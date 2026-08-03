@@ -31,36 +31,6 @@ const loginSchema = z.object({
 });
 type LoginInput = z.infer<typeof loginSchema>;
 
-const DEMO_USERS: {
-  role: UserRole;
-  label: string;
-  email: string;
-  password: string;
-  color: string;
-}[] = [
-  {
-    role: "admin",
-    label: "Admin",
-    email: "admin@alivia.local",
-    password: "Admin@12345",
-    color: "bg-purple-100 text-purple-700 border-purple-200",
-  },
-  {
-    role: "seller",
-    label: "Seller",
-    email: "seller@alivia.local",
-    password: "Seller@12345",
-    color: "bg-blue-100 text-blue-700 border-blue-200",
-  },
-  {
-    role: "buyer",
-    label: "Buyer",
-    email: "buyer@alivia.local",
-    password: "Buyer@12345",
-    color: "bg-green-100 text-green-700 border-green-200",
-  },
-];
-
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,11 +74,6 @@ export function LoginForm() {
     router.refresh();
   }
 
-  function fillDemo(email: string, password: string) {
-    form.setValue("email", email);
-    form.setValue("password", password);
-  }
-
   async function handleResend() {
     const email = form.getValues("email");
     if (!email) return;
@@ -123,25 +88,6 @@ export function LoginForm() {
 
   return (
     <div className="space-y-5">
-      {/* Demo quick-fill */}
-      <div className="space-y-2">
-        <p className="text-xs text-muted-foreground font-medium">
-          Quick demo login:
-        </p>
-        <div className="flex gap-2">
-          {DEMO_USERS.map((u) => (
-            <button
-              key={u.role}
-              type="button"
-              onClick={() => fillDemo(u.email, u.password)}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${u.color}`}
-            >
-              {u.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {error && (
         <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
           <p>{error}</p>
