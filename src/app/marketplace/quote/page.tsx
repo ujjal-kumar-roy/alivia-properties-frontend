@@ -5,6 +5,7 @@ import { ShieldCheck, Sparkles, Timer } from "lucide-react"
 import { GetQuoteForm } from "@/components/marketplace/GetQuoteForm"
 import { marketplaceService } from "@/services/marketplace.service"
 import { ROUTES } from "@/config/routes.config"
+import { siteConfig } from "@/config/site.config"
 
 export const metadata: Metadata = {
   title: "Get a Quote — Alivia Marketplace",
@@ -193,7 +194,7 @@ export default async function MarketplaceQuotePage({ searchParams }: Props) {
                 Not sure who to ask? Submit the form — we&apos;ll route it for you.
               </p>
               <p className="mt-3 text-xs text-ink-600">
-                Or call <span className="font-medium text-ink-900">+880 1700-000000</span>
+                Or call <span className="font-medium text-ink-900">{siteConfig.contact.phone}</span>
               </p>
             </div>
           </aside>

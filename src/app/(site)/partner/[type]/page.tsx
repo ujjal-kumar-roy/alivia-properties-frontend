@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { Clock, ShieldCheck, Sparkles, Store, TrendingUp } from "lucide-react"
 
 import { PartnerApplicationForm } from "@/components/forms/partner-application-form"
+import { siteConfig } from "@/config/site.config"
 
 type PartnerType = "supplier" | "investor"
 
@@ -105,7 +106,7 @@ export default async function PartnerPage({
               <p className="text-eyebrow mb-2">Prefer to talk?</p>
               <p className="text-sm text-ink-700">
                 Submit the form and we&apos;ll route it to the right team — or call{" "}
-                <span className="font-medium text-ink-900">+880 1700-000000</span>.
+                <span className="font-medium text-ink-900">{siteConfig.contact.phone}</span>.
               </p>
             </div>
           </aside>

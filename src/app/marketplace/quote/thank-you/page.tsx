@@ -4,6 +4,7 @@ import { CheckCircle2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/config/routes.config"
+import { siteConfig } from "@/config/site.config"
 
 export const metadata: Metadata = {
   title: "Quote Request Received — Alivia Marketplace",
@@ -52,7 +53,7 @@ export default async function QuoteThankYouPage({ searchParams }: Props) {
           </div>
 
           <p className="mt-6 text-xs text-ink-500">
-            Need to speak to someone now? Call <span className="font-medium">+880 1700-000000</span>.
+            Need to speak to someone now? Call <span className="font-medium">{siteConfig.contact.phone}</span>.
           </p>
         </div>
       </div>

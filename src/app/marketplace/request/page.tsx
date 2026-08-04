@@ -5,6 +5,7 @@ import { ShieldCheck, Sparkles, Timer } from "lucide-react"
 import { QuoteWizard } from "@/components/marketplace/wizard/QuoteWizard"
 import { marketplaceService, type TreeDepartment } from "@/services/marketplace.service"
 import { ROUTES } from "@/config/routes.config"
+import { siteConfig } from "@/config/site.config"
 
 export const dynamic = "force-dynamic"
 
@@ -58,7 +59,7 @@ export default async function MarketplaceRequestPage({ searchParams }: Props) {
               <div className="rounded-2xl border border-dashed border-border py-16 text-center text-sm text-ink-500">
                 The marketplace catalogue is being set up. Please check back shortly, or{" "}
                 <a
-                  href="tel:+8801700000000"
+                  href={`tel:${siteConfig.contact.phoneRaw}`}
                   className="inline-flex min-h-11 items-center font-medium text-brand-700"
                 >
                   call our marketplace desk
@@ -119,7 +120,7 @@ export default async function MarketplaceRequestPage({ searchParams }: Props) {
                 Not sure who to ask? Submit the form — we&apos;ll route it for you.
               </p>
               <p className="mt-3 text-xs text-ink-600">
-                Or call <span className="font-medium text-ink-900">+880 1700-000000</span>
+                Or call <span className="font-medium text-ink-900">{siteConfig.contact.phone}</span>
               </p>
             </div>
           </aside>

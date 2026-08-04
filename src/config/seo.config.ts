@@ -58,7 +58,8 @@ export function organizationSchema() {
     address: {
       "@type": "PostalAddress",
       addressCountry: "BD",
-      addressLocality: "Dhaka",
+      addressLocality: "Rupganj",
+      addressRegion: "Narayanganj",
       streetAddress: siteConfig.contact.address,
     },
     contactPoint: {

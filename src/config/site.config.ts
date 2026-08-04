@@ -13,12 +13,12 @@ export const siteConfig = {
   ogImage: "/og-image.jpg",
 
   contact: {
-    phone: "+880 1769-017621",
-    phoneRaw: "+8801769017621",
+    phone: "+880 1334-957230",
+    phoneRaw: "+8801334957230",
     email: "jolshiriabashon@gmail.com",
-    whatsApp: "+8801769017621",
+    whatsApp: "+8801334957230",
     address:
-      "Zia Colony, near Armed Forces Medical College / MES MP Check Post, Dhaka Cantonment, Dhaka 1206, Bangladesh",
+      "House 007, Road 401, Sector 13, Jolshiri Abason, Rupganj, Narayanganj, Bangladesh",
     officeHours: "Saturday – Thursday: 9:00 AM – 6:00 PM",
     mapEmbedUrl: "",
   },
