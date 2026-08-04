@@ -15,7 +15,8 @@ export const siteConfig = {
   contact: {
     phone: "+880 1334-957230",
     phoneRaw: "+8801334957230",
-    email: "jolshiriabashon@gmail.com",
+    email: "aliviajolshiri26@gmail.com",
+    emailAlt: "jolshiriabashon@gmail.com",
     whatsApp: "+8801334957230",
     address:
       "House 007, Road 401, Sector 13, Jolshiri Abason, Rupganj, Narayanganj, Bangladesh",

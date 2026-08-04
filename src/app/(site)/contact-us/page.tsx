@@ -21,6 +21,7 @@ export default function ContactUsPage() {
               {[
                 { icon: Phone,          label: "Phone",        value: siteConfig.contact.phone,   href: `tel:${siteConfig.contact.phoneRaw}` },
                 { icon: Mail,           label: "Email",        value: siteConfig.contact.email,   href: `mailto:${siteConfig.contact.email}` },
+                { icon: Mail,           label: "Alternate Email", value: siteConfig.contact.emailAlt, href: `mailto:${siteConfig.contact.emailAlt}` },
                 { icon: MessageCircle,  label: "WhatsApp",     value: "Message on WhatsApp",      href: `https://wa.me/${siteConfig.contact.whatsApp}` },
                 { icon: Clock,          label: "Office Hours", value: siteConfig.contact.officeHours, href: null },
                 { icon: MapPin,         label: "Address",      value: siteConfig.contact.address, href: null },
