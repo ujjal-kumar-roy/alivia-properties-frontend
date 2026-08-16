@@ -2,12 +2,14 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { CheckCircle } from "lucide-react"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/config/routes.config"
 import { authService } from "@/services/auth.service"
@@ -26,10 +28,15 @@ const registerSchema = z
       .min(8, "Password must be at least 8 characters")
       .regex(/(?=.*[A-Z])(?=.*[a-z])(?=.*\d)/, "Use uppercase, lowercase, and a number"),
     confirmPassword: z.string().min(1, "Confirm your password"),
+    agreeToTerms: z.boolean(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+  })
+  .refine((data) => data.agreeToTerms === true, {
+    message: "You must agree to the Terms of Service and Privacy Policy",
+    path: ["agreeToTerms"],
   })
 
 type RegisterInput = z.infer<typeof registerSchema>
@@ -41,7 +48,7 @@ export function RegisterForm() {
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { role: "buyer" },
+    defaultValues: { role: "buyer", agreeToTerms: false },
   })
 
   async function onSubmit(values: RegisterInput) {
@@ -202,6 +209,45 @@ export function RegisterForm() {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="agreeToTerms"
+          render={({ field }) => (
+            <FormItem className="group/field flex flex-row items-start gap-2.5 space-y-0">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  className="mt-0.5"
+                />
+              </FormControl>
+              <div className="space-y-1.5">
+                <FormLabel className="cursor-pointer text-sm leading-snug font-normal text-muted-foreground">
+                  I agree to the{" "}
+                  <Link
+                    href={ROUTES.TERMS}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800"
+                  >
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href={ROUTES.PRIVACY}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800"
+                  >
+                    Privacy Policy
+                  </Link>
+                </FormLabel>
+                <FormMessage />
+              </div>
+            </FormItem>
+          )}
+        />
 
         <Button
           type="submit"
