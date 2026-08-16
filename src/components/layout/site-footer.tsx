@@ -160,10 +160,10 @@ export function SiteFooter() {
             © {year} <span className="text-ink-400">{siteConfig.name}</span>. All rights reserved.
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <Link href="/privacy" className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
+            <Link href={ROUTES.PRIVACY} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
               Privacy
             </Link>
-            <Link href="/terms" className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
+            <Link href={ROUTES.TERMS} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
               Terms
             </Link>
             <Link href={ROUTES.CONTACT} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
