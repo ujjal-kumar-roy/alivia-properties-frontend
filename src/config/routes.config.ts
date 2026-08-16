@@ -29,6 +29,8 @@ export const ROUTES = {
   BECOME_INVESTOR: "/partner/investor",
   OFFER_NEW: (propertySlug: string) => `/properties/${propertySlug}/offer`,
   NOTIFICATIONS: "/notifications",
+  PRIVACY: "/privacy",
+  TERMS: "/terms",
 
   // Auth
   LOGIN: "/login",
