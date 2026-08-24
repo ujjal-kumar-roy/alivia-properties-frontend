@@ -4,7 +4,7 @@ import { PackageSearch } from "lucide-react"
 
 import { auth } from "@/auth"
 import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header"
-import { AdminMaterialsCatalogPanel } from "@/pages-sections/admin/admin-materials-catalog-panel"
+import { AdminMarketplaceCataloguePanel } from "@/pages-sections/admin/marketplace-catalogue/catalogue-panel"
 import { marketplaceService } from "@/services/marketplace.service"
 
 export default async function AdminMarketplaceSuppliersPage() {
@@ -40,7 +40,7 @@ export default async function AdminMarketplaceSuppliersPage() {
         title="Suppliers & Services"
         description="Manage Bangladesh suppliers, service providers, and their catalogue lines across every marketplace sub-category. Buyer-facing quote variants are configured under Marketplace -> Categories."
       />
-      <AdminMaterialsCatalogPanel
+      <AdminMarketplaceCataloguePanel
         token={token}
         categories={subCategories.length ? subCategories : categories}
         initialSuppliers={suppliers}

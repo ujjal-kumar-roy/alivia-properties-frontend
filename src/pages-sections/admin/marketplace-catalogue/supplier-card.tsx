@@ -1,0 +1,59 @@
+"use client"
+
+import Link from "next/link"
+import { Pencil, Plus, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { providerLabel } from "@/utils/marketplace-kind"
+import type { Supplier } from "@/types/marketplace.types"
+import { SupplierProductTable } from "./supplier-product-table"
+
+export function SupplierCard({
+  supplier,
+  onEdit,
+  onDeleteSupplier,
+  onQuickEditProduct,
+  onDeleteProduct,
+}: {
+  supplier: Supplier
+  onEdit: () => void
+  onDeleteSupplier: (id: string) => void
+  onQuickEditProduct: (id: string, patch: { price?: number; inStock?: boolean; isActive?: boolean }) => void
+  onDeleteProduct: (id: string) => void
+}) {
+  return (
+    <div className="p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold text-ink-900">{supplier.name}</p>
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-700">
+              {providerLabel(supplier.kind)}
+            </span>
+          </div>
+          <p className="mt-0.5 text-sm text-ink-600">{supplier.location}</p>
+        </div>
+        <div className="flex gap-2">
+          <Link href={`/admin/marketplace/products/new?supplierId=${supplier.id}&categorySlug=${supplier.categories[0] ?? ""}`}>
+            <Button type="button" size="sm">
+              <Plus className="size-3.5" /> Add product
+            </Button>
+          </Link>
+          <Button type="button" size="sm" variant="outline" onClick={onEdit}>
+            <Pencil className="size-3.5" /> Edit
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => onDeleteSupplier(supplier.id)}>
+            <Trash2 className="size-3.5" /> Delete
+          </Button>
+        </div>
+      </div>
+      <div className="mt-4">
+        <SupplierProductTable
+          products={supplier.products ?? []}
+          supplierId={supplier.id}
+          onQuickEdit={onQuickEditProduct}
+          onDelete={onDeleteProduct}
+        />
+      </div>
+    </div>
+  )
+}
