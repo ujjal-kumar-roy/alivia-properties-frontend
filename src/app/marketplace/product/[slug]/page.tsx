@@ -1,21 +1,19 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import Image from "next/image"
 import { notFound } from "next/navigation"
 
 import { MarketplaceBreadcrumb, type Crumb } from "@/components/marketplace/MarketplaceBreadcrumb"
+import { ProductGallery } from "@/components/marketplace/product-gallery"
 import {
   ArrowUpRight,
   CheckCircle2,
   Clock3,
   FileText,
   Mail,
-  Package,
   Phone,
   ShieldCheck,
   Star,
   Truck,
-  Wrench,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -82,34 +80,13 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
       <section className="container-page py-10 sm:py-14">
         <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
           <div className="overflow-hidden rounded-2xl border border-border/70 bg-white shadow-(--shadow-card)">
-            {product.image ? (
-              <div className="relative aspect-4/3 w-full bg-ink-50">
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  fill
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  priority
-                  className="object-cover"
-                />
-              </div>
-            ) : (
-              <div className="flex aspect-4/3 w-full flex-col items-center justify-center gap-4 bg-linear-to-br from-brand-50 via-white to-gold-50 px-6 text-center">
-                <span className="flex size-20 items-center justify-center rounded-2xl bg-white text-brand-500 shadow-(--shadow-card)">
-                  {serviceMode ? (
-                    <Wrench aria-hidden="true" className="size-9" />
-                  ) : (
-                    <Package aria-hidden="true" className="size-9" />
-                  )}
-                </span>
-                <span className="max-w-xs text-sm font-semibold text-brand-800">
-                  {product.name}
-                </span>
-                <span className="text-xs text-ink-500">
-                  {serviceMode ? "Service image coming soon" : "Product image coming soon"}
-                </span>
-              </div>
-            )}
+            <ProductGallery
+              name={product.name}
+              image={product.image}
+              gallery={product.gallery ?? []}
+              videoUrl={product.videoUrl}
+              serviceMode={serviceMode}
+            />
           </div>
 
           <div>
@@ -123,6 +100,17 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
               {product.name}
             </h1>
             <p className="mt-3 text-sm text-ink-700 sm:text-base">{product.description}</p>
+
+            {product.highlights && product.highlights.length > 0 && (
+              <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
+                {product.highlights.map((highlight, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-ink-700">
+                    <CheckCircle2 aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-brand-600" />
+                    {highlight}
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <div className="mt-5 flex flex-wrap items-baseline gap-3">
               <span className="font-heading text-2xl font-semibold text-red-700">
@@ -200,6 +188,94 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {product.specs && product.specs.length > 0 && (
+              <div className="mt-6 rounded-2xl border border-border/70 bg-white p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">Specifications</p>
+                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {product.specs.map((spec) => (
+                    <div key={spec.key} className="rounded-xl bg-ink-50/50 px-3 py-2">
+                      <dt className="text-[10px] uppercase tracking-wider text-ink-500">{spec.label}</dt>
+                      <dd className="mt-0.5 text-sm font-medium text-ink-900">
+                        {spec.value}{spec.unit ? ` ${spec.unit}` : ""}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+
+            {product.priceTiers && product.priceTiers.length > 0 && (
+              <div className="mt-6 overflow-hidden rounded-2xl border border-border/70 bg-white">
+                <p className="px-4 pt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">Bulk pricing</p>
+                <table className="mt-2 w-full text-sm">
+                  <thead>
+                    <tr className="border-t border-border/60 text-left text-[11px] uppercase tracking-wide text-ink-500">
+                      <th className="px-4 py-2 font-medium">Quantity</th>
+                      <th className="px-4 py-2 font-medium">Unit price</th>
+                      <th className="px-4 py-2 font-medium">Note</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {product.priceTiers.map((tier, index) => (
+                      <tr key={index}>
+                        <td className="px-4 py-2 text-ink-700">
+                          {tier.minQty}{tier.maxQty ? `–${tier.maxQty}` : "+"} {product.unit}
+                        </td>
+                        <td className="px-4 py-2 font-medium text-ink-900">{formatPrice(tier.price, true)}</td>
+                        <td className="px-4 py-2 text-ink-500">{tier.note ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {product.documents && product.documents.length > 0 && (
+              <div className="mt-6 rounded-2xl border border-border/70 bg-white p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">Documents</p>
+                <div className="mt-3 flex flex-col gap-2">
+                  {product.documents.map((doc, index) => (
+                    <a
+                      key={index}
+                      href={doc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 rounded-xl border border-border/60 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                    >
+                      <FileText aria-hidden="true" className="size-4" /> {doc.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(product.sku || product.origin || product.packaging || product.warranty || (product.certifications && product.certifications.length > 0)) && (
+              <div className="mt-6 rounded-2xl border border-border/70 bg-white p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">Product details</p>
+                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {product.sku && (
+                    <div><dt className="text-[10px] uppercase tracking-wider text-ink-500">SKU</dt><dd className="mt-0.5 text-sm font-medium text-ink-900">{product.sku}</dd></div>
+                  )}
+                  {product.origin && (
+                    <div><dt className="text-[10px] uppercase tracking-wider text-ink-500">Origin</dt><dd className="mt-0.5 text-sm font-medium text-ink-900">{product.origin}</dd></div>
+                  )}
+                  {product.packaging && (
+                    <div><dt className="text-[10px] uppercase tracking-wider text-ink-500">Packaging</dt><dd className="mt-0.5 text-sm font-medium text-ink-900">{product.packaging}</dd></div>
+                  )}
+                  {product.warranty && (
+                    <div><dt className="text-[10px] uppercase tracking-wider text-ink-500">Warranty</dt><dd className="mt-0.5 text-sm font-medium text-ink-900">{product.warranty}</dd></div>
+                  )}
+                </dl>
+                {product.certifications && product.certifications.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {product.certifications.map((cert) => (
+                      <span key={cert} className="rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-medium text-brand-700">{cert}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
