@@ -57,6 +57,18 @@ export type CategoryAttribute = {
   order?: number
 }
 
+export type ProductDocument = {
+  label: string
+  url: string
+}
+
+export type ProductPriceTier = {
+  minQty: number
+  maxQty?: number | null
+  price: number
+  note?: string | null
+}
+
 export type MarketplaceProduct = {
   id: string
   slug: string
@@ -75,6 +87,20 @@ export type MarketplaceProduct = {
   rating?: number
   reviewCount?: number
   badge?: string
+  gallery?: string[]
+  videoUrl?: string | null
+  documents?: ProductDocument[]
+  specs?: SpecValue[]
+  highlights?: string[]
+  sku?: string | null
+  warranty?: string | null
+  origin?: string | null
+  packaging?: string | null
+  certifications?: string[]
+  priceTiers?: ProductPriceTier[]
+  isActive: boolean
+  isFeatured: boolean
+  order: number
 }
 
 export type SupplierKind = "supplier" | "service" | "SUPPLIER" | "SERVICE"

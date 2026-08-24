@@ -5,6 +5,8 @@ import type {
   CategoryLevel,
   CategoryVariant,
   MarketplaceProduct,
+  ProductDocument,
+  ProductPriceTier,
   ProductVariant,
   Supplier,
 } from "@/types/marketplace.types"
@@ -52,6 +54,7 @@ type ListParams = {
   category?: string
   supplierId?: string
   kind?: "SUPPLIER" | "SERVICE"
+  isActive?: boolean
 }
 
 export type CategoryVariantInput = {
@@ -141,6 +144,20 @@ export type CreateProductInput = {
   brand?: string
   badge?: string
   variants?: Partial<ProductVariant>[]
+  gallery?: string[]
+  videoUrl?: string
+  documents?: ProductDocument[]
+  specs?: { key?: string; label: string; value: string; unit?: string }[]
+  highlights?: string[]
+  sku?: string
+  warranty?: string
+  origin?: string
+  packaging?: string
+  certifications?: string[]
+  priceTiers?: ProductPriceTier[]
+  isActive?: boolean
+  isFeatured?: boolean
+  order?: number
 }
 
 export type UpdateProductInput = Partial<CreateProductInput>
