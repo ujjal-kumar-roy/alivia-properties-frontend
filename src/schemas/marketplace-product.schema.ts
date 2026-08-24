@@ -46,6 +46,7 @@ export const productFormSchema = z.object({
   brand: z.string().optional().default(""),
   badge: z.string().optional().default(""),
   description: z.string().optional().default(""),
+  shortDescription: z.string().max(500, "Keep it under 500 characters").optional().default(""),
   highlights: z.array(z.string()).optional().default([]),
   specs: z.array(specRowSchema).optional().default([]),
   variants: z.array(variantRowSchema).optional().default([]),
@@ -80,6 +81,7 @@ export function emptyProductForm(supplierId = "", categorySlug = "", unit = "uni
     brand: "",
     badge: "",
     description: "",
+    shortDescription: "",
     highlights: [],
     specs: [],
     variants: [],
@@ -114,6 +116,7 @@ export function productToFormValues(product: MarketplaceProduct): ProductFormInp
     brand: product.brand ?? "",
     badge: product.badge ?? "",
     description: product.description ?? "",
+    shortDescription: product.shortDescription ?? "",
     highlights: product.highlights ?? [],
     specs: (product.specs ?? []).map((spec) => ({
       key: spec.key,
@@ -169,6 +172,7 @@ export function productFormToPayload(values: ProductFormValues) {
     brand: values.brand || undefined,
     badge: values.badge || undefined,
     description: values.description || `${values.name} quote-ready product.`,
+    shortDescription: values.shortDescription || undefined,
     highlights: values.highlights.filter((h) => h.trim()),
     specs: values.specs
       .filter((spec) => spec.label.trim() && spec.value.trim())

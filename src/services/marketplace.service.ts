@@ -138,6 +138,7 @@ export type CreateProductInput = {
   price?: number
   unit?: string
   description?: string
+  shortDescription?: string
   inStock?: boolean
   moq?: number
   leadTimeDays?: number

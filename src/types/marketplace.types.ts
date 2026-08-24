@@ -79,6 +79,7 @@ export type MarketplaceProduct = {
   price: number
   unit: string
   description: string
+  shortDescription?: string | null
   inStock: boolean
   moq?: number
   leadTimeDays?: number

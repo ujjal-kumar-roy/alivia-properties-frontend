@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const product = await marketplaceService.productBySlug(slug)
     return {
       title: `${product.name} — Alivia Marketplace`,
-      description: product.description,
+      description: product.shortDescription || product.description,
     }
   } catch {
     return { title: "Product — Alivia Marketplace" }
@@ -99,7 +99,12 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
             <h1 className="font-heading text-3xl font-semibold text-ink-900 sm:text-4xl">
               {product.name}
             </h1>
-            <p className="mt-3 text-sm text-ink-700 sm:text-base">{product.description}</p>
+            {product.shortDescription && (
+              <p className="text-lead mt-2">{product.shortDescription}</p>
+            )}
+            <p className="mt-3 whitespace-pre-line text-sm text-ink-700 sm:text-base">
+              {product.description}
+            </p>
 
             {product.highlights && product.highlights.length > 0 && (
               <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">

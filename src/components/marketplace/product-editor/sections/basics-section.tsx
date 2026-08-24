@@ -154,6 +154,27 @@ export function BasicsSection({
       </div>
       <FormField
         control={control}
+        name="shortDescription"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="flex items-center justify-between">
+              Short description
+              <span className="font-normal text-ink-400">{(field.value ?? "").length}/500</span>
+            </FormLabel>
+            <FormControl>
+              <Textarea
+                placeholder="One or two lines shown on listing cards and as the detail-page subtitle…"
+                maxLength={500}
+                rows={2}
+                {...field}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={control}
         name="description"
         render={({ field }) => (
           <FormItem>

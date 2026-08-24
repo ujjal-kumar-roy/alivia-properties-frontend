@@ -425,7 +425,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                         </div>
 
                         <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-ink-600">
-                          {product.description}
+                          {product.shortDescription || product.description}
                         </p>
 
                         {variants.length > 0 && (
