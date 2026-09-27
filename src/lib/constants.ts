@@ -8,6 +8,7 @@ export const LS_COMPARE_LIST = "alivia_compare_list"
 export const LS_RECENT_SEARCHES = "alivia_recent_searches"
 export const LS_AUTH_USER = "alivia_auth_user"
 export const LS_MARKETPLACE_CART = "alivia_marketplace_cart"
+export const LS_COOKIE_CONSENT = "alivia_cookie_consent"
 
 // Compare limit
 export const MAX_COMPARE_ITEMS = 4

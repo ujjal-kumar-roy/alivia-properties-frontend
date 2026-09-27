@@ -8,8 +8,7 @@ declare module "next-auth" {
     role: UserRole
     isVerified: boolean
     accessToken?: string
-    // refreshToken?: string   // DISABLED — refresh flow is off, see src/auth.ts header comment
-    // rememberMe?: boolean    // DISABLED — same
+    refreshToken?: string
   }
 
   interface Session {
@@ -22,7 +21,10 @@ declare module "next-auth" {
       isVerified: boolean
     }
     accessToken?: string
-    // error?: "RefreshAccessTokenError" | "SessionExpired"   // DISABLED — same
+    // Set by the jwt callback in src/auth.ts when a silent refresh fails.
+    // Nothing currently reacts to this (no new UI) — it's surfaced so client
+    // code can check `session.error` later without another auth.ts change.
+    error?: "RefreshAccessTokenError"
   }
 }
 
@@ -31,9 +33,8 @@ declare module "next-auth/jwt" {
     role?: UserRole
     isVerified?: boolean
     accessToken?: string
-    // refreshToken?: string      // DISABLED — same
-    // accessTokenExpires?: number // DISABLED — same
-    // rememberMe?: boolean        // DISABLED — same
-    // error?: "RefreshAccessTokenError" | "SessionExpired" // DISABLED — same
+    refreshToken?: string
+    accessTokenExpires?: number
+    error?: "RefreshAccessTokenError"
   }
 }

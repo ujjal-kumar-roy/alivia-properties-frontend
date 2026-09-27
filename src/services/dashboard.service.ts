@@ -44,18 +44,40 @@ const emptyDashboard: AdminDashboardData = {
   recentActivity: [],
 }
 
+// GET /dashboard/admin returns the flat stat fields alongside the chart
+// series and recent-activity feed, all on one object (see backend
+// DashboardService#admin). Split them back apart here.
+type AdminDashboardResponse = Partial<DashboardStats> & {
+  monthlyListings?: ChartDataPoint[]
+  inquiryByType?: ChartDataPoint[]
+  monthlyBookings?: ChartDataPoint[]
+  propertyStatusByQuarter?: PropertyStatusPoint[]
+  recentActivity?: ActivityItem[]
+}
+
 export async function getDashboardStats(): Promise<{ data: AdminDashboardData }> {
   const session = await auth()
   const token = session?.accessToken
   try {
-    const stats = await httpClient.get<Partial<DashboardStats>>(
-      "/dashboard/admin",
-      { token, cache: "no-store" },
-    )
+    const {
+      monthlyListings,
+      inquiryByType,
+      monthlyBookings,
+      propertyStatusByQuarter,
+      recentActivity,
+      ...stats
+    } = await httpClient.get<AdminDashboardResponse>("/dashboard/admin", {
+      token,
+      cache: "no-store",
+    })
     return {
       data: {
-        ...emptyDashboard,
         stats: { ...emptyStats, ...stats },
+        monthlyListings: monthlyListings ?? [],
+        inquiryByType: inquiryByType ?? [],
+        monthlyBookings: monthlyBookings ?? [],
+        propertyStatusByQuarter: propertyStatusByQuarter ?? [],
+        recentActivity: recentActivity ?? [],
       },
     }
   } catch {

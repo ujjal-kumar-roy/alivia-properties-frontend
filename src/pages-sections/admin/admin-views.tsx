@@ -51,6 +51,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ApiError } from "@/services/http-client"
 import { propertiesService } from "@/services/properties.service"
 import { projectsService } from "@/services/projects.service"
+import { updateSettings } from "@/services/settings.service"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -751,10 +752,12 @@ export function AdminSellersTable({
     {
       key: "actions",
       header: "Actions",
-      render: () => (
-        <Button size="sm" variant="outline" className="rounded-full">
-          View
-        </Button>
+      render: (s) => (
+        <Link href={ROUTES.ADMIN_USER_DETAIL(s.id)}>
+          <Button size="sm" variant="outline" className="rounded-full">
+            View
+          </Button>
+        </Link>
       ),
     },
   ]
@@ -877,10 +880,12 @@ export function AdminUsersTable({
     {
       key: "actions",
       header: "Actions",
-      render: () => (
-        <Button size="sm" variant="outline" className="rounded-full">
-          View
-        </Button>
+      render: (u) => (
+        <Link href={ROUTES.ADMIN_USER_DETAIL(u.id)}>
+          <Button size="sm" variant="outline" className="rounded-full">
+            View
+          </Button>
+        </Link>
       ),
     },
   ]
@@ -1818,17 +1823,51 @@ export function AdminSettingsForm({
 }: {
   initialValues: { siteName: string; contactEmail: string; phone: string }
 }) {
+  const { data: session } = useSession()
+  const token = session?.accessToken
+
   const [values, setValues] = useState(initialValues)
+  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setSaved(false)
+    setError(null)
     setValues((v) => ({ ...v, [e.target.name]: e.target.value }))
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setSaved(true)
+    setSaving(true)
+    setSaved(false)
+    setError(null)
+    try {
+      const updated = await updateSettings(
+        {
+          siteName: values.siteName.trim(),
+          contactEmail: values.contactEmail.trim(),
+          phone: values.phone.trim(),
+        },
+        token,
+      )
+      setValues({
+        siteName: updated.siteName,
+        contactEmail: updated.contactEmail,
+        phone: updated.phone,
+      })
+      setSaved(true)
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not save settings.",
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
   const fields: { name: keyof typeof values; label: string; type?: string }[] = [
@@ -1850,16 +1889,33 @@ export function AdminSettingsForm({
             type={f.type ?? "text"}
             value={values[f.name]}
             onChange={handleChange}
-            className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
+            disabled={saving}
+            className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink-900 outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600 disabled:opacity-60"
           />
         </div>
       ))}
+
+      {error ? (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      ) : null}
+
       <div className="flex items-center gap-3 pt-2">
-        <Button type="submit" className="rounded-full">
-          Save changes
+        <Button type="submit" className="rounded-full" disabled={saving}>
+          {saving ? (
+            <>
+              <Loader2 className="size-3.5 animate-spin" />
+              Saving
+            </>
+          ) : (
+            "Save changes"
+          )}
         </Button>
         {saved && (
-          <span className="text-xs font-medium text-emerald-600">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+            <CheckCircle2 className="size-3.5" />
             Settings saved
           </span>
         )}

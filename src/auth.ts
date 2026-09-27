@@ -36,33 +36,66 @@ function parseBackendAuthPayload(json: unknown): BackendLoginResponse | null {
 }
 
 /* ────────────────────────────────────────────────────────────────────────
- * DISABLED — silent refresh-token flow.
+ * Silent refresh-token flow.
  *
- * We used to keep the session alive by re-exchanging the refresh token for a
- * fresh access token whenever the 15-minute access token went stale. That
- * kept breaking in practice: the backend rotates the refresh token on every
- * use, and multiple requests (middleware, RSC session lookups, the client's
- * polling/focus refetch) could all race to refresh at once — the loser got
- * "refresh token mismatch" and the whole session was wiped, logging the user
- * out minutes into their visit even with a single-flight de-dupe in place.
+ * This used to be disabled: the backend rotates the refresh token on every
+ * use (single-use, rotating), and multiple requests (middleware, RSC session
+ * lookups, client polling/focus refetch) could race to refresh at once — the
+ * loser presented an already-rotated token, got "refresh token mismatch",
+ * and the jwt() callback throwing wiped the whole NextAuth session, logging
+ * the user out minutes into their visit.
  *
- * Simplified approach instead: the backend now issues a long-lived access
- * token (JWT_ACCESS_EXPIRES_IN, see alivia-properties-backend/.env) and we
- * just use it as-is for the life of the login — no refresh, no rotation, no
- * race. See the active `jwt`/`session` callbacks below.
+ * That race is now handled at the source: the backend added a short (~10s)
+ * reuse-tolerance grace period to refresh-token rotation (see
+ * alivia-properties-backend/src/modules/auth/refresh-token-grace.util.ts and
+ * AuthService.issueTokens). A request that presents a token that was JUST
+ * superseded by a concurrent request gets back the SAME new pair that
+ * request produced, instead of an error — so near-simultaneous refreshes
+ * from the same login are now idempotent. This file also keeps an in-process
+ * de-dupe (`refreshAccessTokenDeduped` below) as a second, defense-in-depth
+ * layer on top of that, but the backend grace window is what actually fixes
+ * the race.
  *
- * If real token expiry/refresh is needed again later, this block plus the
- * commented pieces further down (rememberMe, accessTokenExpires, the old
- * jwt/session callback bodies) are the starting point.
+ * NOTE on token lifetime: the task this was built against assumed a 15-
+ * minute backend access-token lifetime. As implemented right now,
+ * `alivia-properties-backend/.env` still has `JWT_ACCESS_EXPIRES_IN=30d`
+ * (see `src/config/configuration.ts` default too) — i.e. access tokens are
+ * currently long-lived, not 15 minutes. Rather than hardcode an expiry
+ * assumption that's currently false (and would cause near-constant,
+ * unnecessary refresh calls — the exact kind of concurrent-refresh pressure
+ * this whole feature exists to survive), `getAccessTokenExpiresAt` below
+ * decodes the real `exp` claim out of the access token JWT we're actually
+ * holding. That's correct today at 30d and stays correct unchanged if the
+ * backend's access-token lifetime is later shortened to 15m.
  *
+ * Failure handling is deliberately soft: refresh failure never throws inside
+ * jwt() (that's what wiped sessions before). It sets `token.error =
+ * "RefreshAccessTokenError"` and otherwise leaves the token's existing
+ * accessToken/refreshToken untouched — so worst case, a still-valid access
+ * token keeps working until it actually expires, and only then do calls
+ * start 401ing, same as if there were no refresh flow at all. `token.error`
+ * is surfaced on `session.error` for client code to react to later; nothing
+ * currently reacts to it (no new UI added here).
+ * ──────────────────────────────────────────────────────────────────────── */
+
 type RefreshResult =
   | { ok: true; data: BackendLoginResponse }
   | { ok: false; message: string };
 
+// Fallback only — used if we can't decode the access token's own `exp` claim
+// (shouldn't happen with a token we just received from our own backend, but
+// never trust that blindly). Deliberately short: an early, harmless refresh
+// is fine, silently overrunning a real expiry is not.
+const FALLBACK_ACCESS_TOKEN_TTL_MS = 14 * 60 * 1000;
+
+// Refresh this long before the access token's real expiry, so a request
+// that starts just under the wire doesn't race the token's own deadline.
+const REFRESH_SKEW_MS = 60 * 1000;
+
 function getAccessTokenExpiresAt(accessToken: string): number {
   try {
     const [, rawPayload] = accessToken.split(".");
-    if (!rawPayload) return Date.now() + 14 * 60 * 1000;
+    if (!rawPayload) return Date.now() + FALLBACK_ACCESS_TOKEN_TTL_MS;
 
     const normalized = rawPayload.replace(/-/g, "+").replace(/_/g, "/");
     const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
@@ -73,7 +106,7 @@ function getAccessTokenExpiresAt(accessToken: string): number {
     if (typeof parsed.exp === "number") return parsed.exp * 1000;
   } catch {}
 
-  return Date.now() + 14 * 60 * 1000;
+  return Date.now() + FALLBACK_ACCESS_TOKEN_TTL_MS;
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<RefreshResult> {
@@ -104,6 +137,12 @@ async function refreshAccessToken(refreshToken: string): Promise<RefreshResult> 
   return { ok: true, data: payload };
 }
 
+// In-process de-dupe: if two jwt() invocations in the same server instance
+// race with the *same* stale refresh token, they share one in-flight
+// request instead of both hitting the backend. This is a secondary safety
+// net — the backend's own grace period (see header comment) is what makes
+// refreshing safe even when this doesn't catch a race (e.g. across separate
+// server instances/lambdas).
 let inFlightRefresh: { token: string; promise: Promise<RefreshResult> } | null = null;
 
 function refreshAccessTokenDeduped(refreshToken: string): Promise<RefreshResult> {
@@ -117,7 +156,6 @@ function refreshAccessTokenDeduped(refreshToken: string): Promise<RefreshResult>
   inFlightRefresh = { token: refreshToken, promise };
   return promise;
 }
- * ──────────────────────────────────────────────────────────────────────── */
 
 // Auth.js v5 forwards `code` to the client on signIn({ redirect: false }).
 class BackendLoginError extends CredentialsSignin {
@@ -189,7 +227,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        // rememberMe: { label: "Remember me", type: "checkbox" }, // DISABLED — see auth.ts header comment
       },
       async authorize(credentials) {
         const email = credentials?.email as string | undefined;
@@ -203,10 +240,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           throw new BackendLoginError(result.message);
         }
 
-        // refreshToken is still returned by the backend (and validated by
-        // parseBackendAuthPayload) but intentionally unused below — see the
-        // DISABLED block above.
-        const { user, accessToken } = result.data;
+        const { user, accessToken, refreshToken } = result.data;
         return {
           id: user.id,
           name: user.name,
@@ -215,13 +249,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           role: normalizeRole(user.role),
           isVerified: user.isVerified,
           accessToken,
+          refreshToken,
         };
       },
     }),
   ],
 
-  // Match the backend's long-lived access token (JWT_ACCESS_EXPIRES_IN) so
-  // the outer session cookie doesn't cut a still-valid login short.
+  // Outer NextAuth session-cookie lifetime. Independent of the backend's own
+  // access/refresh token lifetimes, which the jwt callback below tracks and
+  // renews on its own — this is just how long the browser cookie itself is
+  // allowed to live before the user has to log in again from scratch.
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
 
   pages: {
@@ -230,21 +267,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   },
 
   callbacks: {
-    // Simple, no-refresh flow: copy the access token onto the JWT once at
-    // sign-in and keep returning it unchanged on every later call. No expiry
-    // check, no refresh request, nothing to race — once logged in, stays
-    // logged in until the 30-day cookie itself runs out.
     async jwt({ token, user }) {
-      if (user) {
-        token.role = (user as { role: UserRole }).role;
-        token.isVerified = (user as { isVerified: boolean }).isVerified;
-        token.accessToken = (user as { accessToken?: string }).accessToken;
-      }
-      return token;
-
-      /* DISABLED — expiry-aware refresh flow. Restore this body (and the
-       * commented helpers above) to bring back auto-refresh/auto-logout.
-       *
+      // Sign-in: seed the token from the credentials-provider result.
       if (user) {
         token.role = (user as { role: UserRole }).role;
         token.isVerified = (user as { isVerified: boolean }).isVerified;
@@ -253,39 +277,37 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         token.accessTokenExpires = token.accessToken
           ? getAccessTokenExpiresAt(token.accessToken as string)
           : undefined;
-        token.rememberMe = (user as { rememberMe?: boolean }).rememberMe ?? false;
         token.error = undefined;
+        return token;
       }
 
       const expiresAt = token.accessTokenExpires as number | undefined;
       const hasFreshAccessToken =
         typeof token.accessToken === "string" &&
         typeof expiresAt === "number" &&
-        Date.now() < expiresAt - 30_000;
+        Date.now() < expiresAt - REFRESH_SKEW_MS;
 
       if (hasFreshAccessToken) {
         return token;
       }
 
-      if (!token.rememberMe) {
-        if (token.accessToken || token.refreshToken) {
-          token.accessToken = undefined;
-          token.refreshToken = undefined;
-          token.accessTokenExpires = undefined;
-          token.error = "SessionExpired";
-        }
-        return token;
-      }
-
+      // No refresh token to work with — e.g. a session cookie issued before
+      // this flow existed, so this JWT never got a refreshToken/
+      // accessTokenExpires in the first place. Nothing we can safely refresh;
+      // leave the token exactly as-is, same as the old no-refresh behavior
+      // (keep serving the access token until it naturally 401s upstream).
       if (typeof token.refreshToken !== "string") {
         return token;
       }
 
       const refreshed = await refreshAccessTokenDeduped(token.refreshToken);
       if (!refreshed.ok) {
-        token.accessToken = undefined;
-        token.accessTokenExpires = undefined;
-        token.refreshToken = undefined;
+        // Standard fail-soft pattern: flag the error, but never clear out an
+        // access token that might still be perfectly valid. Never throw here
+        // — an exception from this callback is exactly what used to wipe
+        // sessions (see header comment). Worst case from here on is a 401 on
+        // the next backend call once the access token truly expires, forcing
+        // a normal re-login — not a corrupted session.
         token.error = "RefreshAccessTokenError";
         return token;
       }
@@ -297,7 +319,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       token.isVerified = refreshed.data.user.isVerified;
       token.error = undefined;
       return token;
-      */
     },
     session({ session, token }) {
       if (session.user) {
@@ -307,6 +328,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           (token.isVerified as boolean | undefined) ?? false;
       }
       session.accessToken = token.accessToken as string | undefined;
+      session.error = token.error as "RefreshAccessTokenError" | undefined;
       return session;
     },
   },

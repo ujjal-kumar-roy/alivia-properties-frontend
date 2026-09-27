@@ -69,6 +69,22 @@ export const usersService = {
       .then(toUser)
   },
 
+  // Admin: change a user's role. `role` is the backend enum value
+  // (ADMIN | SELLER | BUYER, uppercase) — callers pass the frontend
+  // lowercase UserRole and this normalizes it.
+  updateRole(id: string, role: string, token?: string): Promise<User> {
+    return httpClient
+      .patch<BackendUser>(`/users/${id}/role`, { role: role.toUpperCase() }, { token })
+      .then(toUser)
+  },
+
+  // Admin: flip a user's verification flag.
+  updateVerification(id: string, isVerified: boolean, token?: string): Promise<User> {
+    return httpClient
+      .patch<BackendUser>(`/users/${id}/verify`, { isVerified }, { token })
+      .then(toUser)
+  },
+
   updateMe(payload: unknown, token?: string): Promise<User> {
     return httpClient
       .patch<BackendUser>("/users/me", payload, { token })
