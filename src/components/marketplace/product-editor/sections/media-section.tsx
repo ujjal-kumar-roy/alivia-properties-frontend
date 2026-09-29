@@ -4,7 +4,7 @@ import { useFieldArray, type Control } from "react-hook-form"
 import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FileUploader } from "@/components/common/file-uploader"
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import type { ProductFormInput } from "@/schemas/marketplace-product.schema"
 
@@ -69,6 +69,22 @@ export function MediaSection({ control }: { control: Control<ProductFormInput> }
                 onChange={(urls) => field.onChange(urls[0] ?? "")}
               />
             </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={control}
+        name="externalVideoUrl"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Video link</FormLabel>
+            <FormControl>
+              <Input inputMode="url" placeholder="https://www.youtube.com/watch?v=…" {...field} value={field.value ?? ""} />
+            </FormControl>
+            <FormDescription>
+              Optional. Paste a video link from YouTube, Facebook, Vimeo or any other site. Shown on the product page next to the photos.
+            </FormDescription>
             <FormMessage />
           </FormItem>
         )}

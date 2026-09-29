@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { isValidVideoLink } from "@/lib/video-link"
 import type { MarketplaceProduct } from "@/types/marketplace.types"
 
 const variantRowSchema = z.object({
@@ -37,6 +38,12 @@ export const productFormSchema = z.object({
   image: z.string().min(1, "A thumbnail image is required"),
   gallery: z.array(z.string()).optional().default([]),
   videoUrl: z.string().optional().default(""),
+  externalVideoUrl: z
+    .string()
+    .trim()
+    .refine((value) => !value || isValidVideoLink(value), "Enter a valid link starting with http:// or https://")
+    .optional()
+    .default(""),
   documents: z.array(documentRowSchema).optional().default([]),
   price: z.string().optional().default(""),
   unit: z.string().min(1, "Unit is required"),
@@ -72,6 +79,7 @@ export function emptyProductForm(supplierId = "", categorySlug = "", unit = "uni
     image: "",
     gallery: [],
     videoUrl: "",
+    externalVideoUrl: "",
     documents: [],
     price: "",
     unit,
@@ -107,6 +115,7 @@ export function productToFormValues(product: MarketplaceProduct): ProductFormInp
     image: product.image ?? "",
     gallery: product.gallery ?? [],
     videoUrl: product.videoUrl ?? "",
+    externalVideoUrl: product.externalVideoUrl ?? "",
     documents: (product.documents ?? []).map((doc) => ({ label: doc.label, url: doc.url })),
     price: product.price != null && product.price > 0 ? String(product.price) : "",
     unit: product.unit,
@@ -163,6 +172,8 @@ export function productFormToPayload(values: ProductFormValues) {
     image: values.image,
     gallery: values.gallery.length > 0 ? values.gallery : undefined,
     videoUrl: values.videoUrl || undefined,
+    // "" (not undefined) so clearing the link on an edit actually removes it.
+    externalVideoUrl: values.externalVideoUrl,
     documents: values.documents.filter((doc) => doc.label.trim() && doc.url.trim()),
     price: toOptionalNumber(values.price),
     unit: values.unit,

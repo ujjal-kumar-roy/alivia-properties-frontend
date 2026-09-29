@@ -147,6 +147,8 @@ export type CreateProductInput = {
   variants?: Partial<ProductVariant>[]
   gallery?: string[]
   videoUrl?: string
+  /** Empty string clears a saved link on update. */
+  externalVideoUrl?: string
   documents?: ProductDocument[]
   specs?: { key?: string; label: string; value: string; unit?: string }[]
   highlights?: string[]

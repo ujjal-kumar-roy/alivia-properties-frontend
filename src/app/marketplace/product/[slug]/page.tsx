@@ -85,6 +85,7 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
               image={product.image}
               gallery={product.gallery ?? []}
               videoUrl={product.videoUrl}
+              externalVideoUrl={product.externalVideoUrl}
               serviceMode={serviceMode}
             />
           </div>

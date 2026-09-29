@@ -90,6 +90,7 @@ export type MarketplaceProduct = {
   badge?: string
   gallery?: string[]
   videoUrl?: string | null
+  externalVideoUrl?: string | null
   documents?: ProductDocument[]
   specs?: SpecValue[]
   highlights?: string[]
