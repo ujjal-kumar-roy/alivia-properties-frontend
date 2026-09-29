@@ -596,20 +596,41 @@
   }
 
   /* ── Fluid press-morph ─────────────────────────────────────────────────────
-     Liquid Glass controls subtly compress on press, then spring back.
-     Spring-like ease-out; fully disabled under Reduced Motion. */
+     Instant, interruptible feedback on press — responds on pointer-down, not
+     release. `.pressable` is the base press-scale utility; `.pressable-lift`
+     adds a hover lift (for cards) that cancels back to a press-scale while
+     held. `.glass-interactive` is a legacy alias for existing call sites —
+     same behavior as `.pressable`. Fully disabled under Reduced Motion. */
+  .pressable,
+  .pressable-lift,
   .glass-interactive {
     transition:
       transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      box-shadow 220ms ease;
+      box-shadow 220ms ease,
+      border-color 220ms ease,
+      background-color 220ms ease,
+      color 220ms ease;
   }
+  .pressable:active,
+  .pressable-lift:active,
   .glass-interactive:active {
     transform: scale(0.97);
   }
+  .pressable-lift:hover {
+    transform: translateY(-0.25rem);
+  }
+  .pressable-lift:active {
+    transform: translateY(0) scale(0.97);
+  }
   @media (prefers-reduced-motion: reduce) {
+    .pressable,
+    .pressable-lift,
     .glass-interactive {
       transition: none;
     }
+    .pressable:active,
+    .pressable-lift:hover,
+    .pressable-lift:active,
     .glass-interactive:active {
       transform: none;
     }

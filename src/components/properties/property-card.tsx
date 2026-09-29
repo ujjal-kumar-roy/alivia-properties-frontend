@@ -21,7 +21,7 @@ export function PropertyCard({ property, layout = "grid" }: PropertyCardProps) {
 
   return (
     <article
-      className={`group overflow-hidden rounded-xl border-2 border-t-4 bg-white transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:border-brand-300 hover:shadow-(--shadow-elevated) ${
+      className={`group pressable-lift overflow-hidden rounded-xl border-2 border-t-4 bg-white hover:border-brand-300 hover:shadow-(--shadow-elevated) ${
         property.purpose === "rent"
           ? "border-ink-900/10 border-t-gold-400"
           : "border-ink-900/10 border-t-brand-700"
@@ -44,7 +44,7 @@ export function PropertyCard({ property, layout = "grid" }: PropertyCardProps) {
                 alt={property.title}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-105"
+                className="object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
               />
               <div className="absolute inset-0 bg-linear-to-t from-ink-950 via-ink-950/10 to-transparent" />
             </>

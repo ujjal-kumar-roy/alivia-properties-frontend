@@ -29,7 +29,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const gradient = CARD_GRADIENTS[project.status] ?? CARD_GRADIENTS.ongoing
 
   return (
-    <article className="surface-card group overflow-hidden transition-transform duration-300 hover:-translate-y-1">
+    <article className="surface-card group pressable-lift overflow-hidden">
       <Link href={ROUTES.PROJECT_DETAIL(project.slug)} className="block">
         <div className={`relative h-60 overflow-hidden bg-linear-to-br ${gradient}`}>
           <Image
@@ -37,7 +37,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             alt={project.name}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-105"
+            className="object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
           />
           {/* Dot texture overlay for gradient-only state */}
           <div

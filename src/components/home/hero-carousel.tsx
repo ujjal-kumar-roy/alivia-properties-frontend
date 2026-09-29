@@ -13,18 +13,13 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes.config";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { resolveHeroIcon } from "@/lib/hero-icons";
+import { project, rubberband } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { HeroSlide } from "@/types/hero.types";
 
@@ -104,21 +99,21 @@ function toSlide(s: HeroSlide): Slide {
 }
 
 const SLIDE_DURATION = 6000;
-const SWIPE_THRESHOLD = 44;
 
-const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+// Drag feedback: the visible content nudges toward the finger (rubber-banded,
+// since there's no adjacent slide sitting off-screen to reveal), while the
+// release decision uses real momentum projection instead of a fixed distance.
+const FEEDBACK_RADIUS = 90;
+const FEEDBACK_ELASTIC = 0.3;
+const DRAG_HYSTERESIS = 10;
 
-function usePrefersReducedMotion() {
-  return useSyncExternalStore(
-    (onChange) => {
-      const mql = window.matchMedia(REDUCED_MOTION_QUERY);
-      mql.addEventListener("change", onChange);
-      return () => mql.removeEventListener("change", onChange);
-    },
-    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
-    () => false,
-  );
-}
+type DragState = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  committed: boolean;
+  samples: { t: number; x: number }[];
+};
 
 export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
   const SLIDES = useMemo(
@@ -135,12 +130,16 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
 
   const fillRef = useRef<HTMLSpanElement>(null);
   const elapsedRef = useRef(0);
-  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const dragStateRef = useRef<DragState | null>(null);
+  const activeAnimRef = useRef<Animation | null>(null);
+  const [dragging, setDragging] = useState(false);
 
-  const playing = !reduced && !userPaused && !hovered && !focused && !docHidden;
+  const playing =
+    !reduced && !userPaused && !hovered && !focused && !docHidden && !dragging;
 
   const goTo = useCallback(
-    (next: number) => setIndex((next + count) % count),
+    (next: number) => setIndex(((next % count) + count) % count),
     [count],
   );
   const prev = useCallback(() => goTo(index - 1), [goTo, index]);
@@ -195,18 +194,94 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
     }
   }
 
+  // 1:1 drag feedback on the content block (rubber-banded — there's no
+  // adjacent slide sitting off-screen to reveal, so the nudge communicates
+  // "grabbed" rather than spatially previewing the next slide). The release
+  // decision projects momentum (offset + velocity-based projection) onto
+  // slide count, so a firm flick can advance further than the raw drag
+  // distance would, and continues the settle at release velocity.
   function onPointerDown(e: React.PointerEvent) {
-    pointerStart.current = { x: e.clientX, y: e.clientY };
+    if (reduced) return;
+    dragStateRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      committed: false,
+      samples: [{ t: e.timeStamp, x: e.clientX }],
+    };
   }
-  function onPointerUp(e: React.PointerEvent) {
-    const start = pointerStart.current;
-    pointerStart.current = null;
-    if (!start) return;
-    const dx = e.clientX - start.x;
-    const dy = e.clientY - start.y;
-    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
-    if (dx < 0) next();
-    else prev();
+
+  function onPointerMove(e: React.PointerEvent) {
+    const state = dragStateRef.current;
+    const el = contentRef.current;
+    if (!state || !el || e.pointerId !== state.pointerId) return;
+    const dx = e.clientX - state.startX;
+    const dy = e.clientY - state.startY;
+
+    if (!state.committed) {
+      if (Math.abs(dx) < DRAG_HYSTERESIS && Math.abs(dy) < DRAG_HYSTERESIS)
+        return;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        dragStateRef.current = null;
+        return;
+      }
+      state.committed = true;
+      activeAnimRef.current?.cancel();
+      activeAnimRef.current = null;
+      setDragging(true);
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        // Stale pointer session — the drag still tracks via move events already in flight.
+      }
+    }
+
+    state.samples.push({ t: e.timeStamp, x: e.clientX });
+    if (state.samples.length > 5) state.samples.shift();
+    el.style.transform = `translateX(${rubberband(dx, FEEDBACK_RADIUS, FEEDBACK_ELASTIC)}px)`;
+  }
+
+  function endDrag(e: React.PointerEvent) {
+    const state = dragStateRef.current;
+    dragStateRef.current = null;
+    const el = contentRef.current;
+    if (!state || !el) return;
+    if (!state.committed) return;
+    setDragging(false);
+
+    const dx = e.clientX - state.startX;
+    const first = state.samples[0];
+    const last = state.samples[state.samples.length - 1] ?? first;
+    const dt = Math.max(1, last.t - first.t);
+    const velocity = ((last.x - first.x) / dt) * 1000; // px/s
+
+    const rect = el.getBoundingClientRect();
+    const unit = Math.max(rect.width, 1);
+    const projected = dx + project(velocity);
+    // Clamp to a 2-slide jump — also guards against a pathologically large
+    // velocity from a near-zero timestamp delta between move samples.
+    const slidesToAdvance = Math.max(
+      -2,
+      Math.min(2, Math.round(-projected / unit)),
+    );
+
+    const anim = el.animate(
+      [{ transform: el.style.transform }, { transform: "translateX(0)" }],
+      {
+        duration: 320,
+        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        fill: "forwards",
+      },
+    );
+    activeAnimRef.current = anim;
+    anim.finished
+      .then(() => {
+        activeAnimRef.current = null;
+        el.style.transform = "";
+      })
+      .catch(() => {});
+
+    if (slidesToAdvance !== 0) goTo(index + slidesToAdvance);
   }
 
   const active = SLIDES[index];
@@ -223,7 +298,10 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
       onFocusCapture={() => setFocused(true)}
       onBlurCapture={() => setFocused(false)}
       onPointerDown={onPointerDown}
-      onPointerUp={onPointerUp}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      style={{ touchAction: "pan-y" }}
       className="relative isolate flex min-h-136 items-center overflow-hidden bg-brand-950 md:min-h-160"
     >
       {/* Slide imagery (atmospheric — the text below carries the meaning) */}
@@ -255,6 +333,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
 
       <div className="container-page max-w-373! relative z-10 py-20 md:py-28">
         <div
+          ref={contentRef}
           aria-live={playing ? "off" : "polite"}
           className="max-w-2xl text-white"
         >
@@ -267,7 +346,10 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
           >
             {active.eyebrow ? (
               <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
-                <EyebrowIcon aria-hidden="true" className="size-3.5 text-gold-300" />
+                <EyebrowIcon
+                  aria-hidden="true"
+                  className="size-3.5 text-gold-300"
+                />
                 {active.eyebrow}
               </span>
             ) : null}
@@ -282,7 +364,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
               </p>
             ) : null}
 
-            {(active.primary || active.secondary) ? (
+            {active.primary || active.secondary ? (
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 {active.primary ? (
                   <Link href={active.primary.href}>
@@ -347,7 +429,9 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
                     {isActive && (
                       <span
                         ref={fillRef}
-                        style={{ transform: reduced ? "scaleX(1)" : "scaleX(0)" }}
+                        style={{
+                          transform: reduced ? "scaleX(1)" : "scaleX(0)",
+                        }}
                         className="block h-full w-full origin-left rounded-full bg-gold-400"
                       />
                     )}

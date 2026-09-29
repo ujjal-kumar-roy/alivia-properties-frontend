@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 // import { SessionWatcher } from "@/components/layout/session-watcher"; // DISABLED — see src/components/layout/session-watcher.tsx
 import { CookieConsentBanner } from "@/components/common/cookie-consent-banner";
+import { MotionProvider } from "@/components/providers/motion-provider";
 import { defaultMetadata } from "@/config/seo.config";
 import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
@@ -44,14 +45,16 @@ export default async function RootLayout({
           Skip to main content
         </a>
         <CookieConsentBanner />
-        <SessionProvider
-          session={session}
-          refetchInterval={5 * 60}
-          refetchOnWindowFocus
-        >
-          {/* <SessionWatcher /> DISABLED — no session.error is produced anymore, see src/auth.ts */}
-          {children}
-        </SessionProvider>
+        <MotionProvider>
+          <SessionProvider
+            session={session}
+            refetchInterval={5 * 60}
+            refetchOnWindowFocus
+          >
+            {/* <SessionWatcher /> DISABLED — no session.error is produced anymore, see src/auth.ts */}
+            {children}
+          </SessionProvider>
+        </MotionProvider>
       </body>
     </html>
   );
