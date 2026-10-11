@@ -9,42 +9,49 @@ type Tab = {
   count: number
 }
 
+/**
+ * Sticky scroll-spy tab bar for the department sections (`#group-<slug>`).
+ * A Liquid Glass bar with 36px glass chips on one scrollable row. The active
+ * tab follows the page with an IntersectionObserver (no scroll listener): the
+ * section crossing the band just under the bar is the current one.
+ */
 export function CategoryGroupTabs({ tabs }: { tabs: Tab[] }) {
   const [active, setActive] = useState(tabs[0]?.slug ?? "")
   const railRef = useRef<HTMLDivElement>(null)
-  const ticking = useRef(false)
 
-  // Scroll-spy: mark the group whose section is nearest the top
+  // Scroll-spy: mark the group whose section crosses the band below the bar.
   useEffect(() => {
-    function onScroll() {
-      if (ticking.current) return
-      ticking.current = true
-      requestAnimationFrame(() => {
-        const offset = 120
-        let current = tabs[0]?.slug ?? ""
-        for (const tab of tabs) {
-          const el = document.getElementById(`group-${tab.slug}`)
-          if (el && el.getBoundingClientRect().top <= offset) current = tab.slug
+    const inBand = new Set<string>()
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const slug = entry.target.id.replace(/^group-/, "")
+          if (entry.isIntersecting) inBand.add(slug)
+          else inBand.delete(slug)
         }
-        setActive(current)
-        ticking.current = false
-      })
+        const first = tabs.find((tab) => inBand.has(tab.slug))
+        if (first) setActive(first.slug)
+      },
+      { rootMargin: "-72px 0px -65% 0px", threshold: 0 },
+    )
+    for (const tab of tabs) {
+      const el = document.getElementById(`group-${tab.slug}`)
+      if (el) io.observe(el)
     }
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
+    return () => io.disconnect()
   }, [tabs])
 
-  // When active tab changes, scroll the tab rail so it's visible
+  // When the active tab changes, bring it into view in the rail.
   useEffect(() => {
     const rail = railRef.current
     if (!rail) return
-    const btn = rail.querySelector<HTMLButtonElement>(`[data-slug="${active}"]`)
+    const btn = rail.querySelector<HTMLElement>(`[data-slug="${active}"]`)
     if (btn) {
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      const railRect = rail.getBoundingClientRect()
-      const btnRect = btn.getBoundingClientRect()
-      const scrollLeft = rail.scrollLeft + (btnRect.left - railRect.left) - railRect.width / 2 + btnRect.width / 2
-      rail.scrollTo({ left: scrollLeft, behavior: reducedMotion ? "auto" : "smooth" })
+      rail.scrollTo({
+        left: btn.offsetLeft - (rail.clientWidth - btn.offsetWidth) / 2,
+        behavior: reducedMotion ? "auto" : "smooth",
+      })
     }
   }, [active])
 
@@ -52,7 +59,7 @@ export function CategoryGroupTabs({ tabs }: { tabs: Tab[] }) {
     const el = document.getElementById(`group-${slug}`)
     if (!el) return
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    const top = el.getBoundingClientRect().top + window.scrollY - 100
+    const top = el.getBoundingClientRect().top + window.scrollY - 72
     window.scrollTo({ top, behavior: reducedMotion ? "auto" : "smooth" })
     setActive(slug)
   }
@@ -60,50 +67,32 @@ export function CategoryGroupTabs({ tabs }: { tabs: Tab[] }) {
   return (
     <nav
       aria-label="Marketplace departments"
-      className="liquid-glass-nav sticky top-0 z-30 border-b border-border/60 shadow-sm"
+      className="liquid-glass-nav scroll-edge sticky top-0 z-30 border-b"
     >
       <div className="container-page">
         <div
           ref={railRef}
-          className="flex gap-1 overflow-x-auto py-2 scrollbar-none"
-          style={{ scrollbarWidth: "none" }}
+          className="relative flex gap-1.5 overflow-x-auto py-1.5 scrollbar-none sm:py-2"
         >
           {tabs.map((tab) => (
             <button
               key={tab.slug}
               data-slug={tab.slug}
               type="button"
-              aria-current={active === tab.slug ? "true" : undefined}
+              aria-current={active === tab.slug ? "page" : undefined}
               onClick={() => scrollTo(tab.slug)}
-              className={cn(
-                "flex min-h-11 shrink-0 touch-manipulation items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-[background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400",
-                active === tab.slug
-                  ? "bg-brand-700 text-white shadow-sm"
-                  : "text-ink-600 hover:bg-brand-50 hover:text-brand-700",
-              )}
+              className="glass-chip gap-1.5"
             >
               {tab.name}
               <span
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                  active === tab.slug ? "bg-white/25 text-white" : "bg-ink-100 text-ink-500",
+                  "rounded-full px-1.5 py-0.5 text-[0.6875rem] font-semibold tabular-nums",
+                  active === tab.slug ? "bg-white/25 text-white" : "bg-ink-100 text-ink-600",
                 )}
               >
                 {tab.count}
               </span>
             </button>
-          ))}
-        </div>
-        {/* Gold progress stripe under active tab */}
-        <div className="relative -mt-px h-0.5">
-          {tabs.map((tab) => (
-            <div
-              key={tab.slug}
-              className={cn(
-                "absolute inset-0 origin-left transition-transform duration-300 motion-reduce:transition-none",
-                active === tab.slug ? "scale-x-100 bg-gold-400" : "scale-x-0",
-              )}
-            />
           ))}
         </div>
       </div>

@@ -20,6 +20,10 @@ type Props = {
   index: number
 }
 
+/**
+ * One department block: heading, count, and its categories as tiles. Phones get
+ * a tight header (the badge and tagline step aside) and a 2 column grid.
+ */
 export function CategoryGroupSection({ group, items: children, index }: Props) {
   const accent = GROUP_ACCENTS[index % GROUP_ACCENTS.length]!
   const childCountLabel =
@@ -30,27 +34,27 @@ export function CategoryGroupSection({ group, items: children, index }: Props) {
       id={`group-${group.slug}`}
       className="scroll-mt-16"
     >
-      <div className="rounded-[1.75rem] border border-border/70 bg-white/90 p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
+      <div className="rounded-2xl border border-border/70 bg-white/90 p-3 shadow-sm sm:rounded-[1.75rem] sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4">
+          <div className="flex min-w-0 items-start gap-3">
             {/* Colored accent bar */}
-            <div aria-hidden="true" className={`mt-1 h-10 w-1 rounded-full ${accent.bar}`} />
+            <div aria-hidden="true" className={`mt-1 h-8 w-1 shrink-0 rounded-full sm:h-10 ${accent.bar}`} />
             <div className="min-w-0">
               <span
-                className={`mb-2 inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-widest ${accent.badge}`}
+                className={`mb-2 hidden rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-widest sm:inline-block ${accent.badge}`}
               >
                 {group.name}
               </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold text-ink-900 sm:text-xl">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <h2 className="font-sans text-lg font-semibold text-ink-900 sm:text-xl">
                   Shop {group.name}
                 </h2>
-                <span className="rounded-full bg-ink-100 px-2.5 py-1 text-[11px] font-medium text-ink-600">
+                <span className="rounded-full bg-ink-100 px-2 py-0.5 text-xs font-medium text-ink-600 sm:px-2.5 sm:py-1">
                   {childCountLabel}
                 </span>
               </div>
               {group.description && (
-                <p className="mt-1 max-w-2xl text-sm text-ink-500">
+                <p className="mt-1 hidden max-w-2xl text-sm text-ink-500 sm:block">
                   {group.description}
                 </p>
               )}
@@ -59,24 +63,27 @@ export function CategoryGroupSection({ group, items: children, index }: Props) {
           {children.length > 0 && (
             <Link
               href={ROUTES.MARKETPLACE_CATEGORY(group.slug)}
-              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-4 text-sm font-semibold text-brand-700 transition-[background-color,border-color,color] duration-200 hover:border-brand-300 hover:bg-white hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+              className="btn-glass shrink-0 !px-3 sm:min-h-11 sm:!px-4"
             >
-              View all in {group.name}
+              <span className="sm:hidden">View all</span>
+              <span className="hidden sm:inline">View all in {group.name}</span>
               <ArrowRight aria-hidden="true" className="size-4" />
             </Link>
           )}
         </div>
 
         {children.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border py-8 text-center text-sm text-ink-500">
+          <p className="rounded-2xl border border-dashed border-border py-6 text-center text-sm text-ink-500 sm:py-8">
             No items in this category yet.
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <ul className="reveal-stagger grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {children.map((cat) => (
-              <CategoryImageCard key={cat.slug} cat={cat} />
+              <li key={cat.slug} className="min-w-0">
+                <CategoryImageCard cat={cat} className="h-full" />
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
     </section>

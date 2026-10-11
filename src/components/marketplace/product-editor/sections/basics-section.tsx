@@ -1,7 +1,8 @@
 "use client"
 
-import type { Control } from "react-hook-form"
+import { useFormState, type Control } from "react-hook-form"
 import { SearchableSelect } from "@/components/common/searchable-select"
+import { FormSection } from "@/components/dashboard/form-section"
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,10 +17,33 @@ export function BasicsSection({
   supplierOptions: { value: string; label: string }[]
   categoryOptions: { value: string; label: string }[]
 }) {
+  const { errors } = useFormState({ control })
+  const invalid = (
+    [
+      "supplierId",
+      "categorySlug",
+      "name",
+      "brand",
+      "unit",
+      "price",
+      "moq",
+      "leadTimeDays",
+      "badge",
+      "shortDescription",
+      "description",
+    ] as const
+  ).some((name) => Boolean(errors[name]))
+
   return (
-    <fieldset id="section-basics" className="surface-card scroll-mt-24 space-y-4 p-5 lg:p-6">
-      <legend className="font-heading text-lg font-semibold text-ink-900">Basics</legend>
-      <div className="grid gap-4 md:grid-cols-2">
+    <FormSection
+      id="section-basics"
+      title="Basics"
+      hint="Supplier, name, price, description"
+      invalid={invalid}
+      className="space-y-4"
+    >
+      <h2 className="hidden font-heading text-lg font-semibold text-ink-900 md:block">Basics</h2>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           control={control}
           name="supplierId"
@@ -159,7 +183,7 @@ export function BasicsSection({
           <FormItem>
             <FormLabel className="flex items-center justify-between">
               Short description
-              <span className="font-normal text-ink-400">{(field.value ?? "").length}/500</span>
+              <span className="font-normal text-ink-500">{(field.value ?? "").length}/500</span>
             </FormLabel>
             <FormControl>
               <Textarea
@@ -186,6 +210,6 @@ export function BasicsSection({
           </FormItem>
         )}
       />
-    </fieldset>
+    </FormSection>
   )
 }

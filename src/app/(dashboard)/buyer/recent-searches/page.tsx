@@ -12,9 +12,7 @@ export default async function BuyerRecentSearchesPage() {
         title="Recent Searches"
         description="Your recent property searches, ready to run again."
         actions={(
-          <Link href={ROUTES.PROPERTIES}>
-            <Button variant="outline" className="rounded-full">Search Listings</Button>
-          </Link>
+          <Button variant="outline" className="rounded-full" render={<Link href={ROUTES.PROPERTIES} />}>Search Listings</Button>
         )}
       />
       <RecentSearchesView />

@@ -8,6 +8,8 @@ import { createPortal } from "react-dom";
 
 import { ROUTES } from "@/config/routes.config";
 import { cn } from "@/lib/utils";
+import { canOptimize } from "@/utils/image-host";
+import { DEPT_ART } from "@/utils/marketplace-art";
 import type { MarketplaceCategory } from "@/services/marketplace.service";
 
 export type MegaMenuData = {
@@ -17,18 +19,6 @@ export type MegaMenuData = {
 
 const HOVER_CLOSE_DELAY = 140;
 
-/**
- * Departments carry no image in the taxonomy, so map the 5 known departments to
- * the curated marketplace art in /public. Unknown slugs fall back to an icon.
- */
-const DEPT_IMAGE: Record<string, string> = {
-  "raw-materials": "/marketplace-reference/cat-materials.png",
-  finishing: "/marketplace-reference/cat-interior.png",
-  utilities: "/marketplace-reference/cat-plumbing.png",
-  "safety-electronics": "/marketplace-reference/cat-safety.png",
-  services: "/marketplace-reference/cat-services.png",
-};
-
 function imageFor(
   node: MarketplaceCategory,
   fallbackDeptSlug?: string,
@@ -36,8 +26,8 @@ function imageFor(
   return (
     node.image?.url ??
     node.iconUrl ??
-    (node.level === "DEPARTMENT" ? DEPT_IMAGE[node.slug] : null) ??
-    (fallbackDeptSlug ? DEPT_IMAGE[fallbackDeptSlug] : null) ??
+    (node.level === "DEPARTMENT" ? DEPT_ART[node.slug] : null) ??
+    (fallbackDeptSlug ? DEPT_ART[fallbackDeptSlug] : null) ??
     null
   );
 }
@@ -76,7 +66,7 @@ function Thumb({
         fill
         sizes="44px"
         className="object-cover"
-        unoptimized
+        unoptimized={!canOptimize(src)}
         onError={() => setFailed(true)}
       />
     </span>

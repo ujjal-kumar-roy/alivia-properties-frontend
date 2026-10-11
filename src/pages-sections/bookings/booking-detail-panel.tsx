@@ -2,9 +2,8 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
-  ArrowLeft,
   CalendarDays,
   CheckCircle2,
   ExternalLink,
@@ -14,7 +13,9 @@ import {
   XCircle,
 } from "lucide-react"
 
+import { MobileActionBar } from "@/components/common/mobile-action-bar"
 import { BookingStatusBadge } from "@/components/dashboard/booking-status-badge"
+import { DetailBack, DetailHero, DetailText, Fact, FactGrid } from "@/components/dashboard/detail"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/config/routes.config"
 import { ApiError } from "@/services/http-client"
@@ -50,6 +51,9 @@ export function BookingDetailPanel({ booking, token, backHref }: BookingDetailPa
   const [savingAction, setSavingAction] = useState<BookingAction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
+  // When the last action finished. The floating bar's primary button turns into the NEXT action
+  // ("Confirm" becomes "Mark completed") in the same spot, so a double-tap must not run both.
+  const lastActionDoneAt = useRef(0)
   const related = relatedHref(current)
 
   async function runAction(action: BookingAction) {
@@ -85,7 +89,14 @@ export function BookingDetailPanel({ booking, token, backHref }: BookingDetailPa
       )
     } finally {
       setSavingAction(null)
+      lastActionDoneAt.current = Date.now()
     }
+  }
+
+  /** Floating-bar taps: ignore one that lands within 700ms of the previous action finishing. */
+  function runFromBar(action: BookingAction) {
+    if (Date.now() - lastActionDoneAt.current < 700) return
+    void runAction(action)
   }
 
   function canMoveTo(status: BookingStatus) {
@@ -93,115 +104,97 @@ export function BookingDetailPanel({ booking, token, backHref }: BookingDetailPa
     return current.status !== status
   }
 
+  const canConfirm = canMoveTo("confirmed")
+  const canComplete = canMoveTo("completed") && current.status === "confirmed"
+  const canCancel = canMoveTo("cancelled")
+  // On phones the one next step lives in the floating action bar.
+  const nextAction: BookingAction | null = canConfirm ? "confirm" : canComplete ? "complete" : null
+  const showBar = nextAction !== null || canCancel
+
   return (
-    <div className="space-y-5">
-      <Link
-        href={backHref}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800"
-      >
-        <ArrowLeft className="size-4" />
-        Back to bookings
-      </Link>
+    <div className="space-y-3 sm:space-y-5">
+      <DetailBack href={backHref}>Back to bookings</DetailBack>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+      {/* Phones: outcome of the last action (the actions card is replaced by the bar) */}
+      {saved ? (
+        <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 md:hidden">
+          {saved}
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 md:hidden">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[1fr_360px]">
         <section className="surface-card overflow-hidden">
-          <div className="border-b border-border/70 bg-ink-950 px-5 py-5 text-white">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-100">
-                {consultationLabel(current.consultationType)} booking
-              </p>
-              <BookingStatusBadge status={current.status} />
-            </div>
-            <h1 className="mt-3 text-2xl font-semibold">{relatedTitle(current)}</h1>
-            <p className="mt-2 text-sm text-white/70">
-              Submitted {formatDateTime(current.createdAt)}
-            </p>
-          </div>
+          <DetailHero
+            kicker={`${consultationLabel(current.consultationType)} booking`}
+            badge={<BookingStatusBadge status={current.status} />}
+            title={relatedTitle(current)}
+            meta={`Submitted ${formatDateTime(current.createdAt)}`}
+          />
 
-          <div className="space-y-5 p-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Client</p>
-                <p className="mt-2 font-semibold text-ink-900">{current.name}</p>
-              </div>
-              <a
-                href={`mailto:${current.email}`}
-                className="rounded-[1rem] border border-border bg-white p-4 transition-colors hover:border-brand-200 hover:bg-brand-50"
-              >
-                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-ink-400">
-                  <Mail className="size-3.5" />
-                  Email
-                </p>
-                <p className="mt-2 truncate font-semibold text-ink-900">{current.email}</p>
-              </a>
-              <a
-                href={`tel:${current.phone}`}
-                className="rounded-[1rem] border border-border bg-white p-4 transition-colors hover:border-brand-200 hover:bg-brand-50"
-              >
-                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-ink-400">
-                  <Phone className="size-3.5" />
-                  Phone
-                </p>
-                <p className="mt-2 font-semibold text-ink-900">{current.phone}</p>
-              </a>
-            </div>
+          <div className="space-y-3 p-3 sm:space-y-5 sm:p-5">
+            <FactGrid>
+              <Fact label="Client">{current.name}</Fact>
+              <Fact label="Phone" icon={Phone} href={`tel:${current.phone}`}>
+                {current.phone}
+              </Fact>
+              <Fact label="Email" icon={Mail} href={`mailto:${current.email}`} wide>
+                {current.email}
+              </Fact>
+            </FactGrid>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-ink-400">
-                  <CalendarDays className="size-3.5" />
-                  Preferred date
-                </p>
-                <p className="mt-2 font-semibold text-ink-900">{formatDate(current.preferredDate)}</p>
-              </div>
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Preferred time</p>
-                <p className="mt-2 font-semibold text-ink-900">{current.preferredTime}</p>
-              </div>
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Related record</p>
-                <p className="mt-2 truncate font-semibold text-ink-900">{relatedTitle(current)}</p>
-              </div>
-            </div>
+            <FactGrid>
+              <Fact label="Preferred date" icon={CalendarDays}>
+                {formatDate(current.preferredDate)}
+              </Fact>
+              <Fact label="Preferred time">{current.preferredTime}</Fact>
+              <Fact label="Related record" wide>
+                {relatedTitle(current)}
+              </Fact>
+            </FactGrid>
 
-            <div className="rounded-[1rem] border border-border bg-white p-5">
-              <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Message</p>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink-700">
-                {current.message?.trim() || "No message was added for this booking."}
-              </p>
-            </div>
+            <DetailText label="Message">
+              {current.message?.trim() || "No message was added for this booking."}
+            </DetailText>
           </div>
         </section>
 
-        <aside className="space-y-5">
-          <div className="surface-card p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+        <aside className="space-y-3 sm:space-y-5">
+          <div className="surface-card p-4 sm:p-5">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:text-xs">
               Booking lifecycle
             </p>
-            <div className="mt-4 space-y-2 text-sm text-ink-600">
+            <div className="mt-3 space-y-1.5 text-sm text-ink-600 sm:mt-4 sm:space-y-2">
               <p>Created: {formatDateTime(current.createdAt)}</p>
               {current.confirmedAt ? <p>Confirmed: {formatDateTime(current.confirmedAt)}</p> : null}
               {current.cancelledAt ? <p>Cancelled: {formatDateTime(current.cancelledAt)}</p> : null}
               {current.completedAt ? <p>Completed: {formatDateTime(current.completedAt)}</p> : null}
             </div>
             {related ? (
-              <Link href={related}>
-                <Button variant="outline" className="mt-4 w-full rounded-full">
-                  <ExternalLink className="size-4" />
-                  Open related page
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                className="mt-3 w-full rounded-full max-sm:h-10 sm:mt-4"
+                render={<Link href={related} />}
+              >
+                <ExternalLink className="size-4" />
+                Open related page
+              </Button>
             ) : null}
           </div>
 
-          <div className="surface-card p-5">
+          {/* md and up: the full actions card. Phones use the floating bar below. */}
+          <div className="surface-card hidden p-5 md:block">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
               Admin actions
             </p>
             <div className="mt-4 grid gap-2">
               <Button
                 className="rounded-full"
-                disabled={!canMoveTo("confirmed") || savingAction !== null}
+                disabled={!canConfirm || savingAction !== null}
                 onClick={() => runAction("confirm")}
               >
                 {savingAction === "confirm" ? (
@@ -214,7 +207,7 @@ export function BookingDetailPanel({ booking, token, backHref }: BookingDetailPa
               <Button
                 variant="outline"
                 className="rounded-full"
-                disabled={!canMoveTo("completed") || current.status !== "confirmed" || savingAction !== null}
+                disabled={!canComplete || savingAction !== null}
                 onClick={() => runAction("complete")}
               >
                 {savingAction === "complete" ? (
@@ -227,7 +220,7 @@ export function BookingDetailPanel({ booking, token, backHref }: BookingDetailPa
               <Button
                 variant="outline"
                 className="rounded-full border-red-200 text-red-700 hover:bg-red-50"
-                disabled={!canMoveTo("cancelled") || savingAction !== null}
+                disabled={!canCancel || savingAction !== null}
                 onClick={() => runAction("cancel")}
               >
                 {savingAction === "cancel" ? (
@@ -244,6 +237,45 @@ export function BookingDetailPanel({ booking, token, backHref }: BookingDetailPa
           </div>
         </aside>
       </div>
+
+      {showBar ? (
+        <MobileActionBar label="Booking actions">
+          {nextAction ? (
+            <button
+              key={nextAction}
+              type="button"
+              className="btn-tactile flex-1"
+              disabled={savingAction !== null}
+              onClick={() => runFromBar(nextAction)}
+            >
+              {savingAction === nextAction ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="size-4" />
+              )}
+              {nextAction === "confirm" ? "Confirm booking" : "Mark completed"}
+            </button>
+          ) : (
+            <span key="status" className="flex-1 px-3 text-sm text-ink-600">Confirmed booking</span>
+          )}
+          {canCancel ? (
+            <button
+              key="cancel"
+              type="button"
+              className="btn-glass size-11 shrink-0 !p-0 text-red-700"
+              aria-label="Cancel booking"
+              disabled={savingAction !== null}
+              onClick={() => runFromBar("cancel")}
+            >
+              {savingAction === "cancel" ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : (
+                <XCircle className="size-5" />
+              )}
+            </button>
+          ) : null}
+        </MobileActionBar>
+      ) : null}
     </div>
   )
 }

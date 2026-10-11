@@ -32,32 +32,34 @@ export function SupplierCard({
   const productCount = (supplier.products ?? []).length
 
   return (
-    <div className="p-5">
+    <div className="p-3 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold text-ink-900">{supplier.name}</p>
-            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-700">
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-brand-700">
               {providerLabel(supplier.kind)}
             </span>
           </div>
           <p className="mt-0.5 text-sm text-ink-600">{supplier.location}</p>
         </div>
-        <div className="flex gap-2">
-          <Link href={`/admin/marketplace/products/new?supplierId=${supplier.id}&categorySlug=${supplier.categories[0] ?? ""}`}>
-            <Button type="button" size="sm">
-              <Plus className="size-3.5" /> Add product
-            </Button>
-          </Link>
-          <Button type="button" size="sm" variant="outline" onClick={onEdit}>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            className="max-sm:h-9"
+            render={<Link href={`/admin/marketplace/products/new?supplierId=${supplier.id}&categorySlug=${supplier.categories[0] ?? ""}`} />}
+          >
+            <Plus className="size-3.5" /> Add product
+          </Button>
+          <Button type="button" size="sm" variant="outline" className="max-sm:h-9" onClick={onEdit}>
             <Pencil className="size-3.5" /> Edit
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => setConfirmOpen(true)}>
+          <Button type="button" size="sm" variant="outline" className="max-sm:h-9" onClick={() => setConfirmOpen(true)}>
             <Trash2 className="size-3.5" /> Delete
           </Button>
         </div>
       </div>
-      <div className="mt-4">
+      <div className="mt-3 sm:mt-4">
         <SupplierProductTable
           products={supplier.products ?? []}
           supplierId={supplier.id}

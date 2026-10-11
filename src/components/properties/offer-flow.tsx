@@ -8,6 +8,7 @@ import { HandCoins } from "lucide-react"
 import { offersService } from "@/services/offers.service"
 import { ApiError } from "@/services/http-client"
 import { ROUTES } from "@/config/routes.config"
+import { celebrate } from "@/lib/celebrate"
 
 function formatBdt(amount: number): string {
   if (amount >= 10000000) return `৳${(amount / 10000000).toFixed(2)} Cr`
@@ -27,15 +28,18 @@ export function OfferFlow({
   propertyTitle,
   listingPrice,
   sellerName,
+  embedded = false,
 }: {
   propertyId: string
   propertyTitle: string
   listingPrice: number
   sellerId?: string
   sellerName: string
+  /** Inside an accordion: the form is shown straight away, with no card or heading of its own. */
+  embedded?: boolean
 }) {
   const { data: session } = useSession()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(embedded)
   const [offerAmount, setOfferAmount] = useState(listingPrice)
   const [message, setMessage] = useState("")
   const [contingencies, setContingencies] = useState<string[]>([])
@@ -78,6 +82,7 @@ export function OfferFlow({
         session.accessToken,
       )
       setSubmitted(true)
+      celebrate()
     } catch (error) {
       setSubmitError(
         error instanceof ApiError
@@ -92,16 +97,18 @@ export function OfferFlow({
   }
 
   return (
-    <div className="surface-card p-5">
-      <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold-100 text-gold-700">
-          <HandCoins className="h-4 w-4" />
+    <div className={embedded ? undefined : "surface-card p-5"}>
+      {!embedded && (
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold-100 text-gold-700">
+            <HandCoins className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="font-sans text-lg font-semibold text-ink-900">Make an Offer</h3>
+            <p className="text-xs text-ink-500">Negotiate directly with {sellerName}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-sans text-lg font-semibold text-ink-900">Make an Offer</h3>
-          <p className="text-xs text-ink-500">Negotiate directly with {sellerName}</p>
-        </div>
-      </div>
+      )}
 
       {!open ? (
         <Button
@@ -190,14 +197,16 @@ export function OfferFlow({
                 </Button>
               </Link>
             )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              className="rounded-full"
-            >
-              Cancel
-            </Button>
+            {!embedded && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+            )}
           </div>
         </form>
       )}

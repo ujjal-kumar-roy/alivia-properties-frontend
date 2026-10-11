@@ -1,4 +1,3 @@
-import { auth } from "@/auth"
 import type { Booking, BookingStatus, ConsultationType } from "@/types/booking.types"
 import { httpClient, type Paginated } from "./http-client"
 
@@ -111,7 +110,7 @@ export const bookingsService = {
 export async function getBookings(
   params: BookingQueryParams = {},
 ): Promise<Paginated<Booking>> {
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   const token = session?.accessToken
   try {
     return await bookingsService.list(params, token)
@@ -124,11 +123,11 @@ export async function getBookings(
 }
 
 export async function createBooking(payload: unknown): Promise<Booking> {
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   return bookingsService.create(payload, session?.accessToken)
 }
 
 export async function getBooking(id: string): Promise<Booking> {
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   return bookingsService.detail(id, session?.accessToken)
 }

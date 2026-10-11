@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useSession } from "next-auth/react"
+import { MobileActionBar } from "@/components/common/mobile-action-bar"
 import { Button } from "@/components/ui/button"
 import { usersService } from "@/services/users.service"
 import { ApiError } from "@/services/http-client"
@@ -76,7 +77,7 @@ export function SellerProfileForm({ seller }: { seller: Seller | null }) {
   ]
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-lg space-y-5 pt-2">
+    <form onSubmit={handleSubmit} className="max-w-lg space-y-4 pt-1 sm:space-y-5 sm:pt-2">
       {submitError && (
         <div aria-live="polite" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {submitError}
@@ -100,12 +101,22 @@ export function SellerProfileForm({ seller }: { seller: Seller | null }) {
           {field.hint && <p className="text-xs text-ink-500">{field.hint}</p>}
         </div>
       ))}
-      <div className="flex items-center gap-3 pt-2">
+      {saved && (
+        <p role="status" className="text-sm font-medium text-emerald-700 md:hidden">
+          Profile saved
+        </p>
+      )}
+      <div className="hidden items-center gap-3 pt-2 md:flex">
         <Button type="submit" className="rounded-full" disabled={saving}>
           {saving ? "Saving…" : "Save changes"}
         </Button>
         {saved && <span className="text-xs font-medium text-emerald-600">Profile saved</span>}
       </div>
+      <MobileActionBar label="Save profile">
+        <button type="submit" className="btn-tactile btn-tactile--block flex-1" disabled={saving}>
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </MobileActionBar>
     </form>
   )
 }

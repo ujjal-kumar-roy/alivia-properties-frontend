@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import {
-  ArrowLeft,
   CheckCircle2,
   ExternalLink,
   Loader2,
@@ -13,7 +12,9 @@ import {
   Phone,
 } from "lucide-react"
 
+import { MobileActionBar } from "@/components/common/mobile-action-bar"
 import { InquiryStatusBadge } from "@/components/dashboard/inquiry-status-badge"
+import { DetailBack, DetailHero, DetailText, Fact, FactGrid } from "@/components/dashboard/detail"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ROUTES } from "@/config/routes.config"
@@ -96,108 +97,76 @@ export function InquiryDetailPanel({
   }
 
   return (
-    <div className="space-y-5">
-      <Link
-        href={backHref}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800"
-      >
-        <ArrowLeft className="size-4" />
-        Back to inquiries
-      </Link>
+    <div className="space-y-3 sm:space-y-5">
+      <DetailBack href={backHref}>Back to inquiries</DetailBack>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[1fr_360px]">
         <section className="surface-card overflow-hidden">
-          <div className="border-b border-border/70 bg-ink-950 px-5 py-5 text-white">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-100">
-                {current.type} inquiry
-              </p>
-              <InquiryStatusBadge status={current.status} />
-            </div>
-            <h1 className="mt-3 text-2xl font-semibold">{subjectFor(current)}</h1>
-            <p className="mt-2 text-sm text-white/70">
-              Received {formatDateTime(current.createdAt)}
-            </p>
-          </div>
+          <DetailHero
+            kicker={`${current.type} inquiry`}
+            badge={<InquiryStatusBadge status={current.status} />}
+            title={subjectFor(current)}
+            meta={`Received ${formatDateTime(current.createdAt)}`}
+          />
 
-          <div className="space-y-5 p-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">From</p>
-                <p className="mt-2 font-semibold text-ink-900">{current.name}</p>
-              </div>
-              <a
-                href={`mailto:${current.email}`}
-                className="rounded-[1rem] border border-border bg-white p-4 transition-colors hover:border-brand-200 hover:bg-brand-50"
-              >
-                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-ink-400">
-                  <Mail className="size-3.5" />
-                  Email
-                </p>
-                <p className="mt-2 truncate font-semibold text-ink-900">{current.email}</p>
-              </a>
-              <a
-                href={`tel:${current.phone}`}
-                className="rounded-[1rem] border border-border bg-white p-4 transition-colors hover:border-brand-200 hover:bg-brand-50"
-              >
-                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-ink-400">
-                  <Phone className="size-3.5" />
-                  Phone
-                </p>
-                <p className="mt-2 font-semibold text-ink-900">{current.phone}</p>
-              </a>
-            </div>
+          <div className="space-y-3 p-3 sm:space-y-5 sm:p-5">
+            <FactGrid>
+              <Fact label="From">{current.name}</Fact>
+              <Fact label="Phone" icon={Phone} href={`tel:${current.phone}`}>
+                {current.phone}
+              </Fact>
+              <Fact label="Email" icon={Mail} href={`mailto:${current.email}`} wide>
+                {current.email}
+              </Fact>
+            </FactGrid>
 
-            <div className="rounded-[1rem] border border-border bg-white p-5">
-              <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Message</p>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink-700">
-                {current.message}
-              </p>
-            </div>
+            <DetailText label="Message">{current.message}</DetailText>
 
             {current.reply ? (
-              <div className="rounded-[1rem] border border-emerald-200 bg-emerald-50 p-5">
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                  <MessageSquareReply className="size-4" />
-                  Latest reply
-                </p>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-emerald-950">
-                  {current.reply}
-                </p>
-                {current.repliedAt ? (
-                  <p className="mt-3 text-xs text-emerald-700">
-                    Sent {formatDateTime(current.repliedAt)}
-                  </p>
-                ) : null}
-              </div>
+              <DetailText
+                label="Latest reply"
+                tone="success"
+                icon={MessageSquareReply}
+                footer={
+                  current.repliedAt ? (
+                    <p className="mt-3 text-xs text-emerald-700">
+                      Sent {formatDateTime(current.repliedAt)}
+                    </p>
+                  ) : null
+                }
+              >
+                {current.reply}
+              </DetailText>
             ) : null}
           </div>
         </section>
 
-        <aside className="space-y-5">
-          <div className="surface-card p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+        <aside className="flex flex-col gap-3 sm:gap-5">
+          <div className="surface-card order-2 p-4 sm:p-5 xl:order-1">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:text-xs">
               Related record
             </p>
-            <h2 className="mt-2 text-lg font-semibold text-ink-900">{subjectFor(current)}</h2>
-            <p className="mt-2 text-sm capitalize text-ink-500">{current.type}</p>
+            <h2 className="mt-1.5 text-base font-semibold text-ink-900 sm:mt-2 sm:text-lg">{subjectFor(current)}</h2>
+            <p className="mt-1 text-sm capitalize text-ink-500 sm:mt-2">{current.type}</p>
             {related ? (
-              <Link href={related}>
-                <Button variant="outline" className="mt-4 w-full rounded-full">
-                  <ExternalLink className="size-4" />
-                  Open related page
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                className="mt-3 w-full rounded-full max-sm:h-10 sm:mt-4"
+                render={<Link href={related} />}
+              >
+                <ExternalLink className="size-4" />
+                Open related page
+              </Button>
             ) : null}
           </div>
 
           {canManage ? (
-            <div className="surface-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+            <div className="surface-card order-1 p-4 sm:p-5 xl:order-2">
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:text-xs">
                 Seller action
               </p>
 
-              <label className="mt-4 block text-sm font-medium text-ink-800" htmlFor="inquiry-status">
+              <label className="mt-3 block text-sm font-medium text-ink-800 sm:mt-4" htmlFor="inquiry-status">
                 Status
               </label>
               <select
@@ -213,7 +182,7 @@ export function InquiryDetailPanel({
                 ))}
               </select>
 
-              <label className="mt-4 block text-sm font-medium text-ink-800" htmlFor="inquiry-reply">
+              <label className="mt-3 block text-sm font-medium text-ink-800 sm:mt-4" htmlFor="inquiry-reply">
                 Reply note
               </label>
               <Textarea
@@ -226,12 +195,12 @@ export function InquiryDetailPanel({
               />
 
               {error ? (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                   {error}
                 </p>
               ) : null}
               {saved ? (
-                <p className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-700">
+                <p role="status" className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-700">
                   <CheckCircle2 className="size-4" />
                   Inquiry updated
                 </p>
@@ -241,7 +210,7 @@ export function InquiryDetailPanel({
                 type="button"
                 onClick={save}
                 disabled={saving}
-                className="mt-4 w-full rounded-full bg-brand-700 text-white hover:bg-brand-800"
+                className="mt-4 hidden w-full rounded-full bg-brand-700 text-white hover:bg-brand-800 md:inline-flex"
               >
                 {saving ? <Loader2 className="size-4 animate-spin" /> : <MessageSquareReply className="size-4" />}
                 Save response
@@ -250,6 +219,15 @@ export function InquiryDetailPanel({
           ) : null}
         </aside>
       </div>
+
+      {canManage ? (
+        <MobileActionBar label="Save response">
+          <button type="button" className="btn-tactile btn-tactile--block flex-1" disabled={saving} onClick={save}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : <MessageSquareReply className="size-4" />}
+            Save response
+          </button>
+        </MobileActionBar>
+      ) : null}
     </div>
   )
 }

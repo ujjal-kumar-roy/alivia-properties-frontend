@@ -49,11 +49,9 @@ export default function DashboardError({
           credentials. Please sign in again to continue.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Link href={ROUTES.LOGIN}>
-            <Button className="gap-2 bg-brand-700 text-white hover:bg-brand-800">
-              <LogIn className="h-4 w-4" /> Sign in again
-            </Button>
-          </Link>
+          <Button className="gap-2 bg-brand-700 text-white hover:bg-brand-800" render={<Link href={ROUTES.LOGIN} />}>
+            <LogIn className="h-4 w-4" /> Sign in again
+          </Button>
           <Button variant="outline" onClick={reset} className="gap-2">
             Retry
           </Button>
@@ -74,16 +72,12 @@ export default function DashboardError({
           is a mistake, sign in with an account that has the required role.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Link href={ROUTES.HOME}>
-            <Button variant="outline" className="gap-2">
-              <ArrowLeft className="h-4 w-4" /> Go home
-            </Button>
-          </Link>
-          <Link href={ROUTES.LOGIN}>
-            <Button className="bg-brand-700 text-white hover:bg-brand-800">
-              Switch account
-            </Button>
-          </Link>
+          <Button variant="outline" className="gap-2" render={<Link href={ROUTES.HOME} />}>
+            <ArrowLeft className="h-4 w-4" /> Go home
+          </Button>
+          <Button className="bg-brand-700 text-white hover:bg-brand-800" render={<Link href={ROUTES.LOGIN} />}>
+            Switch account
+          </Button>
         </div>
       </div>
     )
@@ -102,11 +96,9 @@ export default function DashboardError({
         <Button variant="outline" onClick={reset} className="gap-2">
           Try again
         </Button>
-        <Link href={ROUTES.HOME}>
-          <Button variant="outline" className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> Go home
-          </Button>
-        </Link>
+        <Button variant="outline" className="gap-2" render={<Link href={ROUTES.HOME} />}>
+          <ArrowLeft className="h-4 w-4" /> Go home
+        </Button>
       </div>
     </div>
   )

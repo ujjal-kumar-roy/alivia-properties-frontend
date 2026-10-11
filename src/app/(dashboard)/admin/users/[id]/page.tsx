@@ -20,8 +20,9 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
   if (!session?.user || !user) notFound()
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 sm:space-y-5">
       <DashboardPageHeader
+        className="max-sm:hidden"
         eyebrow="People"
         title="User detail"
         description="Review the account, then manage its role and verification status."

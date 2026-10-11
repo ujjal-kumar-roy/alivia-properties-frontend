@@ -1,2 +1,5 @@
-import { SkDetailPage } from "@/components/common/skeletons"
-export default function Loading() { return <SkDetailPage /> }
+import { ProjectDetailSkeleton } from "@/components/projects/project-detail-skeleton"
+
+export default function Loading() {
+  return <ProjectDetailSkeleton />
+}

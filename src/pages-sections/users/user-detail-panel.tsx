@@ -1,10 +1,8 @@
 "use client"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import {
-  ArrowLeft,
   BadgeCheck,
   Check,
   Loader2,
@@ -14,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react"
 
+import { DetailBack, DetailHero, Fact, FactGrid } from "@/components/dashboard/detail"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -109,20 +108,14 @@ export function UserDetailPanel({ user, token, currentUserId, backHref }: UserDe
   }
 
   return (
-    <div className="space-y-5">
-      <Link
-        href={backHref}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800"
-      >
-        <ArrowLeft className="size-4" />
-        Back
-      </Link>
+    <div className="space-y-3 sm:space-y-5">
+      <DetailBack href={backHref}>Back</DetailBack>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[1fr_360px]">
         <section className="surface-card overflow-hidden">
-          <div className="border-b border-border/70 bg-ink-950 px-5 py-5 text-white">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16 ring-4 ring-white/20">
+          <DetailHero
+            leading={
+              <Avatar className="size-14 shrink-0 ring-4 ring-white/20 sm:size-16">
                 {current.avatar ? (
                   <AvatarImage src={current.avatar} alt={current.name} />
                 ) : null}
@@ -130,74 +123,52 @@ export function UserDetailPanel({ user, token, currentUserId, backHref }: UserDe
                   {initials(current.name)}
                 </AvatarFallback>
               </Avatar>
-              <div className="min-w-0">
-                <h1 className="truncate text-2xl font-semibold">{current.name}</h1>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
-                      ROLE_BADGE_STYLES[current.role],
-                    )}
-                  >
-                    {ROLE_OPTIONS.find((r) => r.value === current.role)?.label ?? current.role}
-                  </span>
-                  {current.isVerified ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
-                      <BadgeCheck className="h-3 w-3" />
-                      Verified
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
-                      <ShieldAlert className="h-3 w-3" />
-                      Not verified
-                    </span>
+            }
+            title={<span className="block truncate">{current.name}</span>}
+            meta={
+              <span className="flex flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+                    ROLE_BADGE_STYLES[current.role],
                   )}
-                </div>
-              </div>
-            </div>
-          </div>
+                >
+                  {ROLE_OPTIONS.find((r) => r.value === current.role)?.label ?? current.role}
+                </span>
+                {current.isVerified ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300">
+                    <BadgeCheck className="h-3 w-3" />
+                    Verified
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+                    <ShieldAlert className="h-3 w-3" />
+                    Not verified
+                  </span>
+                )}
+              </span>
+            }
+          />
 
-          <div className="space-y-5 p-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <a
-                href={`mailto:${current.email}`}
-                className="rounded-[1rem] border border-border bg-white p-4 transition-colors hover:border-brand-200 hover:bg-brand-50"
-              >
-                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-ink-400">
-                  <Mail className="size-3.5" />
-                  Email
-                </p>
-                <p className="mt-2 truncate font-semibold text-ink-900">{current.email}</p>
-              </a>
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-ink-400">
-                  <Phone className="size-3.5" />
-                  Phone
-                </p>
-                <p className="mt-2 font-semibold text-ink-900">{current.phone ?? "—"}</p>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Joined</p>
-                <p className="mt-2 font-semibold text-ink-900">
-                  {current.createdAt ? formatDateTime(current.createdAt) : "—"}
-                </p>
-              </div>
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Last updated</p>
-                <p className="mt-2 font-semibold text-ink-900">
-                  {current.updatedAt ? formatDateTime(current.updatedAt) : "—"}
-                </p>
-              </div>
-            </div>
+          <div className="space-y-3 p-3 sm:space-y-5 sm:p-5">
+            <FactGrid className="sm:grid-cols-2">
+              <Fact label="Email" icon={Mail} href={`mailto:${current.email}`} wide>
+                {current.email}
+              </Fact>
+              <Fact label="Phone" icon={Phone} href={current.phone ? `tel:${current.phone}` : undefined}>
+                {current.phone ?? "-"}
+              </Fact>
+              <Fact label="Joined">{current.createdAt ? formatDateTime(current.createdAt) : "-"}</Fact>
+              <Fact label="Last updated" wide>
+                {current.updatedAt ? formatDateTime(current.updatedAt) : "-"}
+              </Fact>
+            </FactGrid>
           </div>
         </section>
 
-        <aside className="space-y-5">
-          <div className="surface-card p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+        <aside className="space-y-3 sm:space-y-5">
+          <div className="surface-card p-4 sm:p-5">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:text-xs">
               Role
             </p>
             {isSelf ? (
@@ -205,7 +176,7 @@ export function UserDetailPanel({ user, token, currentUserId, backHref }: UserDe
                 You can&apos;t change your own role from here.
               </p>
             ) : null}
-            <div className="mt-3 grid gap-2">
+            <div className="mt-3 grid grid-cols-3 gap-2 xl:grid-cols-1">
               {ROLE_OPTIONS.map((opt) => {
                 const active = current.role === opt.value
                 const isPending = pendingRole === opt.value
@@ -215,10 +186,11 @@ export function UserDetailPanel({ user, token, currentUserId, backHref }: UserDe
                     type="button"
                     disabled={isSelf || busy || active}
                     onClick={() => changeRole(opt.value)}
+                    aria-pressed={active}
                     className={cn(
-                      "flex items-center justify-between rounded-full border px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                      "flex min-h-11 items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-sm font-semibold transition-[background-color,scale] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 xl:justify-between xl:px-4",
                       active
-                        ? "border-brand-700 bg-brand-700 text-white"
+                        ? "border-brand-700 bg-brand-700 text-white disabled:opacity-100"
                         : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
                     )}
                   >
@@ -234,8 +206,8 @@ export function UserDetailPanel({ user, token, currentUserId, backHref }: UserDe
             </div>
           </div>
 
-          <div className="surface-card p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+          <div className="surface-card p-4 sm:p-5">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:text-xs">
               Verification
             </p>
             <p className="mt-2 text-sm text-ink-600">
@@ -248,7 +220,7 @@ export function UserDetailPanel({ user, token, currentUserId, backHref }: UserDe
               disabled={busy}
               onClick={toggleVerified}
               className={cn(
-                "mt-4 w-full rounded-full",
+                "mt-3 w-full rounded-full max-sm:h-11 sm:mt-4",
                 current.isVerified
                   ? "border-amber-200 text-amber-700 hover:bg-amber-50"
                   : "border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100",
@@ -262,8 +234,8 @@ export function UserDetailPanel({ user, token, currentUserId, backHref }: UserDe
               {current.isVerified ? "Remove verification" : "Verify user"}
             </Button>
 
-            {saved ? <p className="mt-3 text-sm font-medium text-emerald-700">{saved}</p> : null}
-            {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
+            {saved ? <p role="status" className="mt-3 text-sm font-medium text-emerald-700">{saved}</p> : null}
+            {error ? <p role="alert" className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
           </div>
         </aside>
       </div>

@@ -22,18 +22,16 @@ export default async function AdminEditProjectPage({ params }: AdminEditProjectP
   if (!project) notFound()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       <DashboardPageHeader
         eyebrow="Inventory"
         title="Edit Apartment"
         description={`Update details for ${project.name}.`}
         actions={(
-          <Link href={ROUTES.ADMIN_PROJECTS}>
-            <Button variant="outline" className="rounded-full">
-              <ChevronLeft className="h-4 w-4" />
-              Back to Apartments
-            </Button>
-          </Link>
+          <Button variant="outline" className="rounded-full" render={<Link href={ROUTES.ADMIN_PROJECTS} />}>
+            <ChevronLeft className="h-4 w-4" />
+            Back to Apartments
+          </Button>
         )}
       />
       <ProjectForm mode="edit" initialProject={project} />

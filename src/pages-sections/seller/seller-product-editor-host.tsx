@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ProductEditor } from "@/components/marketplace/product-editor/product-editor"
+import { celebrate } from "@/lib/celebrate"
 import {
   emptyProductForm,
   productFormToPayload,
@@ -47,6 +48,7 @@ export function SellerProductEditorHost({
         await marketplaceService.sellerUpdateProduct(product.id, payload, token)
       } else {
         await marketplaceService.sellerCreateProduct(payload, token)
+        celebrate()
       }
       router.push(ROUTES.SELLER_MARKETPLACE_CATALOGUE)
       router.refresh()

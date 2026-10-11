@@ -83,12 +83,12 @@ export function AttachmentUploader({ value, onChange, maxFiles = 8, className }:
     return (
       <div
         className={cn(
-          "flex items-center gap-2 rounded-xl border border-dashed border-border bg-ink-50/60 px-3 py-2.5 text-xs text-ink-600",
+          "flex min-h-11 items-center gap-2 rounded-xl border border-dashed border-border bg-ink-50/60 px-3 py-2.5 text-xs text-ink-600",
           className,
         )}
       >
-        <Lock className="size-3.5 shrink-0" />
-        <span>Log in to attach drawings or photos — or describe them in the notes below.</span>
+        <Lock aria-hidden="true" className="size-3.5 shrink-0" />
+        <span>Log in to attach drawings or photos, or describe them in the notes.</span>
       </div>
     )
   }
@@ -111,7 +111,7 @@ export function AttachmentUploader({ value, onChange, maxFiles = 8, className }:
             void ingest(e.dataTransfer.files)
           }}
           className={cn(
-            "flex min-h-20 w-full flex-col items-center justify-center rounded-xl border border-dashed p-3 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+            "flex min-h-16 w-full flex-col items-center justify-center rounded-xl border border-dashed p-3 text-center transition-colors active:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-20",
             dragOver ? "border-brand-500 bg-brand-50" : "border-brand-200 bg-brand-50/40 hover:bg-brand-50",
           )}
         >
@@ -120,10 +120,17 @@ export function AttachmentUploader({ value, onChange, maxFiles = 8, className }:
           ) : (
             <UploadCloud className="size-5 text-brand-600" />
           )}
-          <p className="mt-1.5 text-xs font-medium text-ink-800">
-            {busy ? "Uploading…" : "Click or drag files (PDF, DOC, images)"}
+          <p className="mt-1 text-[0.8125rem] font-semibold text-ink-800 sm:mt-1.5 sm:text-xs sm:font-medium">
+            {busy ? (
+              "Uploading..."
+            ) : (
+              <>
+                <span className="sm:hidden">Tap to add photos or files</span>
+                <span className="hidden sm:inline">Click or drag files (PDF, DOC, images)</span>
+              </>
+            )}
           </p>
-          <p className="text-[11px] text-ink-500">Up to {maxFiles} files · 15 MB each</p>
+          <p className="text-xs text-ink-500">Up to {maxFiles} files · 15 MB each</p>
         </button>
       )}
 
@@ -143,18 +150,18 @@ export function AttachmentUploader({ value, onChange, maxFiles = 8, className }:
           {value.map((file, index) => (
             <li
               key={file.key}
-              className="flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2"
+              className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-white py-1 pl-3 pr-1"
             >
               <FileText className="size-4 shrink-0 text-brand-600" />
               <span className="min-w-0 flex-1 truncate text-sm text-ink-700">{file.name}</span>
-              <span className="shrink-0 text-[11px] text-ink-500">{prettySize(file.size)}</span>
+              <span className="shrink-0 text-xs text-ink-500">{prettySize(file.size)}</span>
               <button
                 type="button"
                 onClick={() => removeAt(index)}
                 aria-label={`Remove ${file.name}`}
-                className="shrink-0 rounded-md p-1 text-ink-400 hover:bg-ink-50 hover:text-ink-700"
+                className="flex size-9 shrink-0 items-center justify-center rounded-md text-ink-400 hover:bg-ink-50 hover:text-ink-700"
               >
-                <X className="size-4" />
+                <X aria-hidden="true" className="size-4" />
               </button>
             </li>
           ))}

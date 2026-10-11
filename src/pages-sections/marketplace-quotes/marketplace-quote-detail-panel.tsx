@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import {
-  ArrowLeft,
   CheckCircle2,
   ExternalLink,
   Loader2,
@@ -13,6 +12,8 @@ import {
   Phone,
 } from "lucide-react"
 
+import { MobileActionBar } from "@/components/common/mobile-action-bar"
+import { DetailBack, DetailHero, DetailText, Fact, FactGrid } from "@/components/dashboard/detail"
 import { QuoteStatusBadge } from "@/components/dashboard/quote-status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -118,93 +119,60 @@ export function MarketplaceQuoteDetailPanel({
     }
   }
 
+  const noteTooShort = note.trim().length < 2
+
   return (
-    <div className="space-y-5">
-      <Link
-        href={backHref}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800"
-      >
-        <ArrowLeft className="size-4" />
-        Back to quotes
-      </Link>
+    <div className="space-y-3 sm:space-y-5">
+      <DetailBack href={backHref}>Back to quotes</DetailBack>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[1fr_360px]">
         <section className="surface-card overflow-hidden">
-          <div className="border-b border-border/70 bg-ink-950 px-5 py-5 text-white">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-100">
-                Marketplace quote
-              </p>
-              <QuoteStatusBadge status={current.status} />
-            </div>
-            <h1 className="mt-3 text-2xl font-semibold">{quoteSubject(current)}</h1>
-            <p className="mt-2 text-sm text-white/70">
-              Submitted {formatDateTime(current.createdAt)}
-            </p>
-          </div>
+          <DetailHero
+            kicker="Marketplace quote"
+            badge={<QuoteStatusBadge status={current.status} />}
+            title={quoteSubject(current)}
+            meta={`Submitted ${formatDateTime(current.createdAt)}`}
+          />
 
-          <div className="space-y-5 p-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Customer</p>
-                <p className="mt-2 font-semibold text-ink-900">{current.name}</p>
+          <div className="space-y-3 p-3 sm:space-y-5 sm:p-5">
+            <FactGrid>
+              <Fact label="Customer">
+                {current.name}
                 {current.company ? (
-                  <p className="mt-1 text-xs text-ink-500">{current.company}</p>
+                  <span className="mt-0.5 block truncate text-xs font-normal text-ink-500">
+                    {current.company}
+                  </span>
                 ) : null}
-              </div>
-              <a
-                href={`mailto:${current.email}`}
-                className="rounded-[1rem] border border-border bg-white p-4 transition-colors hover:border-brand-200 hover:bg-brand-50"
-              >
-                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-ink-400">
-                  <Mail className="size-3.5" />
-                  Email
-                </p>
-                <p className="mt-2 truncate font-semibold text-ink-900">{current.email}</p>
-              </a>
-              <a
-                href={`tel:${current.phone}`}
-                className="rounded-[1rem] border border-border bg-white p-4 transition-colors hover:border-brand-200 hover:bg-brand-50"
-              >
-                <p className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-ink-400">
-                  <Phone className="size-3.5" />
-                  Phone
-                </p>
-                <p className="mt-2 font-semibold text-ink-900">{current.phone}</p>
-              </a>
-            </div>
+              </Fact>
+              <Fact label="Phone" icon={Phone} href={`tel:${current.phone}`}>
+                {current.phone}
+              </Fact>
+              <Fact label="Email" icon={Mail} href={`mailto:${current.email}`} wide>
+                {current.email}
+              </Fact>
+            </FactGrid>
 
-            <div className="grid gap-3 sm:grid-cols-4">
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Final quote</p>
-                <p className="mt-2 font-semibold text-ink-900">{formatMoney(current.finalQuotedPrice)}</p>
-              </div>
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Quantity</p>
-                <p className="mt-2 font-semibold text-ink-900">
-                  {current.quantity ? `${current.quantity} ${current.unit ?? "units"}` : "-"}
-                </p>
-              </div>
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Location</p>
-                <p className="mt-2 font-semibold text-ink-900">{current.deliveryLocation ?? current.city ?? "-"}</p>
-              </div>
-              <div className="rounded-[1rem] border border-border bg-white p-4">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Delivery</p>
-                <p className="mt-2 font-semibold text-ink-900">
-                  {current.deliveryDate ? formatDateTime(current.deliveryDate) : "-"}
-                </p>
-              </div>
-            </div>
+            <FactGrid className="sm:grid-cols-4">
+              <Fact label="Final quote">{formatMoney(current.finalQuotedPrice)}</Fact>
+              <Fact label="Quantity">
+                {current.quantity ? `${current.quantity} ${current.unit ?? "units"}` : "-"}
+              </Fact>
+              <Fact label="Location">{current.deliveryLocation ?? current.city ?? "-"}</Fact>
+              <Fact label="Delivery">
+                {current.deliveryDate ? formatDateTime(current.deliveryDate) : "-"}
+              </Fact>
+            </FactGrid>
 
             {(current.variantName || (current.specs?.length ?? 0) > 0) ? (
-              <div className="rounded-[1rem] border border-brand-100 bg-brand-50/60 p-5">
-                <p className="text-xs uppercase tracking-[0.14em] text-brand-700">Selected variant</p>
+              <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-4 sm:p-5">
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-brand-700 sm:text-xs sm:tracking-[0.14em]">
+                  Selected variant
+                </p>
                 {current.variantName ? (
                   <p className="mt-2 font-semibold text-ink-900">{current.variantName}</p>
                 ) : null}
                 {current.specs?.length ? (
-                  <dl className="mt-3 grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                  <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
                     {current.specs.map((spec) => (
                       <div key={spec.key} className="flex items-baseline justify-between gap-2 text-sm">
                         <dt className="text-ink-500">{spec.label}</dt>
@@ -221,45 +189,40 @@ export function MarketplaceQuoteDetailPanel({
               </div>
             ) : null}
 
-            <div className="rounded-[1rem] border border-border bg-white p-5">
-              <p className="text-xs uppercase tracking-[0.14em] text-ink-400">Requirement</p>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink-700">
-                {current.message}
-              </p>
-            </div>
+            <DetailText label="Requirement">{current.message}</DetailText>
 
             {current.reply ? (
-              <div className="rounded-[1rem] border border-emerald-200 bg-emerald-50 p-5">
-                <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                  <MessageSquareReply className="size-4" />
-                  Latest reply
-                </p>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-emerald-950">
-                  {current.reply}
-                </p>
-                {current.repliedAt ? (
-                  <p className="mt-3 text-xs text-emerald-700">
-                    Sent {formatDateTime(current.repliedAt)}
-                  </p>
-                ) : null}
-              </div>
+              <DetailText
+                label="Latest reply"
+                tone="success"
+                icon={MessageSquareReply}
+                footer={
+                  current.repliedAt ? (
+                    <p className="mt-3 text-xs text-emerald-700">
+                      Sent {formatDateTime(current.repliedAt)}
+                    </p>
+                  ) : null
+                }
+              >
+                {current.reply}
+              </DetailText>
             ) : null}
 
             {current.conversation && current.conversation.length > 0 ? (
-              <div className="rounded-[1rem] border border-border bg-white p-5">
-                <p className="text-xs uppercase tracking-[0.14em] text-ink-400">
+              <div className="rounded-2xl border border-border bg-white p-4 sm:p-5">
+                <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-ink-500 sm:text-xs sm:tracking-[0.14em]">
                   Conversation thread
                 </p>
-                <div className="mt-4 space-y-3">
+                <div className="mt-3 space-y-2.5 sm:mt-4 sm:space-y-3">
                   {current.conversation.map((entry) => (
                     <div key={entry.id} className="rounded-xl border border-border/70 bg-ink-50/50 p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-600">
+                      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+                        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-ink-600 sm:text-xs sm:tracking-[0.12em]">
                           {entry.authorRole} / {entry.channel}
                         </p>
                         <p className="text-xs text-ink-500">{formatDateTime(entry.createdAt)}</p>
                       </div>
-                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink-800">
+                      <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-ink-800 sm:mt-2">
                         {entry.body}
                       </p>
                     </div>
@@ -270,30 +233,32 @@ export function MarketplaceQuoteDetailPanel({
           </div>
         </section>
 
-        <aside className="space-y-5">
-          <div className="surface-card p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+        <aside className="flex flex-col gap-3 sm:gap-5">
+          <div className="surface-card order-2 p-4 sm:p-5 xl:order-1">
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:text-xs">
               Routed to
             </p>
-            <h2 className="mt-2 text-lg font-semibold text-ink-900">{quoteSubject(current)}</h2>
-            <p className="mt-2 text-sm text-ink-500">
+            <h2 className="mt-1.5 text-base font-semibold text-ink-900 sm:mt-2 sm:text-lg">{quoteSubject(current)}</h2>
+            <p className="mt-1 text-sm text-ink-500 sm:mt-2">
               {current.supplier?.name ?? "Marketplace team"}
             </p>
-            <Link href={relatedHref(current)}>
-              <Button variant="outline" className="mt-4 w-full rounded-full">
-                <ExternalLink className="size-4" />
-                Open related page
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              className="mt-3 w-full rounded-full max-sm:h-10 sm:mt-4"
+              render={<Link href={relatedHref(current)} />}
+            >
+              <ExternalLink className="size-4" />
+              Open related page
+            </Button>
           </div>
 
           {canManage ? (
-            <div className="surface-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+            <div className="surface-card order-1 p-4 sm:p-5 xl:order-2">
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:text-xs">
                 Response
               </p>
 
-              <label className="mt-4 block text-sm font-medium text-ink-800" htmlFor="quote-status">
+              <label className="mt-3 block text-sm font-medium text-ink-800 sm:mt-4" htmlFor="quote-status">
                 Status
               </label>
               <select
@@ -309,7 +274,7 @@ export function MarketplaceQuoteDetailPanel({
                 ))}
               </select>
 
-              <label className="mt-4 block text-sm font-medium text-ink-800" htmlFor="quote-final-price">
+              <label className="mt-3 block text-sm font-medium text-ink-800 sm:mt-4" htmlFor="quote-final-price">
                 Final quoted price
               </label>
               <Input
@@ -317,13 +282,14 @@ export function MarketplaceQuoteDetailPanel({
                 type="number"
                 min={0}
                 step="any"
+                inputMode="decimal"
                 value={finalPrice}
                 onChange={(event) => setFinalPrice(event.target.value)}
                 placeholder="BDT"
                 className="mt-2"
               />
 
-              <label className="mt-4 block text-sm font-medium text-ink-800" htmlFor="quote-reply">
+              <label className="mt-3 block text-sm font-medium text-ink-800 sm:mt-4" htmlFor="quote-reply">
                 Reply
               </label>
               <Textarea
@@ -335,7 +301,7 @@ export function MarketplaceQuoteDetailPanel({
                 className="mt-2"
               />
 
-              <label className="mt-4 block text-sm font-medium text-ink-800" htmlFor="quote-note">
+              <label className="mt-3 block text-sm font-medium text-ink-800 sm:mt-4" htmlFor="quote-note">
                 Conversation note
               </label>
               <Textarea
@@ -348,12 +314,12 @@ export function MarketplaceQuoteDetailPanel({
               />
 
               {error ? (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                   {error}
                 </p>
               ) : null}
               {saved ? (
-                <p className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-700">
+                <p role="status" className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-700">
                   <CheckCircle2 className="size-4" />
                   Quote updated
                 </p>
@@ -363,31 +329,32 @@ export function MarketplaceQuoteDetailPanel({
                 type="button"
                 onClick={save}
                 disabled={saving}
-                className="mt-4 w-full rounded-full bg-brand-700 text-white hover:bg-brand-800"
+                className="mt-4 hidden w-full rounded-full bg-brand-700 text-white hover:bg-brand-800 md:inline-flex"
               >
                 {saving ? <Loader2 className="size-4 animate-spin" /> : <MessageSquareReply className="size-4" />}
                 Save response
               </Button>
             </div>
           ) : (
-            <div className="surface-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+            <div className="surface-card order-1 p-4 sm:p-5 xl:order-2">
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:text-xs">
                 Message sales
               </p>
               <Textarea
                 rows={5}
+                aria-label="Message to the sales team"
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
                 placeholder="Add a message or clarification for the sales team..."
-                className="mt-4"
+                className="mt-3 sm:mt-4"
               />
               {error ? (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                   {error}
                 </p>
               ) : null}
               {saved ? (
-                <p className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-700">
+                <p role="status" className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-700">
                   <CheckCircle2 className="size-4" />
                   Message added
                 </p>
@@ -395,8 +362,8 @@ export function MarketplaceQuoteDetailPanel({
               <Button
                 type="button"
                 onClick={save}
-                disabled={saving || note.trim().length < 2}
-                className="mt-4 w-full rounded-full bg-brand-700 text-white hover:bg-brand-800"
+                disabled={saving || noteTooShort}
+                className="mt-4 hidden w-full rounded-full bg-brand-700 text-white hover:bg-brand-800 md:inline-flex"
               >
                 {saving ? <Loader2 className="size-4 animate-spin" /> : <MessageSquareReply className="size-4" />}
                 Add message
@@ -405,6 +372,18 @@ export function MarketplaceQuoteDetailPanel({
           )}
         </aside>
       </div>
+
+      <MobileActionBar label={canManage ? "Save response" : "Add message"}>
+        <button
+          type="button"
+          className="btn-tactile btn-tactile--block flex-1"
+          disabled={saving || (!canManage && noteTooShort)}
+          onClick={save}
+        >
+          {saving ? <Loader2 className="size-4 animate-spin" /> : <MessageSquareReply className="size-4" />}
+          {canManage ? "Save response" : "Add message"}
+        </button>
+      </MobileActionBar>
     </div>
   )
 }

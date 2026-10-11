@@ -57,18 +57,22 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const listKey = JSON.stringify(filters)
 
   return (
-    <div className="section-y">
+    <div className="py-3 md:py-12">
       <div className="container-page">
         <SectionHeader
+          as="h1"
           eyebrow="Our Portfolio"
           title="Alivia Apartments"
           subtitle="Explore our premium residential and commercial developments across Bangladesh."
           align="left"
         />
 
-        {/* Status filter */}
-        <div className="mt-8 mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
+        {/* Status chips: one scrollable row on phones, wrapping row from sm */}
+        <div className="mb-3 mt-3 flex items-center justify-between gap-3 sm:mb-6 sm:mt-8">
+          <nav
+            aria-label="Filter apartments by status"
+            className="-mx-4 flex flex-1 gap-1.5 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:flex-none sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0"
+          >
             {STATUS_TABS.map((tab) => {
               const isActive = (status ?? "") === tab.value
               const href = new URLSearchParams()
@@ -77,34 +81,34 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                 <Link
                   key={tab.value}
                   href={tab.value ? `/apartments?${href.toString()}` : "/apartments"}
-                  className={`inline-flex min-h-11 items-center rounded-full px-5 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-brand-600 text-white"
-                      : "bg-white border border-border text-foreground hover:border-brand-300 hover:text-brand-700"
-                  }`}
+                  aria-current={isActive ? "page" : undefined}
+                  className="glass-chip sm:min-h-11 sm:px-5 sm:text-sm"
                 >
                   {tab.label}
                 </Link>
               )
             })}
-          </div>
+          </nav>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="hidden text-sm text-muted-foreground sm:block">
             {res.meta.total === 0 ? "0 apartments" : `${res.meta.total} apartments`}
           </p>
         </div>
 
         {activeTags.length > 0 && (
-          <div className="mb-6 flex flex-wrap gap-2">
+          <div className="-mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:mb-6 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0">
             {activeTags.map((tag) => (
-              <span key={tag} className="rounded-full border border-brand-100 bg-brand-50/70 px-3 py-1.5 text-xs font-medium text-brand-800">
+              <span
+                key={tag}
+                className="shrink-0 rounded-full border border-brand-100 bg-brand-50/70 px-2.5 py-1 text-xs font-medium text-brand-800 sm:px-3 sm:py-1.5"
+              >
                 {tag}
               </span>
             ))}
           </div>
         )}
 
-        <div className="flex flex-col gap-8 lg:flex-row">
+        <div className="flex flex-col gap-3 lg:flex-row lg:gap-8">
           <div className="w-full shrink-0 lg:w-80">
             <Suspense fallback={null}>
               <ProjectFilterSidebar />
@@ -112,6 +116,10 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           </div>
 
           <div className="min-w-0 flex-1">
+            <p className="mb-2 text-xs font-medium text-muted-foreground sm:hidden">
+              {res.meta.total === 0 ? "0 apartments" : `${res.meta.total} apartments`}
+            </p>
+            <h2 className="sr-only">Apartment projects</h2>
             {res.data.length === 0 ? (
               <EmptyState
                 icon={Building2}

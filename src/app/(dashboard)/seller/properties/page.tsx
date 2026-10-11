@@ -6,7 +6,6 @@ import { getProperties } from "@/services/properties.service"
 import { DASHBOARD_PAGE_SIZE } from "@/lib/constants"
 import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header"
 import { TablePagination } from "@/components/dashboard/table-pagination"
-import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/config/routes.config"
 import { SellerPropertiesTable } from "@/pages-sections/admin/admin-views"
 import { getCurrentSeller } from "@/utils/dashboard-session"
@@ -33,10 +32,8 @@ export default async function SellerPropertiesPage({
         title="My Properties"
         description="Manage your active and pending property listings."
         actions={(
-          <Link href={ROUTES.SELLER_PROPERTY_CREATE}>
-            <Button className="rounded-full bg-brand-700 text-white hover:bg-brand-800">
-              Add Property
-            </Button>
+          <Link href={ROUTES.SELLER_PROPERTY_CREATE} className="btn-tactile btn-tactile--sm">
+            Add Property
           </Link>
         )}
       />

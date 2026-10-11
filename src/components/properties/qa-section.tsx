@@ -11,7 +11,14 @@ import { ROUTES } from "@/config/routes.config"
 import { formatRelative } from "@/utils/format-date"
 import type { QAItem } from "@/types/qa.types"
 
-export function QASection({ propertyId }: { propertyId: string }) {
+export function QASection({
+  propertyId,
+  embedded = false,
+}: {
+  propertyId: string
+  /** Inside an accordion: no card or heading of its own (the section supplies them). */
+  embedded?: boolean
+}) {
   const { data: session } = useSession()
   const [question, setQuestion] = useState("")
   const [items, setItems] = useState<QAItem[]>([])
@@ -25,6 +32,9 @@ export function QASection({ propertyId }: { propertyId: string }) {
       try {
         const res = await qaService.list(propertyId)
         setItems(res.data)
+      } catch {
+        // A failed lookup reads as "no questions yet" instead of an unhandled rejection.
+        setItems([])
       } finally {
         setLoading(false)
       }
@@ -63,16 +73,18 @@ export function QASection({ propertyId }: { propertyId: string }) {
   }
 
   return (
-    <div className="surface-card p-5">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
-          <MessageCircleQuestion className="h-4 w-4" />
+    <div className={embedded ? undefined : "surface-card p-5"}>
+      {!embedded && (
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+            <MessageCircleQuestion className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-h3">Questions & Answers</h3>
+            <p className="text-xs text-ink-500">Ask the seller anything about this listing</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-h3">Questions & Answers</h3>
-          <p className="text-xs text-ink-500">Ask the seller anything about this listing</p>
-        </div>
-      </div>
+      )}
 
       <div className="space-y-3">
         {loading && (

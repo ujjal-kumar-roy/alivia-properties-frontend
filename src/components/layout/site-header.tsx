@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowUpRight,
   Building2,
   ChevronDown,
   LayoutDashboard,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { AutoHideHeader } from "@/components/layout/auto-hide-header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { cn } from "@/lib/utils";
 import { publicNav, authNav, type NavItem } from "@/config/nav.config";
@@ -26,9 +26,6 @@ import { ROUTES } from "@/config/routes.config";
 import { siteConfig } from "@/config/site.config";
 import { getDashboardRoute } from "@/utils/auth-helpers";
 import type { UserRole } from "@/types/user.types";
-
-const HEADER_COLLAPSE_SCROLL_Y = 96;
-const HEADER_EXPAND_SCROLL_Y = 24;
 
 function getNavPath(href: string) {
   return href.split("?")[0];
@@ -99,72 +96,32 @@ function DropdownNav({ item }: { item: NavItem }) {
 }
 
 export function SiteHeader() {
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session } = useSession();
 
-  useEffect(() => {
-    let isCollapsed = window.scrollY >= HEADER_COLLAPSE_SCROLL_Y;
-    let frameId: number | null = null;
-
-    // Sync the initial collapsed state from the real scroll position on mount
-    // (window is unavailable during SSR). Intentional one-shot, not a cascade.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setScrolled(isCollapsed);
-
-    const updateScrolledState = () => {
-      frameId = null;
-
-      const scrollY = window.scrollY;
-      const shouldCollapse = isCollapsed
-        ? scrollY > HEADER_EXPAND_SCROLL_Y
-        : scrollY >= HEADER_COLLAPSE_SCROLL_Y;
-
-      if (shouldCollapse !== isCollapsed) {
-        isCollapsed = shouldCollapse;
-        setScrolled(shouldCollapse);
-      }
-    };
-
-    const handler = () => {
-      if (frameId === null) {
-        frameId = window.requestAnimationFrame(updateScrolledState);
-      }
-    };
-
-    window.addEventListener("scroll", handler, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", handler);
-
-      if (frameId !== null) {
-        window.cancelAnimationFrame(frameId);
-      }
-    };
-  }, []);
-
   return (
     <>
-      <header className="sticky top-0 z-50 w-full [overflow-anchor:none]">
+      {/* Auto-hides on scroll-down, returns on scroll-up. On md+ it sticks 44px
+          up (top -11) so the info strip scrolls away with the page and only the
+          main bar stays, with no height changes and so no layout shift. */}
+      <AutoHideHeader
+        as="header"
+        className="sticky top-0 z-50 w-full md:-top-11 [overflow-anchor:none]"
+      >
         {/* Top info strip */}
-        <div
-          className={cn(
-            "overflow-hidden bg-linear-to-r from-brand-900 to-brand-800 transition-[max-height] duration-300 ease-in-out",
-            scrolled ? "max-h-0" : "max-h-12",
-          )}
-        >
+        <div className="hidden bg-linear-to-r from-brand-900 to-brand-800 md:block">
           <div className="mx-auto flex h-11 w-full max-w-400 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="hidden items-center gap-3 md:flex">
+            <div className="hidden items-center gap-3 xl:flex">
               <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-brand-400" />
-              <span className="text-[0.67rem] font-semibold uppercase tracking-[0.18em] text-brand-200">
+              <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-200">
                 RAJUK Registered Developer
               </span>
               <span className="h-3 w-px bg-brand-700" />
-              <span className="text-[0.67rem] font-medium uppercase tracking-[0.15em] text-brand-400">
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.15em] text-brand-300">
                 Established 2011
               </span>
               <span className="h-3 w-px bg-brand-700" />
-              <span className="text-[0.67rem] font-medium uppercase tracking-[0.15em] text-brand-400">
+              <span className="text-[0.6875rem] font-medium uppercase tracking-[0.15em] text-brand-300">
                 Dhaka, Bangladesh
               </span>
             </div>
@@ -212,10 +169,10 @@ export function SiteHeader() {
               <a
                 href={`tel:${siteConfig.contact.phoneRaw}`}
                 aria-label={`Call ${siteConfig.contact.phone}`}
-                className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full text-[0.75rem] text-brand-300 transition-colors hover:bg-white/10 hover:text-white sm:min-w-0 sm:px-2"
+                className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full text-[0.75rem] text-brand-300 transition-colors hover:bg-white/10 hover:text-white lg:min-w-0 lg:px-2"
               >
                 <Phone className="h-3 w-3" />
-                <span className="hidden sm:inline">
+                <span className="hidden lg:inline">
                   {siteConfig.contact.phone}
                 </span>
               </a>
@@ -223,7 +180,7 @@ export function SiteHeader() {
                 href={`https://wa.me/${siteConfig.contact.whatsApp}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden min-h-11 items-center gap-1.5 rounded-full px-2 text-[0.75rem] text-brand-300 transition-colors hover:bg-white/10 hover:text-white sm:flex"
+                className="hidden min-h-11 items-center gap-1.5 rounded-full px-2 text-[0.75rem] text-brand-300 transition-colors hover:bg-white/10 hover:text-white lg:flex"
               >
                 <MessageCircle className="h-3 w-3" />
                 WhatsApp
@@ -233,25 +190,15 @@ export function SiteHeader() {
         </div>
 
         {/* Main nav bar */}
-        <div
-          className={cn(
-            "border-b border-white/30 bg-white/45 backdrop-blur-xl transition-shadow duration-300",
-            scrolled && "shadow-sm",
-          )}
-        >
-          <div className="mx-auto w-full max-w-400 px-4 py-2.5 sm:px-6 lg:px-8">
-            <div
-              className={cn(
-                "liquid-glass-nav flex items-center justify-between gap-3 rounded-2xl border border-black/6 px-4 py-2.5 transition-shadow duration-300 md:px-5",
-                scrolled ? "shadow-md" : "shadow-sm",
-              )}
-            >
+        <div className="border-b border-white/30 bg-white/45 backdrop-blur-xl transition-shadow duration-300 group-data-[scrolled=true]/header:shadow-sm">
+          <div className="mx-auto w-full max-w-400 px-3 py-2 sm:px-6 sm:py-2.5 lg:px-8">
+            <div className="liquid-glass-nav flex items-center justify-between gap-3 rounded-2xl border border-black/6 px-3 py-2 shadow-sm transition-shadow duration-300 group-data-[scrolled=true]/header:shadow-md md:px-5 md:py-2.5">
               {/* Logo */}
               <Link
                 href="/"
                 className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center gap-3"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-linear-to-br from-brand-600 to-brand-900 shadow-sm">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-600 to-brand-900 shadow-sm sm:h-10 sm:w-10 sm:rounded-[13px]">
                   <Building2 className="h-5 w-5 text-white" />
                 </div>
                 <div className="block min-w-0">
@@ -327,19 +274,17 @@ export function SiteHeader() {
                 )}
               </div>
 
-              {/* Mobile right side */}
+              {/* Mobile right side: Marketplace stays one tap away (icon-only on the
+                  narrowest phones), then the menu. */}
               <div className="flex items-center gap-2 xl:hidden">
-                {!session && (
-                  <Link href={ROUTES.MARKETPLACE} className="hidden sm:block">
-                    <Button
-                      size="sm"
-                      className="cursor-pointer gap-1.5 rounded-full bg-brand-700 px-4 text-[0.82rem] text-white hover:bg-brand-800"
-                    >
-                      Marketplace
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                )}
+                <Link
+                  href={ROUTES.MARKETPLACE}
+                  aria-label="Marketplace"
+                  className="pressable inline-flex size-11 items-center justify-center rounded-full bg-linear-to-r from-gold-500 to-gold-400 text-brand-950 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_4px_14px_rgba(229,176,79,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 min-[400px]:w-auto min-[400px]:gap-1.5 min-[400px]:px-4"
+                >
+                  <ShoppingBag aria-hidden="true" className="size-4.5" />
+                  <span className="hidden text-[0.8rem] font-bold min-[400px]:inline">Marketplace</span>
+                </Link>
                 <button
                   className="liquid-glass-control glass-interactive flex size-11 cursor-pointer items-center justify-center rounded-xl border border-ink-200 transition-colors hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
                   onClick={() => setMobileOpen(true)}
@@ -351,7 +296,7 @@ export function SiteHeader() {
             </div>
           </div>
         </div>
-      </header>
+      </AutoHideHeader>
 
       <MobileNav open={mobileOpen} onClose={() => setMobileOpen(false)} />
     </>

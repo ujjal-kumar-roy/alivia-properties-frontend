@@ -1,5 +1,6 @@
 "use client";
 
+import { AutoHideHeader } from "@/components/layout/auto-hide-header";
 import { cn } from "@/lib/utils";
 import { MessageSquare, Send, X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -57,12 +58,16 @@ export function LiveChatWidget() {
   }
 
   return (
-    <div
+    <AutoHideHeader
+      as="div"
+      edge="bottom"
+      disabled={open}
       className={cn(
         "fixed z-50",
+        // Lifts above the mobile action bar (--bottom-bar-h is 0 when none is mounted).
         open
-          ? "inset-x-4 bottom-5 sm:inset-x-auto sm:right-5"
-          : "bottom-5 right-5",
+          ? "inset-x-4 bottom-[calc(1.25rem+var(--bottom-bar-h))] sm:inset-x-auto sm:right-5"
+          : "bottom-[calc(1.25rem+var(--bottom-bar-h))] right-5",
       )}
     >
       {open ? (
@@ -128,12 +133,13 @@ export function LiveChatWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex items-center gap-2 rounded-full bg-ink-900 px-5 py-3 text-sm font-semibold text-white shadow-pop transition-colors hover:bg-ink-800"
+          aria-label="Open live chat"
+          className="pressable flex size-12 items-center justify-center gap-2 rounded-full bg-ink-900 text-sm font-semibold text-white shadow-pop transition-colors hover:bg-ink-800 sm:size-auto sm:px-5 sm:py-3"
         >
-          <MessageSquare className="h-4 w-4" />
-          Live Chat
+          <MessageSquare className="size-5 sm:size-4" />
+          <span className="hidden sm:inline">Live Chat</span>
         </button>
       )}
-    </div>
+    </AutoHideHeader>
   );
 }

@@ -27,6 +27,13 @@ export function AdminMarketplaceCategoriesPanel({
   const [deletingCat, setDeletingCat] = useState<MarketplaceCategory | null>(null)
   const [flashSlug, setFlashSlug] = useState<string | null>(null)
   const [filterText, setFilterText] = useState("")
+  // Phones fold each department's categories away; the first one starts open. From md up they are always shown.
+  const [openDepts, setOpenDepts] = useState<Record<string, boolean>>(() => {
+    const first = initialCategories
+      .filter((c) => (c.level ?? (c.parentSlug ? "CATEGORY" : "DEPARTMENT")) === "DEPARTMENT")
+      .sort((a, b) => a.order - b.order)[0]
+    return first ? { [first.slug]: true } : {}
+  })
 
   const lvl = (c: MarketplaceCategory) => c.level ?? (c.parentSlug ? "CATEGORY" : "DEPARTMENT")
   const sortOrder = (a: MarketplaceCategory, b: MarketplaceCategory) => a.order - b.order
@@ -64,6 +71,8 @@ export function AdminMarketplaceCategoriesPanel({
     })
     setFlashSlug(cat.slug)
     window.setTimeout(() => setFlashSlug(null), 2000)
+    // Show the saved row on phones: open the department it lives under.
+    setOpenDepts((current) => ({ ...current, [cat.parentSlug ?? cat.slug]: true }))
     // Purge Next's client Router Cache so the public marketplace pages
     // (force-dynamic) re-fetch fresh data on the next navigation in this session.
     router.refresh()
@@ -87,32 +96,33 @@ export function AdminMarketplaceCategoriesPanel({
   const withImages = categoryNodes.filter((c) => c.image?.url || c.iconUrl).length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Stats + controls */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+        <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
           <Stat label="Departments" value={totalDepartments} />
           <Stat label="Categories" value={totalCategories} />
           <Stat label="Category images" value={withImages} accent="brand" />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Input
             placeholder="Filter…"
+            aria-label="Filter categories"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
-            className="h-9 w-40 rounded-full text-sm"
+            className="h-11 w-full rounded-full text-sm sm:h-9 sm:w-40"
           />
           <Button
             variant="outline"
             onClick={() => openCreate("department")}
-            className="rounded-full gap-1.5 border-brand-300 text-brand-700 hover:bg-brand-50"
+            className="flex-1 rounded-full gap-1.5 border-brand-300 text-brand-700 hover:bg-brand-50 max-sm:h-10 sm:flex-none"
           >
             <FolderPlus className="size-4" /> Department
           </Button>
           <Button
             onClick={() => openCreate("category")}
-            className="rounded-full gap-1.5"
+            className="flex-1 rounded-full gap-1.5 max-sm:h-10 sm:flex-none"
           >
             <Package className="size-4" /> Category
           </Button>
@@ -120,7 +130,7 @@ export function AdminMarketplaceCategoriesPanel({
       </div>
 
       {/* Explainer */}
-      <div className="rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-3 text-xs text-brand-800">
+      <div className="hidden rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-3 text-xs text-brand-800 sm:block">
         Build the tree top-down: <strong>Departments</strong> → <strong>Categories</strong>.
         Categories are the leaf buyers browse to reach suppliers — they carry the image tile and
         quote configuration shown in the wizard. Use the <Plus className="inline size-3" /> on a
@@ -137,11 +147,14 @@ export function AdminMarketplaceCategoriesPanel({
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-5 sm:space-y-8">
           {departments
             .filter((d) => matches(d) || categoriesUnder(d.slug).some(matches))
             .map((dept) => {
               const cats = categoriesUnder(dept.slug).filter(matches)
+              // A filter in use shows every match; otherwise phones follow the toggle.
+              const open = Boolean(q) || Boolean(openDepts[dept.slug])
+              const listClass = open ? "block" : "hidden md:block"
               return (
                 <div key={dept.slug} className="space-y-2">
                   <div className={cn(flash(dept.slug))}>
@@ -151,11 +164,16 @@ export function AdminMarketplaceCategoriesPanel({
                       onEdit={openEdit}
                       onDelete={setDeletingCat}
                       onAddChild={openAddChild}
+                      childCount={cats.length}
+                      expanded={open}
+                      onToggle={() =>
+                        setOpenDepts((current) => ({ ...current, [dept.slug]: !current[dept.slug] }))
+                      }
                     />
                   </div>
 
                   {cats.length === 0 ? (
-                    <div className="ml-6 rounded-xl border border-dashed border-border/70 px-4 py-6 text-center text-xs text-ink-500">
+                    <div className="ml-3 rounded-xl border border-dashed border-border/70 px-4 py-6 text-center text-xs text-ink-600 sm:ml-6">
                       No categories under this department.{" "}
                       <button
                         type="button"
@@ -167,7 +185,7 @@ export function AdminMarketplaceCategoriesPanel({
                       .
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className={cn("space-y-2", listClass)}>
                       {cats.map((category) => (
                         <div key={category.slug} className={cn(flash(category.slug))}>
                           <CategoryRow
@@ -209,7 +227,7 @@ export function AdminMarketplaceCategoriesPanel({
 
 function Stat({ label, value, accent }: { label: string; value: number; accent?: "brand" }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-white px-4 py-2">
+    <div className="rounded-xl border border-border/60 bg-white px-3 py-2 sm:px-4">
       <p className="text-xs text-ink-500">{label}</p>
       <p className={cn("text-xl font-bold", accent === "brand" ? "text-brand-700" : "text-ink-900")}>
         {value}

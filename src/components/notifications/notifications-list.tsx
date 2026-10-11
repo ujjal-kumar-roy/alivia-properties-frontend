@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, BellOff } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -69,44 +69,60 @@ export function NotificationsList({
 
   return (
     <>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-3 sm:mb-5">
         <div>
-          <p className="text-eyebrow mb-1">Activity</p>
-          <h1 className="text-h2">Notifications</h1>
+          <p className="text-eyebrow mb-1 hidden sm:block">Activity</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl lg:text-4xl">
+            Notifications
+          </h1>
         </div>
-        <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800">
-          <Bell className="h-3 w-3" /> {unread} unread
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-800">
+          <Bell aria-hidden="true" className="h-3.5 w-3.5" /> {unread} unread
         </span>
       </div>
-      <ul className="surface-card divide-y divide-border/60 overflow-hidden">
-        {items.length === 0 && (
-          <li className="px-4 py-10 text-center text-sm text-ink-500">
-            No notifications yet.
-          </li>
-        )}
-        {items.map((n) => {
-          const inner = (
-            <div className="flex items-start gap-3 px-4 py-3 hover:bg-ink-50">
-              <span
-                className={`mt-1 inline-block h-1.5 w-1.5 flex-none rounded-full ${n.isRead ? "bg-transparent" : "bg-brand-600"}`}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-ink-900">{n.title}</p>
-                <p className="text-[12px] text-ink-700">{n.body}</p>
-                <p className="mt-0.5 text-[11px] text-ink-500">
-                  {formatRelative(n.createdAt)}
-                </p>
-              </div>
-            </div>
-          );
 
-          return (
-            <li key={n.id} className={n.isRead ? "" : "bg-brand-50/30"}>
-              {n.link ? <Link href={n.link}>{inner}</Link> : inner}
-            </li>
-          );
-        })}
-      </ul>
+      {items.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-white px-5 py-8 text-center shadow-sm">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+            <BellOff aria-hidden="true" className="size-5" />
+          </div>
+          <h2 className="mt-3 font-heading text-lg font-semibold text-ink-900">
+            You are all caught up
+          </h2>
+          <p className="mx-auto mt-1 max-w-xs text-sm leading-snug text-ink-600">
+            New updates about your enquiries, visits and listings will show up here.
+          </p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card)">
+          {items.map((n) => {
+            const inner = (
+              <div className="flex min-h-14 items-start gap-3 px-3.5 py-3 transition-colors active:bg-brand-50 sm:hover:bg-ink-50">
+                <span
+                  aria-hidden="true"
+                  className={`mt-1.5 inline-block size-2 flex-none rounded-full ${n.isRead ? "bg-transparent" : "bg-brand-600"}`}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.9375rem] font-semibold leading-snug text-ink-900">
+                    {n.title}
+                    {!n.isRead && <span className="sr-only"> (unread)</span>}
+                  </p>
+                  <p className="mt-0.5 text-[0.8125rem] leading-snug text-ink-700">{n.body}</p>
+                  <p className="mt-1 text-xs text-ink-600">
+                    {formatRelative(n.createdAt)}
+                  </p>
+                </div>
+              </div>
+            );
+
+            return (
+              <li key={n.id} className={n.isRead ? "" : "bg-brand-50/40"}>
+                {n.link ? <Link href={n.link} className="block">{inner}</Link> : inner}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </>
   );
 }

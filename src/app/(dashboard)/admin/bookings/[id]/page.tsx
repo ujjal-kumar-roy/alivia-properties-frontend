@@ -22,8 +22,9 @@ export default async function AdminBookingDetailPage({
   if (!session?.user || !booking) notFound()
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 sm:space-y-5">
       <DashboardPageHeader
+        className="max-sm:hidden"
         title="Booking detail"
         description="Review the requested appointment and update its lifecycle."
       />

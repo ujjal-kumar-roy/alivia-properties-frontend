@@ -1,29 +1,54 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
-import { type Resolver, useForm } from "react-hook-form"
+import {
+  type Control,
+  type FieldErrors,
+  type FieldPath,
+  type Resolver,
+  useForm,
+  useWatch,
+} from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import {
+  ArrowLeft,
+  ArrowRight,
+  Briefcase,
+  Landmark,
+  Laptop,
+  MoreHorizontal,
+  Plane,
+  Store,
+  type LucideIcon,
+} from "lucide-react"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { CountUp } from "@/components/common/count-up"
+import { GuideAvatar } from "@/components/common/guide-avatar"
+import { MobileActionBar } from "@/components/common/mobile-action-bar"
+import { ProgressBar } from "@/components/common/progress-bar"
 import { ROUTES } from "@/config/routes.config"
+import { celebrate, haptic, prefersReducedMotion } from "@/lib/celebrate"
+import { cn } from "@/lib/utils"
 import { formatPrice } from "@/utils/format-price"
 import { banksService } from "@/services/banks.service"
 import { preApprovalService } from "@/services/pre-approval.service"
 import { ApiError } from "@/services/http-client"
 import type { Bank } from "@/types/bank.types"
 
-const EMPLOYMENT_TYPES = [
-  { value: "salaried", label: "Salaried" },
-  { value: "business-owner", label: "Business owner" },
-  { value: "freelancer", label: "Freelancer" },
-  { value: "government-service", label: "Government service" },
-  { value: "expat", label: "Expat" },
-  { value: "other", label: "Other" },
-] as const
+const EMPLOYMENT_TYPES: { value: string; label: string; icon: LucideIcon }[] = [
+  { value: "salaried", label: "Salaried", icon: Briefcase },
+  { value: "business-owner", label: "Business owner", icon: Store },
+  { value: "freelancer", label: "Freelancer", icon: Laptop },
+  { value: "government-service", label: "Government service", icon: Landmark },
+  { value: "expat", label: "Expat", icon: Plane },
+  { value: "other", label: "Other", icon: MoreHorizontal },
+]
+
+const TENURES = [10, 15, 20, 25, 30]
 
 const schema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -65,14 +90,99 @@ type SubmissionResult = {
   dti?: number | null
 }
 
+type FieldName = FieldPath<FormInput>
+type MoneyField = "monthlyIncome" | "monthlyExpenses" | "loanAmount" | "downPayment"
+
+/**
+ * Phones answer one short group at a time (see `StepGroup`); from md every group
+ * is on screen at once, exactly like the original single form. The fields,
+ * schema and submit are the same either way.
+ */
+const STEPS: { title: string; hint: string; fields: FieldName[] }[] = [
+  { title: "About you", hint: "So we can save your request.", fields: ["fullName", "phone", "email"] },
+  { title: "Your work", hint: "How you earn today.", fields: ["employmentType", "employerName", "yearsEmployed"] },
+  { title: "Your income", hint: "Monthly figures in BDT.", fields: ["monthlyIncome", "monthlyExpenses"] },
+  { title: "Your loan", hint: "What you would like to borrow.", fields: ["loanAmount", "downPayment", "tenureYears", "creditScore"] },
+]
+const LAST_STEP = STEPS.length - 1
+
+// CountUp feeds fractional values while it runs; whole taka only.
+const fmtShort = (n: number) => formatPrice(Math.round(n), true)
+const fmtPercent = (n: number) => n.toFixed(1)
+
+const LABEL = "text-[0.8125rem] font-semibold text-ink-800"
+const ITEM = "gap-1.5"
+
+/** Same breakpoint as the stepper (below md the groups are shown one at a time). */
+function isStepped() {
+  return window.matchMedia("(max-width: 767px)").matches
+}
+
+function StepGroup({
+  index,
+  active,
+  moved,
+  children,
+}: {
+  index: number
+  active: boolean
+  /** True once the visitor has used Back or Continue: the group then slides in. */
+  moved: boolean
+  children: ReactNode
+}) {
+  const step = STEPS[index]
+  return (
+    <div
+      role="group"
+      aria-labelledby={`pre-approval-step-${index}`}
+      className={cn(
+        "space-y-3.5",
+        index > 0 && "md:border-t md:border-border/60 md:pt-4",
+        !active && "max-md:hidden",
+        active && moved && "anim-slide-up",
+      )}
+    >
+      <div>
+        <h2 id={`pre-approval-step-${index}`} className="text-base font-bold text-ink-900">
+          {step.title}
+        </h2>
+        <p className="text-[0.8125rem] text-ink-600">{step.hint}</p>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/** Live "৳90 L" under an amount, so a missed zero is obvious before submitting. */
+function MoneyHint({
+  control,
+  name,
+}: {
+  control: Control<FormInput, undefined, FormValues>
+  name: MoneyField
+}) {
+  const raw = useWatch({ control, name })
+  const n = typeof raw === "number" ? raw : typeof raw === "string" && raw !== "" ? Number(raw) : NaN
+  if (!Number.isFinite(n) || n <= 0) return null
+  return <p className="text-xs font-medium tabular-nums text-ink-600">{formatPrice(n, true)}</p>
+}
+
 export function PreApprovalForm() {
   const { data: session } = useSession()
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [result, setResult] = useState<SubmissionResult | null>(null)
   const [banks, setBanks] = useState<Bank[]>([])
+  const [step, setStep] = useState(0)
+  const [moved, setMoved] = useState(false)
+  const resultRef = useRef<HTMLDivElement>(null)
+  // When the visitor reached the last group, to ignore a double tap on Continue.
+  const reachedLastAt = useRef(0)
 
   const form = useForm<FormInput, undefined, FormValues>({
     resolver: zodResolver(schema) as Resolver<FormInput, undefined, FormValues>,
+    // Validate a field once it was touched, then keep it fresh while typing:
+    // a fixed field loses its error without waiting for the next Continue.
+    mode: "onTouched",
     defaultValues: {
       fullName: session?.user?.name ?? "",
       email: session?.user?.email ?? "",
@@ -98,10 +208,41 @@ export function PreApprovalForm() {
     void banksService.list().then(setBanks).catch(() => setBanks([]))
   }, [])
 
+  // A fresh result scrolls into view (the form above it is taller than a phone screen).
+  useEffect(() => {
+    if (!result) return
+    resultRef.current?.scrollIntoView({
+      block: "start",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    })
+  }, [result])
+
   const bestBank = useMemo(() => {
     if (banks.length === 0) return null
     return [...banks].sort((left, right) => left.interestRate - right.interestRate)[0]
   }, [banks])
+
+  async function goNext() {
+    const ok = await form.trigger(STEPS[step].fields, { shouldFocus: true })
+    if (!ok) return
+    haptic("tap")
+    const next = Math.min(step + 1, LAST_STEP)
+    if (next === LAST_STEP) reachedLastAt.current = Date.now()
+    setMoved(true)
+    setStep(next)
+  }
+
+  function goBack() {
+    setMoved(true)
+    setStep((s) => Math.max(s - 1, 0))
+  }
+
+  // Safety net: if a hidden earlier group is somehow invalid, take the visitor to it.
+  function onInvalid(errors: FieldErrors<FormInput>) {
+    if (!isStepped()) return
+    const bad = STEPS.findIndex((s) => s.fields.some((f) => errors[f as keyof FormInput]))
+    if (bad >= 0) setStep(bad)
+  }
 
   async function onSubmit(values: FormValues) {
     if (!session?.accessToken) {
@@ -129,6 +270,8 @@ export function PreApprovalForm() {
         emi: response.emi,
         dti: response.dti,
       })
+      // Confetti only for a positive outcome.
+      if (response.approved) celebrate()
     } catch (error) {
       setSubmitError(
         error instanceof ApiError
@@ -140,267 +283,427 @@ export function PreApprovalForm() {
     }
   }
 
+  const submitting = form.formState.isSubmitting
+  const progress = result ? 100 : (step / STEPS.length) * 100
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-3.5 sm:space-y-5">
       {!session?.accessToken && (
-        <div className="rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900">
-          Sign in to submit and save your pre-approval request.{" "}
-          <Link href={ROUTES.LOGIN} className="font-semibold underline underline-offset-4">
-            Go to login
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-3 py-2 text-[0.8125rem] leading-snug text-brand-900 sm:px-4 sm:py-3 sm:text-sm">
+          <p>Sign in to submit and save your pre-approval request.</p>
+          <Link href={ROUTES.LOGIN} className="glass-chip shrink-0">
+            Sign in
           </Link>
         </div>
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="surface-card space-y-4 p-5">
-          {submitError && (
-            <div aria-live="polite" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              {submitError}
+        <form
+          noValidate
+          onSubmit={(e) => {
+            if (isStepped()) {
+              // Enter on a phone moves to the next group instead of submitting half the answers.
+              if (step < LAST_STEP) {
+                e.preventDefault()
+                void goNext()
+                return
+              }
+              // A double tap on Continue would land on the final button: let the visitor see it first.
+              if (Date.now() - reachedLastAt.current < 700) {
+                e.preventDefault()
+                return
+              }
+            }
+            void form.handleSubmit(onSubmit, onInvalid)(e)
+          }}
+          className={cn("md:[&_input:not([type=checkbox])]:h-10", result && "max-md:hidden")}
+        >
+          <div className="space-y-3.5 rounded-2xl border border-black/5 bg-white p-3.5 shadow-(--shadow-card) sm:p-5">
+            {/* Phones: where you are in the flow. */}
+            <div className="md:hidden">
+              <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-ink-600">
+                <span aria-live="polite">
+                  Step {step + 1} of {STEPS.length}
+                </span>
+                <span className="tabular-nums">{Math.round(progress)}%</span>
+              </div>
+              <ProgressBar value={progress} label="Pre-approval progress" className="h-2.5" />
             </div>
-          )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="fullName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full name *</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="+8801712345678" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email *</FormLabel>
-                <FormControl>
-                  <Input type="email" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+            {submitError && (
+              <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {submitError}
+              </div>
             )}
-          />
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="monthlyIncome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Monthly income (BDT) *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1}
-                      {...field}
-                      value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="monthlyExpenses"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Monthly expenses (BDT) *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      {...field}
-                      value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <StepGroup index={0} active={step === 0} moved={moved}>
+              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel className={LABEL}>Full name *</FormLabel>
+                      <FormControl>
+                        <Input autoComplete="name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel className={LABEL}>Phone *</FormLabel>
+                      <FormControl>
+                        <Input type="tel" autoComplete="tel" {...field} placeholder="+8801712345678" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem className={ITEM}>
+                    <FormLabel className={LABEL}>Email *</FormLabel>
+                    <FormControl>
+                      <Input type="email" autoComplete="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </StepGroup>
+
+            <StepGroup index={1} active={step === 1} moved={moved}>
+              <FormField
+                control={form.control}
+                name="employmentType"
+                render={({ field }) => (
+                  <FormItem className={ITEM}>
+                    <FormLabel id="pre-approval-employment" className={LABEL}>
+                      Employment type *
+                    </FormLabel>
+                    <FormControl>
+                      <div
+                        role="radiogroup"
+                        aria-labelledby="pre-approval-employment"
+                        className="grid grid-cols-2 gap-2 md:grid-cols-3"
+                      >
+                        {EMPLOYMENT_TYPES.map(({ value, label, icon: Icon }) => {
+                          const selected = field.value === value
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              role="radio"
+                              aria-checked={selected}
+                              onClick={() => {
+                                if (!selected) haptic("tap")
+                                field.onChange(value)
+                              }}
+                              className="choice-card min-h-12 gap-2 px-2.5 py-2 text-[0.8125rem] leading-tight md:text-sm"
+                            >
+                              <Icon aria-hidden="true" className="size-4 shrink-0" />
+                              <span>{label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="employerName"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel className={LABEL}>Employer / business name</FormLabel>
+                      <FormControl>
+                        <Input autoComplete="organization" {...field} value={field.value ?? ""} placeholder="Optional" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="yearsEmployed"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel className={LABEL}>Years employed</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          {...field}
+                          value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </StepGroup>
+
+            <StepGroup index={2} active={step === 2} moved={moved}>
+              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="monthlyIncome"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel className={LABEL}>Monthly income (BDT) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          {...field}
+                          value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
+                        />
+                      </FormControl>
+                      <MoneyHint control={form.control} name="monthlyIncome" />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="monthlyExpenses"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel className={LABEL}>Monthly expenses (BDT) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          {...field}
+                          value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
+                        />
+                      </FormControl>
+                      <MoneyHint control={form.control} name="monthlyExpenses" />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </StepGroup>
+
+            <StepGroup index={3} active={step === 3} moved={moved}>
+              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="loanAmount"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel className={LABEL}>Loan amount (BDT) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          {...field}
+                          value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
+                        />
+                      </FormControl>
+                      <MoneyHint control={form.control} name="loanAmount" />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="downPayment"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel className={LABEL}>Down payment (BDT) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          {...field}
+                          value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
+                        />
+                      </FormControl>
+                      <MoneyHint control={form.control} name="downPayment" />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="tenureYears"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel id="pre-approval-tenure" className={LABEL}>
+                        Loan tenure (years) *
+                      </FormLabel>
+                      <FormControl>
+                        <div
+                          role="radiogroup"
+                          aria-labelledby="pre-approval-tenure"
+                          className="grid grid-cols-5 gap-1.5"
+                        >
+                          {TENURES.map((year) => {
+                            const selected = Number(field.value) === year
+                            return (
+                              <button
+                                key={year}
+                                type="button"
+                                role="radio"
+                                aria-checked={selected}
+                                aria-label={`${year} years`}
+                                data-selected={selected}
+                                onClick={() => {
+                                  if (!selected) haptic("tap")
+                                  field.onChange(year)
+                                }}
+                                className="glass-chip px-0 tabular-nums"
+                              >
+                                {year}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="creditScore"
+                  render={({ field }) => (
+                    <FormItem className={ITEM}>
+                      <FormLabel className={LABEL}>Credit score</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={300}
+                          max={900}
+                          {...field}
+                          value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </StepGroup>
+
+            {/* md and up: one submit under the whole form. */}
+            <div className="hidden pt-1 md:block">
+              <button type="submit" disabled={submitting} className="btn-tactile btn-tactile--block">
+                {submitting ? "Checking eligibility…" : "Check Eligibility"}
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="employmentType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Employment type *</FormLabel>
-                  <FormControl>
-                    <select {...field} className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
-                      {EMPLOYMENT_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
-                      ))}
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+          {/* Phones: Back and Continue (or the final check) stay at thumb reach. */}
+          {!result && (
+            <MobileActionBar label="Pre-approval steps">
+              {step > 0 && (
+                <button
+                  type="button"
+                  onClick={goBack}
+                  aria-label="Back"
+                  className="btn-glass size-11 shrink-0 p-0"
+                >
+                  <ArrowLeft aria-hidden="true" className="size-5" />
+                </button>
               )}
-            />
-            <FormField
-              control={form.control}
-              name="employerName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Employer / business name</FormLabel>
-                  <FormControl>
-                    <Input {...field} value={field.value ?? ""} placeholder="Optional" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              {/* Distinct keys: React must not morph Continue into the submit button
+                  mid click (the click would then submit the form). */}
+              {step < LAST_STEP ? (
+                <button
+                  key="continue"
+                  type="button"
+                  onClick={() => void goNext()}
+                  className="btn-tactile btn-tactile--block flex-1"
+                >
+                  Continue
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </button>
+              ) : (
+                <button
+                  key="submit"
+                  type="submit"
+                  disabled={submitting}
+                  className="btn-tactile btn-tactile--block flex-1"
+                >
+                  {submitting ? "Checking eligibility…" : "Check Eligibility"}
+                </button>
               )}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <FormField
-              control={form.control}
-              name="yearsEmployed"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Years employed</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      {...field}
-                      value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="loanAmount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Loan amount (BDT) *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1}
-                      {...field}
-                      value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="downPayment"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Down payment (BDT) *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      {...field}
-                      value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="tenureYears"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Loan tenure (years) *</FormLabel>
-                  <FormControl>
-                    <select
-                      {...field}
-                      value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
-                      className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                    >
-                      {[10, 15, 20, 25, 30].map((year) => (
-                        <option key={year} value={year}>{year} years</option>
-                      ))}
-                    </select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="creditScore"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Credit score</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={300}
-                      max={900}
-                      {...field}
-                      value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <Button type="submit" disabled={form.formState.isSubmitting} className="w-full rounded-full">
-            {form.formState.isSubmitting ? "Checking eligibility…" : "Check Eligibility"}
-          </Button>
+            </MobileActionBar>
+          )}
         </form>
       </Form>
 
       {result && (
-        <div className={`rounded-2xl border p-5 ${result.approved ? "border-brand-200 bg-brand-50" : "border-red-200 bg-red-50"}`}>
-          <p className={`text-sm font-bold ${result.approved ? "text-brand-800" : "text-red-700"}`}>
-            {result.approved ? "Pre-approved" : "Not eligible yet"}
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl bg-white p-4 shadow-sm">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-ink-500">Approved amount</p>
-              <p className="mt-1 text-base font-bold text-brand-700">
-                {formatPrice(result.approvedAmount ?? 0, true)}
+        <div
+          ref={resultRef}
+          role="status"
+          className={cn(
+            "anim-slide-up scroll-mt-20 rounded-2xl border p-3.5 sm:p-5",
+            result.approved ? "border-brand-200 bg-brand-50" : "border-red-200 bg-red-50",
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <GuideAvatar mood={result.approved ? "cheer" : "think"} size={44} className="mt-0.5" />
+            <div className="speech-bubble min-w-0 flex-1">
+              <p className={cn("text-base font-extrabold", result.approved ? "text-brand-800" : "text-red-700")}>
+                {result.approved ? "Pre-approved" : "Not eligible yet"}
               </p>
-            </div>
-            <div className="rounded-xl bg-white p-4 shadow-sm">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-ink-500">Estimated EMI</p>
-              <p className="mt-1 text-base font-bold text-ink-900">
-                {formatPrice(result.emi ?? 0, true)}
+              <p className="mt-0.5 text-sm font-medium text-ink-600">
+                {result.approved
+                  ? "Here is your indicative offer."
+                  : "Adjusting the loan amount or down payment may help."}
               </p>
             </div>
           </div>
-          <div className="mt-4 rounded-xl bg-white/80 px-4 py-3 text-sm text-ink-700">
-            <p>DTI ratio: <span className="font-semibold">{((result.dti ?? 0) * 100).toFixed(1)}%</span></p>
+
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            <div className="rounded-xl bg-white p-3 shadow-sm">
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-500">Approved amount</p>
+              <p className="mt-1 text-lg font-extrabold tabular-nums text-brand-700">
+                <CountUp value={result.approvedAmount ?? 0} format={fmtShort} />
+              </p>
+            </div>
+            <div className="rounded-xl bg-white p-3 shadow-sm">
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-500">Estimated EMI</p>
+              <p className="mt-1 text-lg font-extrabold tabular-nums text-ink-900">
+                <CountUp value={result.emi ?? 0} format={fmtShort} />
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-2.5 rounded-xl bg-white/80 px-3 py-2.5 text-sm text-ink-700">
+            <p>
+              DTI ratio:{" "}
+              <span className="font-semibold tabular-nums">
+                <CountUp value={(result.dti ?? 0) * 100} format={fmtPercent} />%
+              </span>
+            </p>
             {bestBank && (
               <p className="mt-1">
                 Best published rate right now: <span className="font-semibold">{bestBank.name}</span> at{" "}
@@ -408,6 +711,18 @@ export function PreApprovalForm() {
               </p>
             )}
           </div>
+
+          {/* Phones swap the form for this card: a way back to the loan step. */}
+          <button
+            type="button"
+            onClick={() => {
+              setResult(null)
+              setStep(LAST_STEP)
+            }}
+            className="btn-glass mt-3 w-full md:hidden"
+          >
+            Adjust my details
+          </button>
         </div>
       )}
     </div>

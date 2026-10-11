@@ -9,14 +9,21 @@ export type FloorLevel = {
   sizeSqft?: number
 }
 
-export function FloorPlan({ levels }: { levels: FloorLevel[] }) {
+export function FloorPlan({
+  levels,
+  embedded = false,
+}: {
+  levels: FloorLevel[]
+  /** Inside an accordion: a flat bordered block instead of a glass card. */
+  embedded?: boolean
+}) {
   const [active, setActive] = useState(0)
   if (!levels.length) return null
 
   const current = levels[active]
 
   return (
-    <div className="surface-card overflow-hidden">
+    <div className={embedded ? "overflow-hidden rounded-2xl border border-border/60" : "surface-card overflow-hidden"}>
       <div className="flex items-center justify-between border-b border-border/60 p-3">
         <div className="flex gap-1.5">
           {levels.map((lvl, i) => (

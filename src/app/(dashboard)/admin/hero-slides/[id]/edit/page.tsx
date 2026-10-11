@@ -22,18 +22,16 @@ export default async function AdminEditHeroSlidePage({ params }: AdminEditHeroSl
   if (!slide) notFound()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       <DashboardPageHeader
         eyebrow="Content"
         title="Edit slide"
         description={`Update "${slide.title}".`}
         actions={(
-          <Link href={ROUTES.ADMIN_HERO_SLIDES}>
-            <Button variant="outline" className="rounded-full">
-              <ChevronLeft className="h-4 w-4" />
-              Back to Hero Carousel
-            </Button>
-          </Link>
+          <Button variant="outline" className="rounded-full" render={<Link href={ROUTES.ADMIN_HERO_SLIDES} />}>
+            <ChevronLeft className="h-4 w-4" />
+            Back to Hero Carousel
+          </Button>
         )}
       />
       <HeroSlideForm mode="edit" initialSlide={slide} />

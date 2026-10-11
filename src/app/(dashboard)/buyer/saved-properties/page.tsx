@@ -31,22 +31,31 @@ export default async function BuyerSavedPropertiesPage({
         title="Saved Properties"
         description="Properties you've saved for easy access."
         actions={(
-          <Link href={ROUTES.PROPERTIES}>
-            <Button variant="outline" className="rounded-full">Browse Listings</Button>
-          </Link>
+          <Button
+            variant="outline"
+            className="rounded-full max-sm:h-9"
+            render={<Link href={ROUTES.PROPERTIES} />}
+          >
+            Browse Listings
+          </Button>
         )}
       />
 
       {saved.data.length === 0 ? (
-        <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center">
+        <div className="mt-3 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center sm:mt-6 sm:py-16">
           <p className="text-sm font-medium text-ink-700">No saved properties yet</p>
-          <p className="mt-1 text-xs text-ink-400">Heart a listing to keep it in your shortlist.</p>
-          <Link href={ROUTES.PROPERTIES} className="mt-4">
-            <Button variant="outline" size="sm" className="rounded-full">Browse Listings</Button>
-          </Link>
+          <p className="mt-1 text-xs text-ink-500">Heart a listing to keep it in your shortlist.</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4 rounded-full max-sm:h-9"
+            render={<Link href={ROUTES.PROPERTIES} />}
+          >
+            Browse Listings
+          </Button>
         </div>
       ) : (
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-3 grid gap-2.5 sm:mt-6 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
           {saved.data.map((property) => <PropertyCard key={property.id} property={property} />)}
         </div>
       )}

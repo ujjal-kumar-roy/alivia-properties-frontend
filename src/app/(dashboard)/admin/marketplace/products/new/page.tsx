@@ -23,7 +23,7 @@ export default async function AdminNewProductPage({
   ])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       <DashboardPageHeader title="Add product" description="Create a catalogue item under a supplier." />
       <AdminProductEditorHost
         token={token}

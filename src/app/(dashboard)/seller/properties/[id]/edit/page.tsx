@@ -35,17 +35,15 @@ export default async function SellerEditPropertyPage({ params }: SellerEditPrope
   if (property.data.sellerId !== seller.id) notFound()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       <DashboardPageHeader
         title="Edit Property"
         description="Edit your listing details and availability."
         actions={(
-          <Link href={ROUTES.SELLER_PROPERTIES}>
-            <Button variant="outline" className="rounded-full">
-              <ChevronLeft className="h-4 w-4" />
-              Back to Listings
-            </Button>
-          </Link>
+          <Button variant="outline" className="rounded-full" render={<Link href={ROUTES.SELLER_PROPERTIES} />}>
+            <ChevronLeft className="h-4 w-4" />
+            Back to Listings
+          </Button>
         )}
       />
 

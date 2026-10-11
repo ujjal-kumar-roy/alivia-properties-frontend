@@ -1,8 +1,9 @@
 "use client"
 
-import { useFieldArray, type Control } from "react-hook-form"
+import { useFieldArray, useFormState, type Control } from "react-hook-form"
 import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { FormSection } from "@/components/dashboard/form-section"
 import { Checkbox } from "@/components/ui/checkbox"
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -10,11 +11,22 @@ import type { ProductFormInput } from "@/schemas/marketplace-product.schema"
 
 export function PublishingSection({ control }: { control: Control<ProductFormInput> }) {
   const certifications = useFieldArray({ control, name: "certifications" as never })
+  const { errors } = useFormState({ control })
+  const invalid = (
+    ["sku", "warranty", "origin", "packaging", "order", "certifications", "isActive", "isFeatured"] as const
+  ).some((name) => Boolean(errors[name]))
 
   return (
-    <fieldset id="section-publishing" className="surface-card scroll-mt-24 space-y-4 p-5 lg:p-6">
-      <legend className="font-heading text-lg font-semibold text-ink-900">Commerce & publishing</legend>
-      <div className="grid gap-4 md:grid-cols-2">
+    <FormSection
+      id="section-publishing"
+      title="Commerce and publishing"
+      hint="SKU, warranty, visibility"
+      defaultOpen={false}
+      invalid={invalid}
+      className="space-y-4"
+    >
+      <h2 className="hidden font-heading text-lg font-semibold text-ink-900 md:block">Commerce & publishing</h2>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField control={control} name="sku" render={({ field }) => (
           <FormItem><FormLabel>SKU</FormLabel><FormControl><Input placeholder="SKU…" {...field} /></FormControl></FormItem>
         )} />
@@ -51,18 +63,22 @@ export function PublishingSection({ control }: { control: Control<ProductFormInp
 
       <div className="flex flex-wrap gap-5 border-t border-border/60 pt-4">
         <FormField control={control} name="isActive" render={({ field }) => (
-          <FormItem className="flex items-center gap-2">
-            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-            <span className="text-sm text-ink-700">Published (visible to buyers)</span>
+          <FormItem>
+            <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm text-ink-700">
+              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+              Published (visible to buyers)
+            </label>
           </FormItem>
         )} />
         <FormField control={control} name="isFeatured" render={({ field }) => (
-          <FormItem className="flex items-center gap-2">
-            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-            <span className="text-sm text-ink-700">Featured</span>
+          <FormItem>
+            <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm text-ink-700">
+              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+              Featured
+            </label>
           </FormItem>
         )} />
       </div>
-    </fieldset>
+    </FormSection>
   )
 }

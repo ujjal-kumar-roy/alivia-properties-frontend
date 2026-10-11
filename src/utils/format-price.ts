@@ -30,7 +30,7 @@ export function formatPrice(amount: number, short = false): string {
 }
 
 export function formatPriceRange(min: number, max: number): string {
-  return `${formatPrice(min, true)} – ${formatPrice(max, true)}`
+  return `${formatPrice(min, true)} - ${formatPrice(max, true)}`
 }
 
 export function formatRent(amount: number): string {

@@ -43,10 +43,10 @@ export function CookieConsentBanner() {
     <div
       role="region"
       aria-label="Cookie consent"
-      className="animate-in fade-in slide-in-from-bottom-4 motion-reduce:animate-none fixed inset-x-0 bottom-0 z-50 px-4 pb-4 duration-300 ease-out sm:px-6"
+      className="animate-in fade-in slide-in-from-bottom-4 motion-reduce:animate-none fixed inset-x-0 bottom-[var(--bottom-bar-h)] z-50 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] duration-300 ease-out sm:px-6 sm:pb-4"
     >
-      <div className="liquid-glass-control mx-auto flex w-full max-w-2xl flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
-        <p className="text-sm leading-relaxed text-ink-700">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-2 rounded-2xl border border-white/70 bg-white/94 p-3 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.95),0_14px_38px_rgba(12,48,39,0.2)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:p-4">
+        <p className="text-[0.8rem] leading-snug text-ink-700 sm:text-sm sm:leading-relaxed">
           We use cookies to remember your preferences and improve your
           experience on this site.
         </p>

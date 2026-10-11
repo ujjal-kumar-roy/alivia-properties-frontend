@@ -3,9 +3,11 @@ import { siteConfig } from "@/config/site.config"
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-ink-50 p-4">
+    // Phones: the card sits near the top so the keyboard never hides the form;
+    // from sm it is centred like before.
+    <div className="bg-brand-aurora flex min-h-dvh flex-col items-center justify-start px-4 pb-6 pt-4 sm:justify-center sm:p-4">
       {/* Logo */}
-      <Link href="/" className="mb-8 flex min-h-11 items-center gap-2 rounded-full px-2">
+      <Link href="/" className="mb-3 flex min-h-11 items-center gap-2 rounded-full px-2 sm:mb-8">
         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-600">
           <span className="text-sm font-bold text-white">AP</span>
         </div>
@@ -16,11 +18,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </Link>
 
       {/* Card */}
-      <div className="mobile-liquid-glass w-full max-w-md rounded-2xl border border-border bg-white p-5 shadow-card sm:p-8">
+      <div className="liquid-glass w-full max-w-md rounded-2xl border p-4 sm:p-8">
         {children}
       </div>
 
-      <p className="mt-6 text-center text-xs text-muted-foreground">
+      <p className="mt-4 text-center text-xs text-ink-600 sm:mt-6">
         © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
       </p>
     </div>

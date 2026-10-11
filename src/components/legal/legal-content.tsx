@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils"
  * documents read with one consistent rhythm. Deliberately not data-driven —
  * each page writes its own sections as plain JSX (legal copy gets edited by
  * hand later; a generic content array would make that harder, not easier).
+ *
+ * Body copy is 16px on every screen. Links inside list items get a taller hit
+ * area (padding cancelled by a negative margin, so the lines do not move).
  */
 
 export function LegalSection({
@@ -21,10 +24,12 @@ export function LegalSection({
   return (
     <section
       id={id}
-      className="scroll-mt-28 border-t border-border pt-10 first:mt-0 first:border-t-0 first:pt-0 md:scroll-mt-32"
+      className="scroll-mt-28 border-t border-border pt-6 first:mt-0 first:border-t-0 first:pt-0 sm:pt-10 md:scroll-mt-32 [&:not(:first-child)]:mt-6 sm:[&:not(:first-child)]:mt-10"
     >
-      <h2 className="text-h3 mb-4">{title}</h2>
-      <div className="space-y-4">{children}</div>
+      <h2 className="mb-3 font-heading text-xl font-bold leading-snug tracking-tight text-ink-900 sm:mb-4 sm:text-2xl md:text-3xl">
+        {title}
+      </h2>
+      <div className="space-y-3.5 sm:space-y-4">{children}</div>
     </section>
   )
 }
@@ -34,12 +39,12 @@ export function LegalSubHeading({ children }: { children: ReactNode }) {
 }
 
 export function LegalP({ children }: { children: ReactNode }) {
-  return <p className="text-[0.95rem] leading-relaxed text-ink-700">{children}</p>
+  return <p className="text-base leading-relaxed text-ink-700">{children}</p>
 }
 
 export function LegalUl({ children }: { children: ReactNode }) {
   return (
-    <ul className="list-disc space-y-2 pl-5 text-[0.95rem] leading-relaxed text-ink-700 marker:text-brand-400">
+    <ul className="list-disc space-y-2 pl-5 text-base leading-relaxed text-ink-700 marker:text-brand-400 [&_a]:-my-1.5 [&_a]:inline-block [&_a]:py-1.5">
       {children}
     </ul>
   )
@@ -61,13 +66,13 @@ export function LegalCallout({
 }) {
   const { wrap, icon, Icon } = CALLOUT_STYLES[variant]
   return (
-    <div className={cn("flex gap-3 rounded-xl border p-4", wrap)}>
+    <div className={cn("flex gap-3 rounded-xl border p-3.5 sm:p-4", wrap)}>
       <div className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", icon)}>
         <Icon className="size-4" aria-hidden="true" />
       </div>
-      <div className="space-y-1">
-        <p className="text-sm font-bold text-ink-900">{title}</p>
-        <div className="space-y-2 text-sm leading-relaxed text-ink-700">{children}</div>
+      <div className="min-w-0 space-y-1">
+        <p className="text-[0.9375rem] font-bold text-ink-900">{title}</p>
+        <div className="space-y-2 text-[0.9375rem] leading-relaxed text-ink-700">{children}</div>
       </div>
     </div>
   )

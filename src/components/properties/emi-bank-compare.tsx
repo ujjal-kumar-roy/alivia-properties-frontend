@@ -17,7 +17,14 @@ function formatBdt(amount: number): string {
   return `৳${Math.round(amount).toLocaleString("en-BD")}`
 }
 
-export function EmiBankCompare({ propertyPrice }: { propertyPrice: number }) {
+export function EmiBankCompare({
+  propertyPrice,
+  embedded = false,
+}: {
+  propertyPrice: number
+  /** Inside an accordion: no card or heading of its own (the section supplies them). */
+  embedded?: boolean
+}) {
   const [banks, setBanks] = useState<Bank[]>([])
 
   useEffect(() => {
@@ -42,16 +49,18 @@ export function EmiBankCompare({ propertyPrice }: { propertyPrice: number }) {
   }, [banks, propertyPrice])
 
   return (
-    <div className="surface-card p-5">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
-          <Landmark className="h-4 w-4" />
+    <div className={embedded ? undefined : "surface-card p-5"}>
+      {!embedded && (
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+            <Landmark className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-h3">Bank EMI Comparison</h3>
+            <p className="text-xs text-ink-500">Live partner-bank rates from the backend</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-h3">Bank EMI Comparison</h3>
-          <p className="text-xs text-ink-500">Live partner-bank rates from the backend</p>
-        </div>
-      </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

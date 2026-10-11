@@ -14,25 +14,23 @@ import {
 
 import { MarketplaceBreadcrumb, type Crumb } from "@/components/marketplace/MarketplaceBreadcrumb";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { MobileActionBar } from "@/components/common/mobile-action-bar";
+import { Disclosure } from "@/components/marketplace/Disclosure";
+import { MarketplaceProductCard } from "@/components/marketplace/MarketplaceProductCard";
+import { MediaImage } from "@/components/marketplace/MediaImage";
+import { telHref, whatsappHref } from "@/components/marketplace/product-meta";
 import {
   buildSupplierMedia,
   formatCompactBd,
 } from "@/components/marketplace/supplier-media-utils";
 import { SupplierMediaShowcase } from "@/components/marketplace/SupplierMediaShowcase";
-import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes.config";
 import { ApiError } from "@/services/http-client";
 import { marketplaceService } from "@/services/marketplace.service";
-import type {
-  MarketplaceProduct,
-  ProductVariant,
-} from "@/types/marketplace.types";
-import { formatPrice } from "@/utils/format-price";
 import { isServiceKind } from "@/utils/marketplace-kind";
 
 export const dynamic = "force-dynamic";
@@ -41,39 +39,6 @@ type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-function variantMeta(variant: ProductVariant) {
-  return (variant.specs ?? [])
-    .map((spec) => `${spec.value}${spec.unit ? ` ${spec.unit}` : ""}`)
-    .filter(Boolean)
-    .join(" / ");
-}
-
-function productStartingPrice(product: MarketplaceProduct) {
-  const prices = [
-    product.price,
-    ...(product.variants ?? []).map((variant) => variant.price ?? 0),
-  ].filter((value) => typeof value === "number" && value > 0) as number[];
-
-  return prices.length > 0 ? Math.min(...prices) : null;
-}
-
-function productVariantLabels(product: MarketplaceProduct) {
-  return (product.variants ?? [])
-    .filter((variant) => variant.isActive !== false)
-    .slice(0, 4);
-}
-
-function productSpecHighlights(product: MarketplaceProduct) {
-  return Array.from(
-    new Set(
-      (product.variants ?? [])
-        .filter((variant) => variant.isActive !== false)
-        .map(variantMeta)
-        .filter(Boolean),
-    ),
-  ).slice(0, 2);
-}
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -81,11 +46,11 @@ export async function generateMetadata({
   try {
     const supplier = await marketplaceService.supplierBySlug(slug);
     return {
-      title: `${supplier.name} — Alivia Marketplace`,
+      title: `${supplier.name} - Alivia Marketplace`,
       description: supplier.tagline ?? "Verified supplier profile",
     };
   } catch {
-    return { title: "Supplier — Alivia Marketplace" };
+    return { title: "Supplier - Alivia Marketplace" };
   }
 }
 
@@ -110,555 +75,374 @@ export default async function SupplierProfilePage({ params }: PageProps) {
     0,
   );
   const serviceMode = isServiceKind(supplier.kind);
+  const call = telHref(supplier.phone);
+  const whatsapp = whatsappHref(supplier.whatsApp);
   const soldCountLabel =
     typeof supplier.itemsSold === "number" && supplier.itemsSold > 0
       ? formatCompactBd(supplier.itemsSold)
       : "New";
+  const hasBrands = (supplier.brands?.length ?? 0) > 0;
+  const hasCerts = (supplier.certifications?.length ?? 0) > 0;
+
+  const heroStats: { label: string; value: string }[] = [
+    { label: serviceMode ? "Jobs done" : "Items sold", value: soldCountLabel },
+  ];
+  if (supplier.responseTimeHours) {
+    heroStats.push({ label: "Reply time", value: `${supplier.responseTimeHours}h` });
+  }
+  if (supplier.deliveryDays) {
+    heroStats.push({
+      label: serviceMode ? "Visit lead" : "Delivery",
+      value: `${supplier.deliveryDays}d`,
+    });
+  }
+  if (supplier.serviceAreas?.length) {
+    heroStats.push({ label: "Coverage", value: `${supplier.serviceAreas.length} areas` });
+  }
 
   const breadcrumbTrail: Crumb[] = [{ label: supplier.name }];
 
   return (
-    <main className="bg-white">
+    <main id="main-content" className="bg-white">
+      <MarketplaceBreadcrumb trail={breadcrumbTrail} />
 
       <section className="relative overflow-hidden border-b border-border/60 bg-ink-950 text-white">
         {supplier.coverImage && (
           <div className="absolute inset-0">
-            <Image
+            <MediaImage
               src={supplier.coverImage}
               alt=""
               fill
               unoptimized
               sizes="100vw"
-              priority
               className="object-cover opacity-20"
+              fallback={null}
             />
           </div>
         )}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(246,190,63,0.18),transparent_30%),linear-gradient(135deg,rgba(6,41,31,0.97),rgba(4,22,17,0.92))]" />
 
-        <div className="container-page relative py-10 sm:py-14 lg:py-16">
-          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-50 backdrop-blur-sm">
+        <div className="container-page relative py-3 sm:py-10 lg:py-14">
+          <div className="grid gap-3 sm:gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start lg:gap-10">
+            {/* Phones show the gallery first; wide screens keep the text on the left. */}
+            <SupplierMediaShowcase
+              supplier={supplier}
+              className="order-1 lg:order-2 lg:mt-2"
+            />
+
+            <div className="order-2 min-w-0 lg:order-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="hidden rounded-full bg-white/10 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-brand-50 backdrop-blur-sm sm:inline-block">
                   {serviceMode ? "Bangladesh Service Provider" : "Bangladesh Supplier"}
                 </span>
                 {supplier.isVerified && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/25 px-3 py-1 text-[11px] font-semibold text-brand-50 backdrop-blur-sm">
-                    <CheckCircle2 aria-hidden="true" className="size-3.5" />{" "}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/25 px-2.5 py-1 text-xs font-semibold text-brand-50 backdrop-blur-sm">
+                    <CheckCircle2 aria-hidden="true" className="size-3.5" />
                     Verified
                   </span>
                 )}
                 {supplier.isFeatured && (
-                  <span className="rounded-full bg-gold-400/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-gold-200 backdrop-blur-sm">
-                    Featured Pick
+                  <span className="rounded-full bg-gold-400/20 px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-gold-200 backdrop-blur-sm">
+                    Featured
                   </span>
                 )}
               </div>
 
-              <h1 className="mt-4 max-w-3xl text-balance font-heading text-4xl font-semibold sm:text-5xl">
+              <h1 className="mt-2 max-w-3xl text-balance font-heading text-2xl font-semibold leading-tight sm:mt-4 sm:text-5xl">
                 {supplier.name}
               </h1>
               {supplier.tagline && (
-                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-brand-50/86 sm:text-base">
+                <p className="mt-1.5 line-clamp-2 max-w-2xl text-[0.8125rem] leading-snug text-brand-50/86 sm:mt-3 sm:line-clamp-none sm:text-base sm:leading-relaxed">
                   {supplier.tagline}
                 </p>
               )}
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                <div className="rounded-[1.75rem] border border-red-300/25 bg-red-500/10 px-5 py-4 backdrop-blur-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-red-200">
-                    Bangladesh Market Price
+              <div className="mt-3 flex items-stretch gap-2 sm:mt-6 sm:gap-4">
+                <div className="min-w-0 flex-1 rounded-xl border border-gold-300/25 bg-gold-400/10 px-3 py-2 backdrop-blur-sm sm:rounded-[1.75rem] sm:px-5 sm:py-4">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-gold-200">
+                    {serviceMode ? "Service rate" : "Market price"}
                   </p>
-                  <p className="mt-2 text-2xl font-bold text-red-100">
-                    {supplier.priceRange ?? "Price on request"}
+                  <p className="mt-0.5 truncate text-lg font-extrabold tabular-nums text-gold-100 sm:mt-2 sm:text-2xl">
+                    {supplier.priceRange ?? "Quote on request"}
                   </p>
                 </div>
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm backdrop-blur-sm">
-                  <Star
-                    aria-hidden="true"
-                    className="size-4 fill-gold-400 text-gold-400"
-                  />
-                  <span className="font-semibold">
-                    {supplier.rating.toFixed(1)}
-                  </span>
-                  <span className="text-brand-100/80">
-                    ({supplier.reviewCount} reviews)
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <HeroStat
-                  label={serviceMode ? "Jobs Done" : "Items Sold"}
-                  value={soldCountLabel}
-                  note={serviceMode ? "recent booking signal" : "recent buying signal"}
-                />
-                <HeroStat
-                  label="Reply Time"
-                  value={
-                    supplier.responseTimeHours
-                      ? `${supplier.responseTimeHours}h`
-                      : "Fast"
-                  }
-                  note="typical desk response"
-                />
-                <HeroStat
-                  label={serviceMode ? "Visit Lead" : "Delivery"}
-                  value={
-                    supplier.deliveryDays
-                      ? `${supplier.deliveryDays}d`
-                      : "Quick"
-                  }
-                  note={serviceMode ? "usual booking window" : "usual lead window"}
-                />
-                <HeroStat
-                  label="Coverage"
-                  value={
-                    supplier.serviceAreas?.length
-                      ? `${supplier.serviceAreas.length} areas`
-                      : supplier.location
-                  }
-                  note="Bangladesh service footprint"
-                />
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-2">
-                <Link href={quoteHref}>
-                  <Button
-                    size="lg"
-                    className="gap-2 bg-gold-400 text-ink-900 hover:bg-gold-300"
-                  >
-                    <FileText aria-hidden="true" className="size-4" />
-                    {serviceMode ? "Request Service Quote" : "Request a Quote"}
-                  </Button>
-                </Link>
-                <a href={`tel:${supplier.phone}`}>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="gap-2 border-white/20 bg-white/10 text-white hover:bg-white/18"
-                  >
-                    <Phone aria-hidden="true" className="size-4" />
-                    Call Now
-                  </Button>
-                </a>
-                {supplier.whatsApp && (
-                  <a
-                    href={`https://wa.me/${supplier.whatsApp.replace(/\D/g, "")}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="gap-2 border-emerald-300/35 bg-emerald-500/10 text-emerald-50 hover:bg-emerald-500/18"
-                    >
-                      <MessageCircle aria-hidden="true" className="size-4" />
-                      WhatsApp
-                    </Button>
-                  </a>
+                {supplier.rating > 0 && (
+                  <div className="flex shrink-0 flex-col items-center justify-center rounded-xl bg-white/10 px-3 py-2 backdrop-blur-sm sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-4">
+                    <span className="inline-flex items-center gap-1">
+                      <Star
+                        aria-hidden="true"
+                        className="size-4 fill-gold-400 text-gold-400"
+                      />
+                      <span className="font-semibold tabular-nums">
+                        {supplier.rating.toFixed(1)}
+                      </span>
+                    </span>
+                    <span className="text-xs text-brand-100/80 sm:text-sm">
+                      {supplier.reviewCount} reviews
+                    </span>
+                  </div>
                 )}
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm text-brand-50/80">
-                <span className="inline-flex items-center gap-1.5">
-                  <TrendingUp
-                    aria-hidden="true"
-                    className="size-4 text-gold-300"
-                  />
-                  {supplier.yearsInBusiness} years in business
-                </span>
+              <dl className="mt-2 grid grid-cols-4 gap-1.5 sm:mt-6 sm:gap-3 xl:grid-cols-4">
+                {heroStats.map((stat) => (
+                  <HeroStat key={stat.label} label={stat.label} value={stat.value} />
+                ))}
+              </dl>
+
+              {/* Wide screens: actions here. Phones use the bottom bar. */}
+              <div className="mt-6 hidden flex-wrap gap-2 md:flex">
+                <Link href={quoteHref} className="btn-tactile btn-tactile--gold">
+                  <FileText aria-hidden="true" className="size-4" />
+                  {serviceMode ? "Request service quote" : "Request a quote"}
+                </Link>
+                {call ? (
+                  <a href={call} className="btn-glass">
+                    <Phone aria-hidden="true" className="size-4" />
+                    Call now
+                  </a>
+                ) : null}
+                {whatsapp ? (
+                  <a href={whatsapp} target="_blank" rel="noreferrer" className="btn-glass">
+                    <MessageCircle aria-hidden="true" className="size-4" />
+                    WhatsApp
+                  </a>
+                ) : null}
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem] text-brand-50/80 sm:mt-6 sm:text-sm">
+                {supplier.yearsInBusiness > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <TrendingUp aria-hidden="true" className="size-4 text-gold-300" />
+                    {supplier.yearsInBusiness} years in business
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-1.5">
                   <MapPin aria-hidden="true" className="size-4 text-gold-300" />
                   {supplier.location}
                 </span>
                 {mediaCount > 0 && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <ShoppingBag
-                      aria-hidden="true"
-                      className="size-4 text-gold-300"
-                    />
+                  <span className="hidden items-center gap-1.5 sm:inline-flex">
+                    <ShoppingBag aria-hidden="true" className="size-4 text-gold-300" />
                     {mediaCount} media assets
                   </span>
                 )}
               </div>
             </div>
-
-            <SupplierMediaShowcase supplier={supplier} className="lg:mt-2" />
           </div>
         </div>
       </section>
 
-      <MarketplaceBreadcrumb trail={breadcrumbTrail} />
-
-      <section className="container-page py-10 sm:py-14">
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="container-page pb-6 pt-4 sm:py-10 lg:py-12">
+        <ul className="mb-5 grid grid-cols-2 gap-2.5 sm:mb-8 sm:grid-cols-4 sm:gap-4">
           <InfoCard
-            label={serviceMode ? "Available Packages" : "Ready Products"}
+            label={serviceMode ? "Available packages" : "Ready products"}
             value={String(readyProducts)}
             note={serviceMode ? "service lines buyers can request now" : "in-stock lines buyers can request now"}
           />
           <InfoCard
-            label={serviceMode ? "Schedule Needed" : "On Order"}
+            label={serviceMode ? "Schedule needed" : "On order"}
             value={String(onOrderProducts)}
             note={serviceMode ? "packages that need booking or confirmation" : "special-order or limited-stock lines"}
           />
           <InfoCard
-            label={serviceMode ? "Package Options" : "Size Options"}
+            label={serviceMode ? "Package options" : "Size options"}
             value={String(variantCount)}
             note={serviceMode ? "packages, visit types, and service specs" : "variants, dimensions, finishes, and specs"}
           />
           <InfoCard
-            label="Showroom Media"
+            label="Showroom media"
             value={String(mediaCount)}
             note="photos and video used to build buyer trust"
           />
-        </div>
+        </ul>
 
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div>
-            <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-8">
+          <div className="min-w-0">
+            <header className="mb-3 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
               <div>
-                <p className="text-eyebrow mb-1">{serviceMode ? "Service packages" : "Products & services"}</p>
-                <h2 className="text-balance font-heading text-2xl font-semibold text-ink-900 sm:text-3xl">
+                <p className="text-eyebrow mb-1 hidden sm:block">
+                  {serviceMode ? "Service packages" : "Products & services"}
+                </p>
+                <h2 className="text-balance font-heading text-lg font-semibold text-ink-900 sm:text-3xl">
                   {products.length > 0
-                    ? `${products.length} offerings ready to compare`
+                    ? `${products.length} ${products.length === 1 ? "offering" : "offerings"} ready to compare`
                     : "Catalogue coming soon"}
                 </h2>
                 {products.length > 0 && (
-                  <p className="mt-1 max-w-2xl text-sm text-ink-600">
+                  <p className="mt-1 hidden max-w-2xl text-sm text-ink-600 sm:block">
                     {serviceMode
                       ? "Compare package price, booking lead, option details, and coverage before you request pricing."
                       : "Compare price, size options, stock, MOQ, and delivery time before you request pricing."}
                   </p>
                 )}
               </div>
-              <Link href={quoteHref}>
-                <Button size="sm" className="gap-1.5">
-                  <FileText aria-hidden="true" className="size-3.5" /> {serviceMode ? "Request service quote" : "Request a quote"}
-                </Button>
+              <Link href={quoteHref} className="btn-tactile btn-tactile--sm hidden md:inline-flex">
+                <FileText aria-hidden="true" className="size-3.5" />
+                {serviceMode ? "Request service quote" : "Request a quote"}
               </Link>
             </header>
 
             {products.length > 0 ? (
-              <ul className="grid gap-6 xl:grid-cols-2">
-                {products.map((product) => {
-                  const startingPrice = productStartingPrice(product);
-                  const variants = productVariantLabels(product);
-                  const specs = productSpecHighlights(product);
-
-                  return (
-                    <li
-                      key={product.id}
-                      className="overflow-hidden rounded-[2rem] border border-border/70 bg-white shadow-(--shadow-card)"
-                    >
-                      <div className="relative aspect-16/10 overflow-hidden bg-ink-50">
-                        {product.image ? (
-                          <Image
-                            src={product.image}
-                            alt={product.name}
-                            fill
-                            unoptimized
-                            sizes="(min-width: 1280px) 32vw, (min-width: 768px) 50vw, 100vw"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="flex size-full items-center justify-center bg-linear-to-br from-ink-100 to-brand-50 text-sm font-medium text-ink-500">
-                            {serviceMode ? "Service image coming soon" : "Product image coming soon"}
-                          </div>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/60 via-black/8 to-transparent p-4">
-                          <div className="flex flex-wrap gap-2">
-                            <span
-                              className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-                                product.inStock
-                                  ? "bg-emerald-50 text-emerald-700"
-                                  : "bg-red-50 text-red-700"
-                              }`}
-                            >
-                              {product.inStock ? (serviceMode ? "Available Now" : "In Stock") : serviceMode ? "Schedule Needed" : "On Order"}
-                            </span>
-                            {product.moq ? (
-                              <span className="rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
-                                {serviceMode ? "Min booking" : "MOQ"} {product.moq} {product.unit}
-                              </span>
-                            ) : null}
-                            {product.leadTimeDays ? (
-                              <span className="rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
-                                {product.leadTimeDays}d {serviceMode ? "visit lead" : "lead"}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-5 sm:p-6">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <Link
-                              href={ROUTES.MARKETPLACE_PRODUCT(product.slug)}
-                              className="font-heading text-xl font-semibold text-ink-900 transition-colors hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
-                            >
-                              {product.name}
-                            </Link>
-                            {product.brand && (
-                              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">
-                                {product.brand}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-right">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-red-600">
-                              {serviceMode ? "Starting Rate" : "Indicative Price"}
-                            </p>
-                            <p className="mt-1 text-base font-bold text-red-700">
-                              {startingPrice
-                                ? formatPrice(startingPrice, true)
-                                : "Quote"}
-                              <span className="ml-1 text-xs font-medium text-red-500">
-                                / {product.unit}
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-
-                        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-ink-600">
-                          {product.shortDescription || product.description}
-                        </p>
-
-                        {variants.length > 0 && (
-                          <div className="mt-4">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">
-                              {serviceMode ? "Packages & popular options" : "Sizes & popular options"}
-                            </p>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {variants.map((variant) => (
-                                <span
-                                  key={variant.id}
-                                  title={variantMeta(variant)}
-                                  className="rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700"
-                                >
-                                  {variant.name}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {specs.length > 0 && (
-                          <div className="mt-4 space-y-1.5 rounded-2xl bg-ink-50/80 p-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">
-                              {serviceMode ? "Service snapshot" : "Buyer-friendly spec snapshot"}
-                            </p>
-                            {specs.map((spec) => (
-                              <p key={spec} className="text-sm text-ink-700">
-                                {spec}
-                              </p>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="mt-5 flex flex-wrap gap-2">
-                          <Link href={ROUTES.MARKETPLACE_PRODUCT(product.slug)}>
-                            <Button size="sm" variant="outline">
-                              {serviceMode ? "View Service" : "View Product"}
-                            </Button>
-                          </Link>
-                          <Link
-                            href={`${ROUTES.MARKETPLACE_QUOTE}?productId=${product.id}&productSlug=${product.slug}&supplierSlug=${supplier.slug}`}
-                          >
-                            <Button size="sm" className="gap-1.5">
-                              <FileText
-                                aria-hidden="true"
-                                className="size-3.5"
-                              />
-                              {serviceMode ? "Quote This Service" : "Quote This Item"}
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
+              <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-4">
+                {products.map((product) => (
+                  <li key={product.id} className="reveal min-w-0">
+                    <MarketplaceProductCard
+                      product={product}
+                      supplierName={supplier.name}
+                      serviceMode={serviceMode}
+                      hideSupplier
+                      className="h-full"
+                    />
+                  </li>
+                ))}
               </ul>
             ) : (
-              <div className="rounded-[2rem] border border-border/70 bg-white p-8 text-center shadow-(--shadow-card)">
+              <div className="rounded-2xl border border-border/70 bg-white p-5 text-center shadow-(--shadow-card) sm:p-8">
                 <p className="font-heading text-lg font-semibold text-ink-900">
                   {serviceMode ? "No service packages yet" : "No listings yet"}
                 </p>
-                <p className="mt-2 text-sm text-ink-600">
+                <p className="mt-1.5 text-sm text-ink-600">
                   {serviceMode
                     ? "Send one request and the provider desk will share matching packages, booking slots, and pricing."
                     : "Send one request and the supplier desk will share matching sizes, prices, and availability."}
                 </p>
-                <div className="mt-5">
-                  <Link href={quoteHref}>
-                    <Button size="sm" className="gap-1.5">
-                      <FileText aria-hidden="true" className="size-3.5" />{" "}
-                      {serviceMode ? "Request service quote" : "Request a quote"}
-                    </Button>
+                <div className="mt-4">
+                  <Link href={quoteHref} className="btn-tactile btn-tactile--sm">
+                    <FileText aria-hidden="true" className="size-3.5" />
+                    {serviceMode ? "Request service quote" : "Request a quote"}
                   </Link>
                 </div>
               </div>
             )}
           </div>
 
-          <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
-            <div className="rounded-[2rem] border border-border/70 bg-white p-5 shadow-(--shadow-card)">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">
-                Contact This {serviceMode ? "Provider" : "Supplier"}
+          <aside className="grid gap-2.5 xl:sticky xl:top-24 xl:self-start xl:gap-4">
+            {/* Contact: its own card on wide screens (phones have the bottom bar). */}
+            <div className="hidden rounded-[2rem] border border-border/70 bg-white p-5 shadow-(--shadow-card) xl:block">
+              <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700">
+                Contact this {serviceMode ? "provider" : "supplier"}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-ink-600">
-                {supplier.priceRange ?? "Price on request"} · typically replies
-                in about {supplier.responseTimeHours ?? 24}h.
+                {supplier.priceRange ?? "Quote on request"}
+                {supplier.responseTimeHours
+                  ? `, typically replies in about ${supplier.responseTimeHours}h.`
+                  : "."}
               </p>
-
-              <div className="mt-4 space-y-2">
-                <Link href={quoteHref} className="block">
-                  <Button size="sm" className="w-full gap-1.5">
-                    <FileText aria-hidden="true" className="size-3.5" />{" "}
-                    {serviceMode ? "Get a Service Quote" : "Get a Quote"}
-                  </Button>
+              <div className="mt-4 grid gap-2">
+                <Link href={quoteHref} className="btn-tactile btn-tactile--sm btn-tactile--block">
+                  <FileText aria-hidden="true" className="size-3.5" />
+                  {serviceMode ? "Get a service quote" : "Get a quote"}
                 </Link>
-                <a href={`tel:${supplier.phone}`} className="block">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full gap-1.5"
-                  >
-                    <Phone aria-hidden="true" className="size-3.5" /> Call Now
-                  </Button>
-                </a>
-                {supplier.whatsApp && (
-                  <a
-                    href={`https://wa.me/${supplier.whatsApp.replace(/\D/g, "")}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block"
-                  >
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full gap-1.5 border-emerald-500/30 text-emerald-700 hover:bg-emerald-50"
-                    >
-                      <MessageCircle aria-hidden="true" className="size-3.5" />{" "}
-                      WhatsApp
-                    </Button>
+                {call ? (
+                  <a href={call} className="btn-glass">
+                    <Phone aria-hidden="true" className="size-3.5" /> Call now
                   </a>
-                )}
-                {supplier.email && (
-                  <a href={`mailto:${supplier.email}`} className="block">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full gap-1.5"
-                    >
-                      <Mail aria-hidden="true" className="size-3.5" /> Email
-                    </Button>
+                ) : null}
+                {whatsapp ? (
+                  <a href={whatsapp} target="_blank" rel="noreferrer" className="btn-glass">
+                    <MessageCircle aria-hidden="true" className="size-3.5" /> WhatsApp
                   </a>
-                )}
+                ) : null}
+                {supplier.email ? (
+                  <a href={`mailto:${supplier.email}`} className="btn-glass">
+                    <Mail aria-hidden="true" className="size-3.5" /> Email
+                  </a>
+                ) : null}
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-border/70 bg-white p-5 shadow-(--shadow-card)">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">
-                {serviceMode ? "Provider Snapshot" : "Supplier Snapshot"}
-              </p>
-              <div className="mt-3 space-y-3 text-sm text-ink-700">
-                <SidebarFact
-                  icon={
-                    <TrendingUp
-                      aria-hidden="true"
-                      className="size-4 text-brand-600"
-                    />
-                  }
-                  label="Years in business"
-                  value={`${supplier.yearsInBusiness}`}
-                />
-                <SidebarFact
-                  icon={
-                    <Clock3
-                      aria-hidden="true"
-                      className="size-4 text-brand-600"
-                    />
-                  }
-                  label="Average reply"
-                  value={
-                    supplier.responseTimeHours
-                      ? `${supplier.responseTimeHours}h`
-                      : "Fast"
-                  }
-                />
-                <SidebarFact
-                  icon={
-                    <Truck
-                      aria-hidden="true"
-                      className="size-4 text-brand-600"
-                    />
-                  }
-                  label={serviceMode ? "Visit lead" : "Delivery lead"}
-                  value={
-                    supplier.deliveryDays
-                      ? `${supplier.deliveryDays}d`
-                      : "Quick"
-                  }
-                />
-                <SidebarFact
-                  icon={
-                    <MapPin
-                      aria-hidden="true"
-                      className="size-4 text-brand-600"
-                    />
-                  }
+            <Disclosure
+              title={serviceMode ? "Provider snapshot" : "Supplier snapshot"}
+              defaultOpen
+              expandedFrom="xl"
+            >
+              <div className="grid grid-cols-2 gap-2 xl:grid-cols-1">
+                {supplier.yearsInBusiness > 0 && (
+                  <SnapshotFact
+                    icon={<TrendingUp aria-hidden="true" className="size-4 text-brand-600" />}
+                    label="Years in business"
+                    value={`${supplier.yearsInBusiness}`}
+                  />
+                )}
+                {supplier.responseTimeHours ? (
+                  <SnapshotFact
+                    icon={<Clock3 aria-hidden="true" className="size-4 text-brand-600" />}
+                    label="Average reply"
+                    value={`${supplier.responseTimeHours}h`}
+                  />
+                ) : null}
+                {supplier.deliveryDays ? (
+                  <SnapshotFact
+                    icon={<Truck aria-hidden="true" className="size-4 text-brand-600" />}
+                    label={serviceMode ? "Visit lead" : "Delivery lead"}
+                    value={`${supplier.deliveryDays}d`}
+                  />
+                ) : null}
+                <SnapshotFact
+                  icon={<MapPin aria-hidden="true" className="size-4 text-brand-600" />}
                   label="Base location"
                   value={supplier.location}
                 />
-                <SidebarFact
-                  icon={
-                    <ShoppingBag
-                      aria-hidden="true"
-                      className="size-4 text-brand-600"
-                    />
-                  }
+                <SnapshotFact
+                  icon={<ShoppingBag aria-hidden="true" className="size-4 text-brand-600" />}
                   label={serviceMode ? "Jobs done" : "Items sold"}
                   value={soldCountLabel}
                 />
+                {supplier.email ? (
+                  <SnapshotFact
+                    icon={<Mail aria-hidden="true" className="size-4 text-brand-600" />}
+                    label="Email"
+                    value={supplier.email}
+                    href={`mailto:${supplier.email}`}
+                    wide
+                  />
+                ) : null}
               </div>
-            </div>
+            </Disclosure>
 
             {supplier.serviceAreas?.length > 0 && (
-              <div className="rounded-[2rem] border border-border/70 bg-white p-5 shadow-(--shadow-card)">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">
-                  Service Areas
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
+              <Disclosure
+                title="Service areas"
+                meta={`${supplier.serviceAreas.length}`}
+                expandedFrom="xl"
+              >
+                <div className="flex flex-wrap gap-1.5">
                   {supplier.serviceAreas.map((area) => (
                     <span
                       key={area}
-                      className="rounded-full bg-ink-100 px-3 py-1 text-xs font-medium text-ink-700"
+                      className="rounded-full bg-ink-100 px-2.5 py-1 text-xs font-medium text-ink-700"
                     >
                       {area}
                     </span>
                   ))}
                 </div>
-              </div>
+              </Disclosure>
             )}
 
-            {((supplier.brands?.length ?? 0) > 0 ||
-              (supplier.certifications?.length ?? 0) > 0) && (
-              <div className="rounded-[2rem] border border-border/70 bg-white p-5 shadow-(--shadow-card)">
-                {(supplier.brands?.length ?? 0) > 0 && (
+            {(hasBrands || hasCerts) && (
+              <Disclosure
+                title={
+                  hasBrands && hasCerts
+                    ? "Brands and certifications"
+                    : hasBrands
+                      ? "Brands carried"
+                      : "Certifications"
+                }
+                expandedFrom="xl"
+              >
+                {hasBrands && (
                   <>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">
-                      Brands Carried
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    {hasCerts && (
+                      <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-500">
+                        Brands carried
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
                       {supplier.brands?.map((brand) => (
                         <span
                           key={brand}
-                          className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700"
+                          className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700"
                         >
                           {brand}
                         </span>
@@ -666,17 +450,18 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                     </div>
                   </>
                 )}
-
-                {(supplier.certifications?.length ?? 0) > 0 && (
+                {hasCerts && (
                   <>
-                    <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">
-                      Certifications
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    {hasBrands && (
+                      <p className="mb-1.5 mt-3 text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-500">
+                        Certifications
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5">
                       {supplier.certifications?.map((certification) => (
                         <span
                           key={certification}
-                          className="rounded-full bg-gold-100 px-3 py-1 text-xs font-semibold text-gold-800"
+                          className="rounded-full bg-gold-100 px-2.5 py-1 text-xs font-semibold text-gold-800"
                         >
                           {certification}
                         </span>
@@ -684,31 +469,52 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                     </div>
                   </>
                 )}
-              </div>
+              </Disclosure>
             )}
           </aside>
         </div>
       </section>
+
+      <MobileActionBar label={serviceMode ? "Book this provider" : "Contact this supplier"}>
+        <Link href={quoteHref} className="btn-tactile flex-1">
+          <FileText aria-hidden="true" className="size-4" />
+          Get a quote
+        </Link>
+        {call ? (
+          <a
+            href={call}
+            aria-label={`Call ${supplier.name}`}
+            className="btn-glass size-11 shrink-0 !p-0"
+          >
+            <Phone aria-hidden="true" className="size-4" />
+          </a>
+        ) : null}
+        {whatsapp ? (
+          <a
+            href={whatsapp}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`WhatsApp ${supplier.name}`}
+            className="btn-glass size-11 shrink-0 !p-0"
+          >
+            <MessageCircle aria-hidden="true" className="size-4" />
+          </a>
+        ) : null}
+      </MobileActionBar>
     </main>
   );
 }
 
-function HeroStat({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string;
-  note: string;
-}) {
+function HeroStat({ label, value }: { label: string; value: string }) {
+  // Markup keeps dt before dd; phones flip it so the figure sits above its label.
   return (
-    <div className="rounded-[1.5rem] border border-white/12 bg-white/8 px-4 py-3 backdrop-blur-sm">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-100/80">
+    <div className="flex min-w-0 flex-col-reverse rounded-xl border border-white/12 bg-white/8 px-1.5 py-1.5 text-center backdrop-blur-sm sm:flex-col sm:rounded-[1.5rem] sm:px-4 sm:py-3 sm:text-left">
+      <dt className="text-xs font-medium leading-tight text-brand-100/80 sm:text-[0.6875rem] sm:font-semibold sm:uppercase sm:tracking-wider">
         {label}
-      </p>
-      <p className="mt-1 text-lg font-semibold text-white">{value}</p>
-      <p className="mt-1 text-xs text-brand-50/72">{note}</p>
+      </dt>
+      <dd className="truncate text-sm font-semibold tabular-nums text-white sm:mt-1 sm:text-lg">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -723,34 +529,52 @@ function InfoCard({
   note: string;
 }) {
   return (
-    <div className="rounded-[1.75rem] border border-border/70 bg-white p-4 shadow-(--shadow-card)">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-700">
+    <li className="min-w-0 rounded-2xl border border-border/70 bg-white p-3 shadow-(--shadow-card) sm:rounded-[1.75rem] sm:p-4">
+      <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brand-700">
         {label}
       </p>
-      <p className="mt-2 text-2xl font-semibold text-ink-900">{value}</p>
-      <p className="mt-1 text-sm text-ink-600">{note}</p>
-    </div>
+      <p className="mt-1 text-xl font-semibold tabular-nums text-ink-900 sm:mt-2 sm:text-2xl">
+        {value}
+      </p>
+      <p className="mt-1 hidden text-sm text-ink-600 sm:block">{note}</p>
+    </li>
   );
 }
 
-function SidebarFact({
+function SnapshotFact({
   icon,
   label,
   value,
+  href,
+  wide = false,
 }: {
   icon: ReactNode;
   label: string;
   value: string;
+  href?: string;
+  wide?: boolean;
 }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl bg-ink-50/80 px-3.5 py-3">
-      <span className="mt-0.5">{icon}</span>
+  const className = `flex min-h-11 min-w-0 items-start gap-2 rounded-xl bg-ink-50/80 px-2.5 py-2 ${wide ? "col-span-2 xl:col-span-1" : ""}`;
+  const body = (
+    <>
+      <span className="mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-ink-500">
           {label}
         </p>
-        <p className="mt-1 text-sm font-medium text-ink-900">{value}</p>
+        <p
+          className={`mt-0.5 text-[0.8125rem] font-medium ${href ? "truncate text-brand-700" : "text-ink-900"}`}
+        >
+          {value}
+        </p>
       </div>
-    </div>
+    </>
+  );
+  return href ? (
+    <a href={href} className={`${className} transition-colors hover:bg-brand-50`}>
+      {body}
+    </a>
+  ) : (
+    <div className={className}>{body}</div>
   );
 }

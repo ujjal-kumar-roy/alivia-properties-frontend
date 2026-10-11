@@ -21,9 +21,12 @@ function averageRating(reviews: Review[]): number {
 export function ReviewsSection({
   targetType,
   targetId,
+  embedded = false,
 }: {
   targetType: ReviewTargetType
   targetId: string
+  /** Inside an accordion: no card or heading of its own (the section supplies them). */
+  embedded?: boolean
 }) {
   const { data: session } = useSession()
   const [reviews, setReviews] = useState<Review[]>([])
@@ -42,6 +45,9 @@ export function ReviewsSection({
           targetType === "agent" ? { agentId: targetId, limit: 20 } : { propertyId: targetId, limit: 20 },
         )
         setReviews(res.data)
+      } catch {
+        // A failed lookup reads as "no reviews yet" instead of an unhandled rejection.
+        setReviews([])
       } finally {
         setLoading(false)
       }
@@ -96,16 +102,18 @@ export function ReviewsSection({
   }
 
   return (
-    <div className="surface-card p-5">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold-100 text-gold-700">
-          <Star className="h-4 w-4" />
+    <div className={embedded ? undefined : "surface-card p-5"}>
+      {!embedded && (
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold-100 text-gold-700">
+            <Star className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-h3">Reviews</h3>
+            <p className="text-xs text-ink-500">Verified guest ratings</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-h3">Reviews</h3>
-          <p className="text-xs text-ink-500">Verified guest ratings</p>
-        </div>
-      </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-[0.38fr_0.62fr]">
         <div className="rounded-[1rem] border border-border bg-ink-50 p-4 text-center">
@@ -145,7 +153,7 @@ export function ReviewsSection({
               key={value}
               type="button"
               onClick={() => setRating(value)}
-              className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+              className={`min-h-8 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
                 rating === value
                   ? "border-gold-400 bg-gold-100 text-gold-800"
                   : "border-border text-ink-600 hover:border-gold-300"

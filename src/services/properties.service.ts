@@ -26,7 +26,7 @@ type BackendImage = { url: string } | string
 type BackendProperty = Omit<Property, "images"> & {
   images: BackendImage[]
   panorama?: { url: string } | null
-  seller?: { id: string; name: string; phone?: string; avatar?: string; isVerified?: boolean; whatsApp?: string }
+  seller?: { id: string; name: string; phone?: string; avatar?: string; avatarUrl?: string | null; isVerified?: boolean; whatsApp?: string }
 }
 
 function imageUrl(i: BackendImage): string {
@@ -86,7 +86,7 @@ function toFrontendProperty(p: BackendProperty): Property {
     type: (typeof p.type === "string" ? p.type.toLowerCase() : p.type) as PropertyType,
     sellerName: p.sellerName ?? p.seller?.name ?? "Seller",
     sellerPhone: p.sellerPhone ?? p.seller?.phone ?? "",
-    sellerAvatar: p.sellerAvatar ?? p.seller?.avatar,
+    sellerAvatar: p.sellerAvatar ?? p.seller?.avatarUrl ?? p.seller?.avatar ?? undefined,
     sellerWhatsApp: p.sellerWhatsApp ?? p.seller?.whatsApp,
     sellerVerified: p.sellerVerified ?? p.seller?.isVerified ?? false,
     sellerId: p.sellerId ?? p.seller?.id,

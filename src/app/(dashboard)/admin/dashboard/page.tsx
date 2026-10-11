@@ -64,21 +64,21 @@ export default async function AdminDashboardPage() {
   })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Greeting hero */}
-      <section className="surface-panel relative overflow-hidden p-5 sm:p-7">
+      <section className="surface-panel relative overflow-hidden p-4 sm:p-7">
         <div className="absolute inset-0 bg-brand-aurora" aria-hidden />
-        <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-gold-200/30 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute -left-16 bottom-0 h-48 w-48 rounded-full bg-brand-200/30 blur-3xl" aria-hidden />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="pointer-events-none absolute -right-20 -top-24 hidden h-64 w-64 rounded-full bg-gold-200/30 blur-3xl sm:block" aria-hidden />
+        <div className="pointer-events-none absolute -left-16 bottom-0 hidden h-48 w-48 rounded-full bg-brand-200/30 blur-3xl sm:block" aria-hidden />
+        <div className="relative flex flex-col gap-3 sm:gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700">
+            <p className="hidden text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:block">
               {today}
             </p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl">
+            <h1 className="text-xl font-bold tracking-tight text-ink-900 sm:mt-2 sm:text-3xl">
               {getGreeting()}, {firstName} 👋
             </h1>
-            <p className="mt-1.5 max-w-xl text-sm text-ink-600 sm:text-base">
+            <p className="mt-1 max-w-xl text-[0.8125rem] leading-snug text-ink-600 sm:mt-1.5 sm:text-base">
               Here&apos;s what&apos;s happening across the Alivia marketplace today.
               You have{" "}
               <span className="font-semibold text-brand-800">
@@ -90,7 +90,7 @@ export default async function AdminDashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={ROUTES.ADMIN_PROJECTS}
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-ink-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-ink-800"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-ink-900 px-4 text-sm font-semibold text-white transition-[background-color,scale] hover:bg-ink-800 active:scale-[0.98] sm:h-10"
             >
               Manage apartments
               <ArrowRight className="h-4 w-4" />
@@ -100,7 +100,7 @@ export default async function AdminDashboardPage() {
       </section>
 
       {/* Stat cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
         <StatCard
           icon={Home}
           tone="brand"
@@ -164,25 +164,25 @@ export default async function AdminDashboardPage() {
 
       {/* Quick actions */}
       <section>
-        <div className="mb-3 flex items-end justify-between">
+        <div className="mb-2 flex items-end justify-between sm:mb-3">
           <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-brand-700">
+            <p className="hidden text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-brand-700 sm:block">
               Quick actions
             </p>
-            <h2 className="mt-1 text-lg font-semibold text-ink-900">
+            <h2 className="text-base font-semibold text-ink-900 sm:mt-1 sm:text-lg">
               Jump back into your workflow
             </h2>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
           {QUICK_ACTIONS.map((action) => (
             <Link
               key={action.href}
               href={action.href}
-              className="surface-card group flex items-center gap-4 p-4 transition-all hover:-translate-y-1 hover:shadow-elevated"
+              className="surface-card group flex min-w-0 items-center gap-3 p-3 transition-[translate,box-shadow,scale] active:scale-[0.99] hover:-translate-y-1 hover:shadow-elevated sm:gap-4 sm:p-4"
             >
               <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br ${action.tone}`}
+                className={`flex size-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br sm:size-12 sm:rounded-2xl ${action.tone}`}
               >
                 <action.icon className="h-5 w-5" />
               </div>

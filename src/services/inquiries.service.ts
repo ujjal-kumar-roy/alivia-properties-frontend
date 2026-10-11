@@ -1,4 +1,3 @@
-import { auth } from "@/auth"
 import type { Inquiry, InquiryStatus, InquiryType } from "@/types/inquiry.types"
 import { httpClient, type Paginated } from "./http-client"
 
@@ -109,7 +108,7 @@ export const inquiriesService = {
 export async function getInquiries(
   params: InquiryQueryParams = {},
 ): Promise<Paginated<Inquiry>> {
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   const token = session?.accessToken
   try {
     return await inquiriesService.list(params, token)
@@ -129,11 +128,11 @@ export async function getInquiries(
 }
 
 export async function createInquiry(payload: unknown): Promise<Inquiry> {
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   return inquiriesService.create(payload, session?.accessToken)
 }
 
 export async function getInquiry(id: string): Promise<Inquiry> {
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   return inquiriesService.detail(id, session?.accessToken)
 }

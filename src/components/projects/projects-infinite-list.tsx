@@ -1,10 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import {
-  FlagshipProjectCard,
-  toFlagshipProject,
-} from "@/pages-sections/home/flagship-projects"
+import { FlagshipProjectCard } from "@/pages-sections/home/flagship-projects"
+import { toFlagshipProject } from "@/utils/flagship-project"
 import { projectsService, type ProjectQueryParams } from "@/services/projects.service"
 import type { Project } from "@/types/project.types"
 
@@ -67,9 +65,11 @@ export function ProjectsInfiniteList({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-6">
         {projects.map((project) => (
-          <FlagshipProjectCard key={project.id} project={toFlagshipProject(project)} />
+          <div key={project.id} className="reveal min-w-0">
+            <FlagshipProjectCard project={toFlagshipProject(project)} />
+          </div>
         ))}
       </div>
 

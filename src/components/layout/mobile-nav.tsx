@@ -143,7 +143,7 @@ function NavRow({
         onClick={navigate(item.href)}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group flex min-h-12 items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-colors",
+          "group flex min-h-11 items-center gap-3 rounded-2xl px-3 py-1.5 text-sm font-semibold transition-colors",
           active
             ? "bg-brand-700 text-white shadow-sm"
             : "text-ink-700 hover:bg-white/70",
@@ -179,7 +179,7 @@ function NavRow({
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex min-h-12 w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold text-ink-800 transition-colors hover:bg-white/70"
+        className="flex min-h-11 w-full items-center gap-3 rounded-2xl px-3 py-1.5 text-sm font-semibold text-ink-800 transition-colors hover:bg-white/70"
       >
         <span
           className={cn(
@@ -363,9 +363,9 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   }
 
   const primaryCta =
-    "glass-interactive inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-brand-700 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-800"
+    "glass-interactive inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-700 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-800"
   const outlineCta =
-    "glass-interactive inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-brand-200 bg-white/70 px-5 text-sm font-semibold text-brand-800 transition-colors hover:bg-white"
+    "glass-interactive inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-brand-200 bg-white/70 px-5 text-sm font-semibold text-brand-800 transition-colors hover:bg-white"
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -384,14 +384,14 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
           onPointerCancel={endDrag}
         >
           {/* Header */}
-          <SheetHeader className="shrink-0 border-b border-white/40 px-5 pb-4 pt-5">
+          <SheetHeader className="shrink-0 border-b border-white/40 px-4 pb-3 pt-4">
             <div className="flex items-center justify-between gap-3">
               <Link
                 href="/"
                 onClick={navigate("/")}
                 className="flex items-center gap-3"
               >
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-900 shadow-md">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-900 shadow-md">
                   <Building2 className="h-5 w-5 text-white" />
                 </span>
                 <span className="block">
@@ -414,26 +414,21 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
             </div>
           </SheetHeader>
 
-          <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5">
-            {/* Quick action tiles */}
-            <div className="grid grid-cols-2 gap-3">
+          <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-3">
+            {/* Quick action tiles: three across, icon above label */}
+            <div className="grid grid-cols-3 gap-2">
               {QUICK_ACTIONS.map((action) => (
                 <Link
                   key={action.href}
                   href={action.href}
                   onClick={navigate(action.href)}
-                  className="glass-interactive group flex flex-col gap-2 rounded-2xl border border-white/60 bg-white/80 p-3.5 shadow-sm transition-colors hover:border-brand-200 hover:bg-white"
+                  className="glass-interactive group flex flex-col items-center gap-1.5 rounded-2xl border border-white/60 bg-white/80 px-1.5 py-2.5 text-center shadow-sm transition-colors hover:border-brand-200 hover:bg-white"
                 >
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-100">
-                    <action.icon className="h-5 w-5" />
+                  <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-100">
+                    <action.icon className="h-[1.15rem] w-[1.15rem]" />
                   </span>
-                  <span>
-                    <span className="block text-sm font-semibold text-ink-900">
-                      {action.label}
-                    </span>
-                    <span className="block text-[0.7rem] text-ink-500">
-                      {action.caption}
-                    </span>
+                  <span className="block text-[0.8125rem] font-semibold leading-tight text-ink-900">
+                    {action.label}
                   </span>
                 </Link>
               ))}
@@ -487,7 +482,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
           </div>
 
           {/* Sticky action footer */}
-          <div className="mobile-liquid-glass-nav shrink-0 space-y-2 border-t border-white/40 px-5 py-4">
+          <div className="mobile-liquid-glass-nav shrink-0 space-y-1.5 border-t border-white/40 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {role ? (
               <Link
                 href={getDashboardRoute(role)}
@@ -514,18 +509,18 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                 >
                   Consult an Expert
                 </Link>
-                <div className="grid grid-cols-2 gap-2 pt-0.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   <Link
                     href={authNav.login.href}
                     onClick={navigate(authNav.login.href)}
-                    className="glass-interactive inline-flex min-h-11 items-center justify-center rounded-full border border-ink-200 bg-white/70 text-sm font-semibold text-ink-700 transition-colors hover:bg-white"
+                    className="glass-interactive inline-flex min-h-10 items-center justify-center rounded-full border border-ink-200 bg-white/70 text-sm font-semibold text-ink-700 transition-colors hover:bg-white"
                   >
                     Login
                   </Link>
                   <Link
                     href={authNav.register.href}
                     onClick={navigate(authNav.register.href)}
-                    className="glass-interactive inline-flex min-h-11 items-center justify-center rounded-full border border-ink-200 bg-white/70 text-sm font-semibold text-ink-700 transition-colors hover:bg-white"
+                    className="glass-interactive inline-flex min-h-10 items-center justify-center rounded-full border border-ink-200 bg-white/70 text-sm font-semibold text-ink-700 transition-colors hover:bg-white"
                   >
                     List Property
                   </Link>

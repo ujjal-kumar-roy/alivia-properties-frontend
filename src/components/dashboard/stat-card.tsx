@@ -70,10 +70,24 @@ export function StatCard({
   const isPositive = trend !== undefined && trend >= 0
   const styles = TONE_STYLES[tone]
 
+  const iconTile = (small: boolean) => (
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-center shadow-elevated",
+        small ? "size-8 rounded-xl ring-2" : "size-11 rounded-2xl ring-4",
+        styles.iconBg,
+        styles.iconText,
+        styles.ring,
+      )}
+    >
+      <Icon className={small ? "size-4" : "size-5"} />
+    </div>
+  )
+
   return (
     <div
       className={cn(
-        "group surface-card relative flex flex-col gap-4 overflow-hidden p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-elevated",
+        "group surface-card relative flex flex-col gap-1.5 overflow-hidden p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-elevated sm:gap-4 sm:p-5",
         className,
       )}
     >
@@ -84,29 +98,22 @@ export function StatCard({
         )}
         aria-hidden
       />
-      <div className="relative flex items-center justify-between">
-        <span className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-ink-500">
+      {/* Phones: the label gets the full card width and the icon sits beside the value. sm and up: label and icon share the top row. */}
+      <div className="relative flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-ink-500 sm:tracking-[0.18em]">
           {label}
         </span>
-        <div
-          className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-2xl shadow-elevated ring-4",
-            styles.iconBg,
-            styles.iconText,
-            styles.ring,
-          )}
-        >
-          <Icon className="h-5 w-5" />
-        </div>
+        <div className="hidden sm:block">{iconTile(false)}</div>
       </div>
-      <div className="relative flex items-end justify-between gap-2">
-        <span className="text-3xl font-bold tracking-tight text-ink-900">
+      <div className="relative flex items-center justify-between gap-2 sm:items-end">
+        <span className="text-2xl font-bold leading-none tracking-tight text-ink-900 tabular-nums sm:text-3xl">
           {value}
         </span>
+        <div className="sm:hidden">{iconTile(true)}</div>
         {trend !== undefined && (
           <div
             className={cn(
-              "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+              "hidden items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold sm:flex",
               isPositive
                 ? "bg-emerald-50 text-emerald-700"
                 : "bg-rose-50 text-rose-700",
@@ -122,7 +129,7 @@ export function StatCard({
         )}
       </div>
       {(hint || trendLabel) && (
-        <p className="relative text-xs text-ink-500">{hint ?? trendLabel}</p>
+        <p className="relative hidden text-xs text-ink-500 sm:block">{hint ?? trendLabel}</p>
       )}
     </div>
   )

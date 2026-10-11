@@ -6,7 +6,6 @@ import { auth } from "@/auth"
 import { heroService } from "@/services/hero.service"
 import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header"
 import { HeroSlidesManager } from "@/components/dashboard/hero-slides-manager"
-import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/config/routes.config"
 
 export default async function AdminHeroSlidesPage() {
@@ -21,11 +20,9 @@ export default async function AdminHeroSlidesPage() {
         title="Hero Carousel"
         description="Control every slide on the marketplace hero — copy, image, buttons, order, and visibility."
         actions={(
-          <Link href={ROUTES.ADMIN_HERO_SLIDE_CREATE}>
-            <Button className="rounded-full bg-brand-700 text-white hover:bg-brand-800">
-              <Plus className="h-4 w-4" />
-              Add slide
-            </Button>
+          <Link href={ROUTES.ADMIN_HERO_SLIDE_CREATE} className="btn-tactile btn-tactile--sm">
+            <Plus className="size-4" />
+            Add slide
           </Link>
         )}
       />

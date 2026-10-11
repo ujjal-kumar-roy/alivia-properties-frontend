@@ -14,7 +14,9 @@ const TYPES: Record<
     eyebrow: string
     title: string
     lead: string
-    bullets: { icon: typeof Store; title: string; desc: string }[]
+    /** One line for phones; the full lead shows from sm. */
+    short: string
+    bullets: { icon: typeof Store; title: string; short: string; desc: string }[]
   }
 > = {
   supplier: {
@@ -22,10 +24,11 @@ const TYPES: Record<
     eyebrow: "Become a Partner",
     title: "Be a Supplier",
     lead: "Join Alivia's B2B marketplace and reach buyers who need exactly what you supply. Share a few details and our team will get you onboarded.",
+    short: "Reach buyers who need what you supply. Share a few details and we will onboard you.",
     bullets: [
-      { icon: ShieldCheck, title: "Verified storefront", desc: "Get a trusted, verified listing in front of active buyers." },
-      { icon: Sparkles, title: "Qualified quote requests", desc: "Receive structured quote requests routed straight to you." },
-      { icon: Clock, title: "Fast onboarding", desc: "Our team reviews and reaches out, usually within a business day." },
+      { icon: ShieldCheck, title: "Verified storefront", short: "Verified storefront", desc: "Get a trusted, verified listing in front of active buyers." },
+      { icon: Sparkles, title: "Qualified quote requests", short: "Quote requests", desc: "Receive structured quote requests routed straight to you." },
+      { icon: Clock, title: "Fast onboarding", short: "Fast onboarding", desc: "Our team reviews and reaches out, usually within a business day." },
     ],
   },
   investor: {
@@ -33,10 +36,11 @@ const TYPES: Record<
     eyebrow: "Become a Partner",
     title: "Be an Investor",
     lead: "Invest in Bangladesh real estate with Alivia. Tell us your interest and budget, and our team will share curated opportunities that fit.",
+    short: "Tell us your interest and budget. We will share curated opportunities that fit.",
     bullets: [
-      { icon: ShieldCheck, title: "RAJUK-registered developer", desc: "Invest alongside an established, compliant developer." },
-      { icon: Sparkles, title: "Curated opportunities", desc: "Get matched to apartments and properties that fit your goals." },
-      { icon: Clock, title: "Personal follow-up", desc: "A specialist reaches out to understand your plans." },
+      { icon: ShieldCheck, title: "RAJUK-registered developer", short: "RAJUK registered", desc: "Invest alongside an established, compliant developer." },
+      { icon: Sparkles, title: "Curated opportunities", short: "Curated deals", desc: "Get matched to apartments and properties that fit your goals." },
+      { icon: Clock, title: "Personal follow-up", short: "Personal follow-up", desc: "A specialist reaches out to understand your plans." },
     ],
   },
 }
@@ -66,32 +70,53 @@ export default async function PartnerPage({
 
   return (
     <main className="bg-linear-to-b from-brand-50/60 via-white to-white">
-      <div className="container-page section-y-sm">
-        <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:items-start">
-          <section className="surface-card p-5 sm:p-7">
-            <header className="mb-5 border-b border-border/60 pb-5">
-              <span className="inline-flex size-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-                <Icon className="size-5" />
-              </span>
-              <p className="text-eyebrow mt-3">{t.eyebrow}</p>
-              <h1 className="font-heading text-2xl font-semibold text-balance text-ink-900 sm:text-3xl">
-                {t.title}
-              </h1>
-              <p className="mt-2 text-sm text-ink-600">{t.lead}</p>
+      <div className="container-page py-4 sm:py-8 lg:py-12">
+        <div className="grid gap-3.5 lg:grid-cols-[1.3fr_1fr] lg:items-start lg:gap-8">
+          <section className="rounded-2xl border border-black/5 bg-white p-3.5 shadow-(--shadow-card) sm:p-7">
+            <header className="mb-3.5 border-b border-border/60 pb-3.5 sm:mb-5 sm:pb-5">
+              <div className="flex items-center gap-3 sm:block">
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 sm:size-11">
+                  <Icon aria-hidden="true" className="size-5" />
+                </span>
+                <div>
+                  <p className="text-eyebrow mt-3 hidden sm:block">{t.eyebrow}</p>
+                  <h1 className="font-heading text-xl font-bold tracking-tight text-balance text-ink-900 sm:text-3xl">
+                    {t.title}
+                  </h1>
+                </div>
+              </div>
+              <p className="mt-2 text-[0.9375rem] leading-snug text-ink-600 sm:hidden">{t.short}</p>
+              <p className="mt-2 hidden text-sm text-ink-600 sm:block">{t.lead}</p>
+
+              {/* Phones: the three promises as small pills, in place of the side card. */}
+              <ul className="mt-2.5 flex flex-wrap gap-1.5 sm:hidden">
+                {t.bullets.map((b) => {
+                  const BIcon = b.icon
+                  return (
+                    <li
+                      key={b.title}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-800"
+                    >
+                      <BIcon aria-hidden="true" className="size-3.5" />
+                      {b.short}
+                    </li>
+                  )
+                })}
+              </ul>
             </header>
 
             <PartnerApplicationForm type={type} />
           </section>
 
-          <aside className="space-y-4 lg:sticky lg:top-24">
-            <div className="surface-card p-5">
+          <aside className="space-y-3 lg:sticky lg:top-24 lg:space-y-4">
+            <div className="hidden rounded-2xl border border-black/5 bg-white p-5 shadow-(--shadow-card) sm:block">
               <p className="text-eyebrow mb-3">Why partner with Alivia</p>
               <ul className="space-y-3 text-sm text-ink-700">
                 {t.bullets.map((b) => {
                   const BIcon = b.icon
                   return (
                     <li key={b.title} className="flex items-start gap-3">
-                      <BIcon className="mt-0.5 size-5 shrink-0 text-brand-700" />
+                      <BIcon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-700" />
                       <div>
                         <p className="font-medium text-ink-900">{b.title}</p>
                         <p className="text-xs text-ink-600">{b.desc}</p>
@@ -102,11 +127,17 @@ export default async function PartnerPage({
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-border/70 bg-brand-50/60 p-5">
-              <p className="text-eyebrow mb-2">Prefer to talk?</p>
-              <p className="text-sm text-ink-700">
-                Submit the form and we&apos;ll route it to the right team — or call{" "}
-                <span className="font-medium text-ink-900">{siteConfig.contact.phone}</span>.
+            <div className="rounded-2xl border border-border/70 bg-brand-50/60 p-3.5 sm:p-5">
+              <p className="text-eyebrow mb-1.5 hidden sm:mb-2 sm:block">Prefer to talk?</p>
+              <p className="text-[0.9375rem] leading-snug text-ink-700 sm:text-sm">
+                Submit the form and we&apos;ll route it to the right team, or call{" "}
+                <a
+                  href={`tel:${siteConfig.contact.phoneRaw}`}
+                  className="inline-block py-1.5 -my-1.5 font-semibold text-brand-800 underline underline-offset-2"
+                >
+                  {siteConfig.contact.phone}
+                </a>
+                .
               </p>
             </div>
           </aside>

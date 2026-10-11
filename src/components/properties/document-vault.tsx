@@ -21,19 +21,28 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function DocumentVault({ documents }: { documents: PropertyDocument[] }) {
+export function DocumentVault({
+  documents,
+  embedded = false,
+}: {
+  documents: PropertyDocument[]
+  /** Inside an accordion: no card or heading of its own (the section supplies them). */
+  embedded?: boolean
+}) {
   const verifiedCount = documents.filter((d) => d.isVerified).length
 
   return (
-    <div className="surface-card p-5">
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <div>
-          <h3 className="text-h3">Document Vault</h3>
-          <p className="mt-1 text-xs text-ink-500">
-            {verifiedCount} of {documents.length} verified
-          </p>
+    <div className={embedded ? undefined : "surface-card p-5"}>
+      {!embedded && (
+        <div className="mb-4 flex items-end justify-between gap-3">
+          <div>
+            <h3 className="text-h3">Document Vault</h3>
+            <p className="mt-1 text-xs text-ink-500">
+              {verifiedCount} of {documents.length} verified
+            </p>
+          </div>
         </div>
-      </div>
+      )}
       <ul className="divide-y divide-border/60">
         {documents.map((doc) => (
           <li key={doc.id} className="flex items-center gap-3 py-3">

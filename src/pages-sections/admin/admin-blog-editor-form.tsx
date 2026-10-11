@@ -1,10 +1,13 @@
 "use client"
 
-import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useRef, useState } from "react"
-import { ArrowLeft, Eye, ImagePlus, Loader2, Save, X } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Eye, ImagePlus, Loader2, Save, X } from "lucide-react"
 
+import { MobileActionBar } from "@/components/common/mobile-action-bar"
+import { DetailBack } from "@/components/dashboard/detail"
+import { FormSection } from "@/components/dashboard/form-section"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -56,6 +59,12 @@ export function AdminBlogEditorForm({ post, token }: AdminBlogEditorFormProps) {
   const [uploading, setUploading] = useState<"cover" | "avatar" | null>(null)
   const [saving, setSaving] = useState<"draft" | "publish" | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const errorRef = useRef<HTMLParagraphElement>(null)
+
+  // The error sits in the publishing card; bring it into view from the sticky bar on phones.
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+  }, [error])
 
   function updateTitle(value: string) {
     setTitle(value)
@@ -152,17 +161,11 @@ export function AdminBlogEditorForm({ post, token }: AdminBlogEditorFormProps) {
   }
 
   return (
-    <div className="space-y-5">
-      <Link
-        href={ROUTES.ADMIN_BLOG}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-800"
-      >
-        <ArrowLeft className="size-4" />
-        Back to blog
-      </Link>
+    <div className="space-y-3 sm:space-y-5">
+      <DetailBack href={ROUTES.ADMIN_BLOG}>Back to blog</DetailBack>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="surface-card space-y-5 p-5">
+      <div className="grid grid-cols-1 gap-3 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="surface-card space-y-4 p-4 sm:space-y-5 sm:p-5">
           <div>
             <Label htmlFor="blog-title">Title</Label>
             <Input
@@ -206,13 +209,13 @@ export function AdminBlogEditorForm({ post, token }: AdminBlogEditorFormProps) {
               value={content}
               onChange={(event) => setContent(event.target.value)}
               placeholder={"Write the article body. Use ## headings and - bullet lines if needed."}
-              className="mt-2 min-h-[420px] font-mono text-sm leading-6"
+              className="mt-2 min-h-72 font-mono text-sm leading-6 sm:min-h-[420px]"
             />
           </div>
         </section>
 
-        <aside className="space-y-5">
-          <div className="surface-card space-y-4 p-5">
+        <aside className="space-y-3 sm:space-y-5">
+          <div className="surface-card space-y-4 p-4 sm:p-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
                 Publishing
@@ -222,11 +225,12 @@ export function AdminBlogEditorForm({ post, token }: AdminBlogEditorFormProps) {
               </p>
             </div>
 
-            <label className="flex items-center gap-2 rounded-xl border border-border bg-ink-50 px-3 py-2 text-sm">
+            <label className="flex min-h-11 items-center gap-2.5 rounded-xl border border-border bg-ink-50 px-3 py-2 text-sm">
               <input
                 type="checkbox"
                 checked={isPublished}
                 onChange={(event) => setIsPublished(event.target.checked)}
+                className="size-6 accent-brand-600 lg:size-4"
               />
               Published
             </label>
@@ -242,7 +246,8 @@ export function AdminBlogEditorForm({ post, token }: AdminBlogEditorFormProps) {
               />
             </div>
 
-            <div className="grid gap-2">
+            {/* md and up: inline buttons. Phones: the floating bar at the bottom. */}
+            <div className="hidden gap-2 md:grid">
               <Button
                 type="button"
                 variant="outline"
@@ -264,11 +269,21 @@ export function AdminBlogEditorForm({ post, token }: AdminBlogEditorFormProps) {
               </Button>
             </div>
 
-            {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
+            {error ? (
+              <p ref={errorRef} role="alert" className="text-sm font-medium text-red-600">
+                {error}
+              </p>
+            ) : null}
           </div>
 
-          <div className="surface-card space-y-4 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">
+          <FormSection
+            id="section-details"
+            title="Article details"
+            hint="Category, author, cover image, tags"
+            defaultOpen={false}
+            className="space-y-4"
+          >
+            <p className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 md:block">
               Article details
             </p>
 
@@ -343,12 +358,16 @@ export function AdminBlogEditorForm({ post, token }: AdminBlogEditorFormProps) {
             <div>
               <Label htmlFor="blog-cover">Cover image URL</Label>
               {coverImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={coverImage}
-                  alt="Blog cover preview"
-                  className="mt-2 h-36 w-full rounded-2xl border border-border object-cover"
-                />
+                <div className="relative mt-2 h-36 w-full overflow-hidden rounded-2xl border border-border">
+                  <Image
+                    src={coverImage}
+                    alt="Blog cover preview"
+                    fill
+                    unoptimized
+                    sizes="(max-width: 1280px) 100vw, 340px"
+                    className="object-cover"
+                  />
+                </div>
               ) : null}
               <div className="mt-2 flex gap-2">
                 <Input
@@ -420,9 +439,30 @@ export function AdminBlogEditorForm({ post, token }: AdminBlogEditorFormProps) {
                 className="mt-2 h-11"
               />
             </div>
-          </div>
+          </FormSection>
         </aside>
       </div>
+
+      <MobileActionBar label="Article actions">
+        <button
+          type="button"
+          className="btn-glass shrink-0"
+          disabled={saving !== null}
+          onClick={() => save(false)}
+        >
+          {saving === "draft" ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+          Save draft
+        </button>
+        <button
+          type="button"
+          className="btn-tactile btn-tactile--block flex-1"
+          disabled={saving !== null}
+          onClick={() => save(true)}
+        >
+          {saving === "publish" ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
+          Publish
+        </button>
+      </MobileActionBar>
     </div>
   )
 }

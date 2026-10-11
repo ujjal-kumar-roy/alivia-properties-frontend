@@ -1,2 +1,5 @@
-import { SkContentPage } from "@/components/common/skeletons"
-export default function Loading() { return <SkContentPage /> }
+import { FormPageSkeleton } from "@/components/booking/form-page-skeleton"
+
+export default function Loading() {
+  return <FormPageSkeleton fields={5} />
+}

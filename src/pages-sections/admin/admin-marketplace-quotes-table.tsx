@@ -6,6 +6,8 @@ import { useSession } from "next-auth/react"
 import { AlertCircle, CheckCircle2, Eye, Loader2, Mail, MessageSquareReply, Phone } from "lucide-react"
 
 import { DataTable, type DataTableColumn } from "@/components/dashboard/data-table"
+import { FilterBar } from "@/components/dashboard/filter-bar"
+import { RowActions, type RowAction } from "@/components/dashboard/row-actions"
 import { QuoteStatusBadge } from "@/components/dashboard/quote-status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,12 +22,14 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { ROUTES } from "@/config/routes.config"
 import { useUrlFilter } from "@/hooks/use-url-filter"
-import { cn } from "@/lib/utils"
 import { ApiError } from "@/services/http-client"
 import { quotesService } from "@/services/quotes.service"
 import type { QuoteRequest, QuoteStatus } from "@/types/quote.types"
 import type { User } from "@/types/user.types"
 import { formatDate } from "@/utils/format-date"
+
+/** Low-priority table columns: shown from xl, where the sidebar layout has room for them. */
+const FROM_XL = "hidden xl:table-cell"
 
 const STATUS_FILTERS: { value: QuoteStatus | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -164,12 +168,14 @@ export function AdminMarketplaceQuotesTable({
     {
       key: "request",
       header: "Request",
+      mobileLabel: false,
+      wideOnMobile: true,
       render: (quote) => (
         <div className="min-w-0">
           <p className="truncate text-xs font-medium text-ink-800">
             {quote.product?.name ?? quote.supplier?.name ?? quote.categorySlug ?? "General quote"}
           </p>
-          <p className="mt-0.5 line-clamp-2 max-w-[22rem] text-xs text-ink-500">
+          <p className="mt-0.5 line-clamp-2 max-w-[22rem] text-xs text-ink-500 max-sm:max-w-none">
             {quote.message}
           </p>
         </div>
@@ -178,6 +184,7 @@ export function AdminMarketplaceQuotesTable({
     {
       key: "supplier",
       header: "Supplier",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (quote) =>
         quote.supplier ? (
@@ -194,6 +201,7 @@ export function AdminMarketplaceQuotesTable({
     {
       key: "quantity",
       header: "Quantity",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (quote) => (
         <div className="text-xs text-ink-700">
@@ -209,10 +217,11 @@ export function AdminMarketplaceQuotesTable({
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (quote) => (
-        <div className="space-y-1">
+        <div className="space-y-1 max-sm:flex max-sm:flex-col max-sm:items-end">
           <QuoteStatusBadge status={quote.status} />
-          <p className="text-[11px] text-ink-500">
+          <p className="text-[0.6875rem] text-ink-500">
             {quote.assignedRep?.name ?? "Unassigned"}
           </p>
         </div>
@@ -221,7 +230,8 @@ export function AdminMarketplaceQuotesTable({
     {
       key: "created",
       header: "Submitted",
-      hideOnMobile: true,
+      className: FROM_XL,
+      mobileLabel: false,
       render: (quote) => (
         <span className="text-xs text-ink-500">{formatDate(quote.createdAt)}</span>
       ),
@@ -229,56 +239,46 @@ export function AdminMarketplaceQuotesTable({
     {
       key: "actions",
       header: "Actions",
-      render: (quote) => (
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="default"
-            className="rounded-full"
-            onClick={() => openReview(quote)}
-          >
-            <MessageSquareReply className="size-3.5" />
-            Review
-          </Button>
-          <Link href={`${detailBasePath}/${quote.id}`}>
-            <Button size="icon" variant="outline" className="size-8 rounded-full" aria-label="Open quote detail">
-              <Eye className="size-3.5" />
-            </Button>
-          </Link>
-          <Link href={`mailto:${quote.email}`}>
-            <Button size="icon" variant="outline" className="size-8 rounded-full" aria-label="Email customer">
-              <Mail className="size-3.5" />
-            </Button>
-          </Link>
-          <Link href={`tel:${quote.phone}`}>
-            <Button size="icon" variant="outline" className="size-8 rounded-full" aria-label="Call customer">
-              <Phone className="size-3.5" />
-            </Button>
-          </Link>
-        </div>
-      ),
+      render: (quote) => {
+        const actions: RowAction[] = [
+          {
+            key: "review",
+            label: "Review",
+            icon: MessageSquareReply,
+            primary: true,
+            solid: true,
+            onSelect: () => openReview(quote),
+          },
+          {
+            key: "detail",
+            label: "Open quote detail",
+            icon: Eye,
+            href: `${detailBasePath}/${quote.id}`,
+          },
+          {
+            key: "email",
+            label: "Email customer",
+            icon: Mail,
+            href: `mailto:${quote.email}`,
+          },
+          {
+            key: "call",
+            label: "Call customer",
+            icon: Phone,
+            href: `tel:${quote.phone}`,
+          },
+        ]
+        return <RowActions actions={actions} menuLabel={`Actions for ${quote.name}`} />
+      },
     },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {STATUS_FILTERS.map((filter) => (
-          <button
-            key={filter.value}
-            type="button"
-            onClick={() => setFilter("status", filter.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              status === filter.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[{ name: "status", label: "Status", value: status, options: STATUS_FILTERS }]}
+        onChange={setFilter}
+      />
       <DataTable
         columns={columns}
         data={rows}
@@ -297,7 +297,7 @@ export function AdminMarketplaceQuotesTable({
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="grid gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <section className="rounded-lg border border-border/70 bg-ink-50/40 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -338,7 +338,7 @@ export function AdminMarketplaceQuotesTable({
                   </p>
                 </section>
 
-                <section className="grid gap-3">
+                <section className="grid grid-cols-1 gap-3">
                   <label htmlFor="quote-status" className="text-sm font-medium text-ink-800">
                     Status
                   </label>
@@ -361,7 +361,7 @@ export function AdminMarketplaceQuotesTable({
                 </section>
 
                 {salesReps.length > 0 ? (
-                  <section className="grid gap-3">
+                  <section className="grid grid-cols-1 gap-3">
                     <label htmlFor="quote-assignee" className="text-sm font-medium text-ink-800">
                       Assigned rep
                     </label>
@@ -396,7 +396,7 @@ export function AdminMarketplaceQuotesTable({
                   </Button>
                 ) : null}
 
-                <section className="grid gap-3">
+                <section className="grid grid-cols-1 gap-3">
                   <label htmlFor="quote-final-price" className="text-sm font-medium text-ink-800">
                     Final quoted price
                   </label>
@@ -412,7 +412,7 @@ export function AdminMarketplaceQuotesTable({
                   />
                 </section>
 
-                <section className="grid gap-3">
+                <section className="grid grid-cols-1 gap-3">
                   <label htmlFor="quote-reply" className="text-sm font-medium text-ink-800">
                     Reply
                   </label>
@@ -432,7 +432,7 @@ export function AdminMarketplaceQuotesTable({
                   </div>
                 </section>
 
-                <section className="grid gap-3">
+                <section className="grid grid-cols-1 gap-3">
                   <label htmlFor="quote-note" className="text-sm font-medium text-ink-800">
                     Conversation note
                   </label>

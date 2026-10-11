@@ -24,8 +24,9 @@ export default async function SellerInquiryDetailPage({
   if (!inquiry) notFound()
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 sm:space-y-5">
       <DashboardPageHeader
+        className="max-sm:hidden"
         title="Inquiry detail"
         description="Review the lead, contact the buyer, and keep the response status updated."
       />

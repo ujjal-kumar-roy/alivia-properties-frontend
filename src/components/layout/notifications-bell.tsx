@@ -126,11 +126,11 @@ export function NotificationsBell() {
         aria-label={
           unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"
         }
-        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border/80 bg-white text-ink-700 outline-none transition-colors hover:bg-brand-50"
+        className="relative flex size-11 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white text-ink-700 outline-none transition-[background-color,scale] hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-400 active:scale-95 data-popup-open:bg-brand-50 sm:size-10 lg:rounded-2xl"
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="size-5 sm:size-4" />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-400 px-1 text-[0.65rem] font-bold text-ink-900 shadow-sm">
+          <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-gold-400 px-1 text-[0.6875rem] font-bold leading-none text-ink-900 shadow-sm">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -139,7 +139,7 @@ export function NotificationsBell() {
       <PopoverContent
         align="end"
         sideOffset={10}
-        className="w-80 gap-0 overflow-hidden p-0"
+        className="w-[min(20rem,calc(100vw-1.5rem))] gap-0 overflow-hidden p-0"
       >
         <div className="flex items-center justify-between border-b border-border/60 px-3.5 py-2.5">
           <p className="text-sm font-semibold text-ink-900">Notifications</p>
@@ -148,7 +148,7 @@ export function NotificationsBell() {
               type="button"
               onClick={handleMarkAll}
               disabled={markingAll}
-              className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 transition-colors hover:text-brand-800 disabled:opacity-50"
+              className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-medium text-brand-700 transition-colors hover:text-brand-800 disabled:opacity-50"
             >
               {markingAll ? (
                 <Loader2 className="size-3 animate-spin" />
@@ -181,7 +181,7 @@ export function NotificationsBell() {
                     type="button"
                     onClick={() => handleSelect(n)}
                     className={cn(
-                      "flex w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-ink-50",
+                      "flex min-h-12 w-full items-start gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-ink-50 active:bg-ink-50",
                       !n.isRead && "bg-brand-50/50",
                     )}
                   >
@@ -199,7 +199,7 @@ export function NotificationsBell() {
                       <span className="mt-0.5 block line-clamp-2 text-xs text-ink-600">
                         {n.body}
                       </span>
-                      <span className="mt-1 block text-[11px] text-ink-400">
+                      <span className="mt-1 block text-[0.6875rem] text-ink-500">
                         {formatRelative(n.createdAt)}
                       </span>
                     </span>
@@ -214,7 +214,7 @@ export function NotificationsBell() {
           <Link
             href={ROUTES.NOTIFICATIONS}
             onClick={() => setOpen(false)}
-            className="block rounded-lg px-2 py-1.5 text-center text-xs font-medium text-brand-700 transition-colors hover:bg-brand-50"
+            className="flex min-h-10 items-center justify-center rounded-lg px-2 py-1.5 text-center text-xs font-medium text-brand-700 transition-colors hover:bg-brand-50"
           >
             View all notifications
           </Link>

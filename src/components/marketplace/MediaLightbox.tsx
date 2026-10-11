@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCw,
-  RotateCcw,
   Maximize2,
   X,
   ZoomIn,
@@ -24,12 +23,17 @@ import { cn } from "@/lib/utils"
 
 const DISMISS_DRAG_HYSTERESIS = 10
 const DISMISS_RUBBER_RADIUS = 220
+/** Horizontal travel (px) that counts as a swipe to the next/previous photo. */
+const SWIPE_NAV_DISTANCE = 48
 
 type DismissDragState = {
   pointerId: number
   startX: number
   startY: number
+  /** The gesture read as vertical: it now drags the viewer away. */
   committed: boolean
+  /** The gesture read as horizontal: it is a browse swipe on release. */
+  horizontal: boolean
   samples: { t: number; y: number }[]
 }
 
@@ -48,10 +52,13 @@ type Props = {
 }
 
 /**
- * Fullscreen image inspector: zoom in/out (buttons · wheel · double-click),
- * 90° rotate, drag-to-pan when zoomed, and prev/next navigation. Fully
- * keyboard-driven and respects prefers-reduced-motion. The Base UI Dialog
- * gives us the focus trap + Esc-to-close + scrim for free.
+ * Fullscreen image inspector: zoom in/out (buttons, wheel, double tap), 90 degree
+ * rotate, drag-to-pan when zoomed, swipe left/right (or arrows) to browse, and
+ * swipe down/up to dismiss. On phones it fills the screen: the photo is the
+ * whole stage and every control floats over it in clear glass, clear of the
+ * notch and home indicator (safe-area insets), with a 44px close button. Fully
+ * keyboard-driven and respects prefers-reduced-motion. The Base UI Dialog gives
+ * us the focus trap + Esc-to-close + scrim for free.
  */
 export function MediaLightbox({
   images,
@@ -175,15 +182,15 @@ export function MediaLightbox({
       setDragging(true)
       return
     }
-    // Not zoomed: track a possible vertical swipe-to-dismiss instead. Only
-    // commits once the gesture reads as vertical, so a horizontal browse
-    // gesture (prev/next buttons, or just a stray move) isn't hijacked.
-    if (reducedMotion) return
+    // Not zoomed: track a possible swipe. It commits to a vertical dismiss or a
+    // horizontal browse only once the gesture's direction is clear, so neither
+    // hijacks the other.
     dismissStateRef.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
       committed: false,
+      horizontal: false,
       samples: [{ t: e.timeStamp, y: e.clientY }],
     }
   }
@@ -199,7 +206,8 @@ export function MediaLightbox({
 
     const state = dismissStateRef.current
     const el = lightboxRef.current
-    if (!state || !el || e.pointerId !== state.pointerId) return
+    if (!state || !el || e.pointerId !== state.pointerId || state.horizontal)
+      return
     const dx = e.clientX - state.startX
     const dy = e.clientY - state.startY
 
@@ -209,8 +217,9 @@ export function MediaLightbox({
         Math.abs(dy) < DISMISS_DRAG_HYSTERESIS
       )
         return
-      if (Math.abs(dx) > Math.abs(dy)) {
-        dismissStateRef.current = null
+      if (Math.abs(dx) > Math.abs(dy) || reducedMotion) {
+        state.horizontal = Math.abs(dx) > Math.abs(dy)
+        if (!state.horizontal) dismissStateRef.current = null
         return
       }
       state.committed = true
@@ -219,7 +228,7 @@ export function MediaLightbox({
       try {
         el.setPointerCapture(e.pointerId)
       } catch {
-        // Stale pointer session — the drag still tracks via move events already in flight.
+        // Stale pointer session: the drag still tracks via move events already in flight.
       }
     }
 
@@ -242,7 +251,15 @@ export function MediaLightbox({
     const state = dismissStateRef.current
     dismissStateRef.current = null
     const el = lightboxRef.current
-    if (!state || !el || !state.committed) return
+    if (!state || !el) return
+
+    // A horizontal flick browses to the neighbouring photo.
+    if (state.horizontal) {
+      const dx = e.clientX - state.startX
+      if (Math.abs(dx) > SWIPE_NAV_DISTANCE) go(dx < 0 ? 1 : -1)
+      return
+    }
+    if (!state.committed) return
 
     const dy = e.clientY - state.startY
     const first = state.samples[0]
@@ -274,7 +291,7 @@ export function MediaLightbox({
       anim.finished
         .then(() => onOpenChange(false))
         .catch(() => {
-          /* cancelled by a new grab — that drag owns the close decision now */
+          /* cancelled by a new grab: that drag owns the close decision now */
         })
     } else {
       const anim = el.animate(
@@ -308,67 +325,18 @@ export function MediaLightbox({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="block h-[92vh] max-h-[92vh] w-[96vw] max-w-none overflow-hidden border-0 bg-ink-950/96 p-0 ring-0 sm:max-w-none"
+        // Opts out of the auto-glass that [data-slot="dialog-content"] applies:
+        // the viewer is a dark stage, and the controls carry their own glass.
+        data-slot="media-lightbox"
+        className="block h-dvh max-h-dvh w-screen max-w-none overflow-hidden rounded-none border-0 bg-ink-950 p-0 ring-0 left-0 top-0 translate-x-0 translate-y-0 sm:left-1/2 sm:top-1/2 sm:h-[92vh] sm:max-h-[92vh] sm:w-[96vw] sm:max-w-none sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl"
       >
         <DialogTitle className="sr-only">
-          {label ? `${label} — image viewer` : "Image viewer"}
+          {label ? `${label}: image viewer` : "Image viewer"}
         </DialogTitle>
 
-        {/* Drag target for swipe-to-dismiss (unzoomed only) — moves the whole
+        {/* Drag target for swipe-to-dismiss (unzoomed only): moves the whole
             lightbox UI as one unit, rubber-banded, fading as it travels. */}
         <div ref={lightboxRef} className="relative size-full">
-          {/* Top control bar */}
-          <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 bg-linear-to-b from-black/70 to-transparent px-3 py-3 sm:px-4">
-            <span className="rounded-full bg-black/45 px-3 py-1 font-mono text-xs font-medium text-white/90 tabular-nums backdrop-blur-sm">
-              {count > 0 ? `${index + 1} / ${count}` : "—"}
-            </span>
-
-            <div className="flex items-center gap-1.5">
-              <ToolButton
-                label="Zoom out"
-                onClick={() => zoomBy(-STEP)}
-                disabled={scale <= MIN_SCALE}
-              >
-                <ZoomOut className="size-5" />
-              </ToolButton>
-              <span className="min-w-12 select-none text-center font-mono text-xs text-white/80 tabular-nums">
-                {Math.round(scale * 100)}%
-              </span>
-              <ToolButton
-                label="Zoom in"
-                onClick={() => zoomBy(STEP)}
-                disabled={scale >= MAX_SCALE}
-              >
-                <ZoomIn className="size-5" />
-              </ToolButton>
-              <ToolButton
-                label="Rotate left"
-                onClick={() => setRotation((d) => (d - 90 + 360) % 360)}
-              >
-                <RotateCcw className="size-5" />
-              </ToolButton>
-              <ToolButton
-                label="Rotate right"
-                onClick={() => setRotation((d) => (d + 90) % 360)}
-              >
-                <RotateCw className="size-5" />
-              </ToolButton>
-              <ToolButton
-                label="Reset view"
-                onClick={resetView}
-                disabled={!isTransformed}
-              >
-                <Maximize2 className="size-5" />
-              </ToolButton>
-              <ToolButton
-                label="Close viewer"
-                onClick={() => onOpenChange(false)}
-              >
-                <X className="size-5" />
-              </ToolButton>
-            </div>
-          </div>
-
           {/* Stage */}
           <div
             className="relative flex size-full items-center justify-center overflow-hidden"
@@ -406,7 +374,7 @@ export function MediaLightbox({
               </div>
             )}
 
-            {/* Prev / next */}
+            {/* Prev / next (the swipe is the phone way; these are the fallback) */}
             {count > 1 && (
               <>
                 <ArrowButton
@@ -427,9 +395,64 @@ export function MediaLightbox({
             )}
           </div>
 
-          {/* Bottom hint */}
-          <div className="absolute inset-x-0 bottom-0 z-20 flex justify-center bg-linear-to-t from-black/60 to-transparent px-4 py-3">
-            <p className="text-center text-[11px] text-white/65">
+          {/* Top: position and the 44px close, in clear glass over the photo. */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-4">
+            <span className="pointer-events-auto rounded-full bg-black/50 px-3 py-1.5 text-xs font-semibold text-white tabular-nums backdrop-blur-md">
+              {count > 0 ? `${index + 1} / ${count}` : "0"}
+            </span>
+            <button
+              type="button"
+              aria-label="Close viewer"
+              title="Close viewer"
+              onClick={() => onOpenChange(false)}
+              className="glass-clear pointer-events-auto flex size-11 items-center justify-center rounded-full text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <X aria-hidden="true" className="size-5" />
+            </button>
+          </div>
+
+          {/* Bottom: tools in one glass capsule, thumb height, above the home bar. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div
+              role="toolbar"
+              aria-label="Image tools"
+              className="glass-clear pointer-events-auto flex items-center gap-0.5 rounded-full p-1"
+            >
+              <ToolButton
+                label="Zoom out"
+                onClick={() => zoomBy(-STEP)}
+                disabled={scale <= MIN_SCALE}
+              >
+                <ZoomOut className="size-5" />
+              </ToolButton>
+              <span
+                aria-live="polite"
+                className="min-w-11 select-none text-center text-xs font-semibold text-white/90 tabular-nums"
+              >
+                {Math.round(scale * 100)}%
+              </span>
+              <ToolButton
+                label="Zoom in"
+                onClick={() => zoomBy(STEP)}
+                disabled={scale >= MAX_SCALE}
+              >
+                <ZoomIn className="size-5" />
+              </ToolButton>
+              <ToolButton
+                label="Rotate right"
+                onClick={() => setRotation((d) => (d + 90) % 360)}
+              >
+                <RotateCw className="size-5" />
+              </ToolButton>
+              <ToolButton
+                label="Reset view"
+                onClick={resetView}
+                disabled={!isTransformed}
+              >
+                <Maximize2 className="size-5" />
+              </ToolButton>
+            </div>
+            <p className="pointer-events-none hidden text-center text-[11px] text-white/70 sm:block">
               Scroll or double-click to zoom · drag to pan ·{" "}
               <kbd className="font-mono">R</kbd> to rotate ·{" "}
               <kbd className="font-mono">←/→</kbd> to browse ·{" "}
@@ -461,9 +484,9 @@ function ToolButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex size-11 items-center justify-center rounded-full text-white/90 transition-colors",
+        "flex size-11 items-center justify-center rounded-full text-white transition-colors",
         "hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
-        "disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent",
+        "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent",
       )}
     >
       {children}
@@ -488,11 +511,12 @@ function ArrowButton({
       aria-label={label}
       title={label}
       onClick={onClick}
+      // Stop the stage from reading a tap on the arrow as the start of a swipe.
+      onPointerDown={(e) => e.stopPropagation()}
       className={cn(
-        "absolute top-1/2 z-10 flex size-12 -translate-y-1/2 items-center justify-center rounded-full",
-        "bg-black/45 text-white backdrop-blur-sm transition-colors hover:bg-black/70",
+        "glass-clear absolute top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-white sm:size-12",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
-        side === "left" ? "left-3 sm:left-5" : "right-3 sm:right-5",
+        side === "left" ? "left-2 sm:left-5" : "right-2 sm:right-5",
       )}
     >
       {children}

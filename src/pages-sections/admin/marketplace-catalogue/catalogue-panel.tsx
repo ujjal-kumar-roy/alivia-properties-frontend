@@ -43,7 +43,7 @@ export function AdminMarketplaceCataloguePanel({
   const countFor = (slug: string) => suppliers.filter((s) => s.categories.includes(slug)).length
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 sm:space-y-5">
       <CatalogueToolbar
         categories={categories}
         categorySlug={categorySlug}
@@ -62,7 +62,14 @@ export function AdminMarketplaceCataloguePanel({
       {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
 
       <div className="flex justify-end">
-        <Button type="button" size="sm" onClick={() => { setEditingSupplier(null); setSheetOpen(true) }}>
+        <button
+          type="button"
+          className="btn-tactile btn-tactile--sm btn-tactile--block sm:hidden"
+          onClick={() => { setEditingSupplier(null); setSheetOpen(true) }}
+        >
+          <Plus className="size-4" /> Add supplier
+        </button>
+        <Button type="button" size="sm" className="hidden sm:inline-flex" onClick={() => { setEditingSupplier(null); setSheetOpen(true) }}>
           <Plus className="size-3.5" /> Add supplier
         </Button>
       </div>
@@ -70,7 +77,7 @@ export function AdminMarketplaceCataloguePanel({
       <section className="surface-card overflow-hidden">
         <div className="divide-y divide-border/70">
           {visibleSuppliers.length === 0 ? (
-            <p className="px-5 py-10 text-center text-sm text-ink-500">No suppliers match — add one above.</p>
+            <p className="px-5 py-10 text-center text-sm text-ink-600">No suppliers match. Add one above.</p>
           ) : (
             visibleSuppliers.map((supplier) => (
               <SupplierCard

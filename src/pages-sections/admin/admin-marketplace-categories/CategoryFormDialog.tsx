@@ -243,7 +243,7 @@ export function CategoryFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {/* Image upload */}
           <div className="flex items-center gap-4">
             <div className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-border bg-ink-50">
@@ -294,7 +294,7 @@ export function CategoryFormDialog({
           </div>
 
           {/* Name */}
-          <div className="grid gap-1.5">
+          <div className="grid grid-cols-1 gap-1.5">
             <label className="text-sm font-medium text-ink-800">Name *</label>
             <Input
               value={form.name}
@@ -305,7 +305,7 @@ export function CategoryFormDialog({
           </div>
 
           {/* Slug */}
-          <div className="grid gap-1.5">
+          <div className="grid grid-cols-1 gap-1.5">
             <label className="text-sm font-medium text-ink-800">Slug *</label>
             <Input
               value={form.slug}
@@ -320,7 +320,7 @@ export function CategoryFormDialog({
           </div>
 
           {/* Description */}
-          <div className="grid gap-1.5">
+          <div className="grid grid-cols-1 gap-1.5">
             <label className="text-sm font-medium text-ink-800">Description</label>
             <Textarea
               value={form.description}
@@ -332,7 +332,7 @@ export function CategoryFormDialog({
 
           {/* Parent department (categories only) */}
           {needsParent && (
-            <div className="grid gap-1.5">
+            <div className="grid grid-cols-1 gap-1.5">
               <label className="text-sm font-medium text-ink-800">Parent department *</label>
               <select
                 value={form.parentSlug}
@@ -353,7 +353,7 @@ export function CategoryFormDialog({
 
           {/* Order + active */}
           <div className="flex flex-wrap items-end gap-5">
-            <div className="grid gap-1.5">
+            <div className="grid grid-cols-1 gap-1.5">
               <label className="text-sm font-medium text-ink-800">Display order</label>
               <Input
                 type="number" min={0} value={form.order}
@@ -375,7 +375,7 @@ export function CategoryFormDialog({
 
           {/* RFQ configuration — categories only */}
           {isCategory && (
-            <div className="grid gap-1.5">
+            <div className="grid grid-cols-1 gap-1.5">
               <label className="text-sm font-medium text-ink-800">Quote configuration</label>
               <p className="-mt-1 text-xs text-ink-500">
                 Define the variants and spec fields buyers fill when requesting a quote for this category.

@@ -12,7 +12,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { FileUploader } from "@/components/common/file-uploader"
+import { TouchFileUploader } from "@/components/dashboard/touch-file-uploader"
+import { FormSection } from "@/components/dashboard/form-section"
+import { FormActionBar } from "@/components/dashboard/form-action-bar"
 import { heroSlideSchema, type HeroSlideInput, type HeroSlideSubmit } from "@/schemas/hero-slide.schema"
 import { heroService } from "@/services/hero.service"
 import { DEFAULT_HERO_ICON, HERO_ICONS, HERO_ICON_NAMES, type HeroIconName } from "@/lib/hero-icons"
@@ -86,20 +88,25 @@ export function HeroSlideForm({ mode, initialSlide }: HeroSlideFormProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {submitError && (
-        <div className="rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div role="alert" className="rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {submitError}
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+      <div className="grid grid-cols-1 gap-3 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-6">
             {/* Background image */}
-            <div className="surface-card space-y-2 p-5">
-              <p className="text-sm font-medium text-ink-800">Background image</p>
-              <FileUploader
+            <FormSection
+              id="section-image"
+              title="Background image"
+              hint={imageValue ? "Photo added" : "Wide, high-resolution photo"}
+              className="space-y-2"
+            >
+              <p className="hidden text-sm font-medium text-ink-800 md:block">Background image</p>
+              <TouchFileUploader
                 kind="project-image"
                 label=""
                 value={imageValue ? [imageValue] : []}
@@ -109,10 +116,15 @@ export function HeroSlideForm({ mode, initialSlide }: HeroSlideFormProps) {
                 }}
                 hint="Wide, high-resolution photo · shown full-bleed behind the copy · max 10 MB"
               />
-            </div>
+            </FormSection>
 
             {/* Copy */}
-            <div className="surface-card grid gap-4 p-5 md:grid-cols-2">
+            <FormSection
+              id="section-copy"
+              title="Copy"
+              hint="Eyebrow, title, subtitle"
+              className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            >
               <FormField
                 control={form.control}
                 name="eyebrow"
@@ -177,10 +189,16 @@ export function HeroSlideForm({ mode, initialSlide }: HeroSlideFormProps) {
                   )}
                 />
               </div>
-            </div>
+            </FormSection>
 
             {/* Buttons */}
-            <div className="surface-card grid gap-4 p-5 md:grid-cols-2">
+            <FormSection
+              id="section-buttons"
+              title="Buttons"
+              hint="Labels and links"
+              defaultOpen={mode === "create"}
+              className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            >
               <FormField
                 control={form.control}
                 name="primaryLabel"
@@ -233,10 +251,16 @@ export function HeroSlideForm({ mode, initialSlide }: HeroSlideFormProps) {
                   </FormItem>
                 )}
               />
-            </div>
+            </FormSection>
 
             {/* Placement */}
-            <div className="surface-card grid gap-4 p-5 md:grid-cols-2">
+            <FormSection
+              id="section-placement"
+              title="Placement"
+              hint="Order and visibility"
+              defaultOpen={mode === "create"}
+              className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            >
               <FormField
                 control={form.control}
                 name="order"
@@ -256,12 +280,12 @@ export function HeroSlideForm({ mode, initialSlide }: HeroSlideFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Visibility</FormLabel>
-                    <label className="flex items-center gap-3 rounded-[1rem] border border-border bg-white px-3 py-2">
+                    <label className="flex min-h-11 items-center gap-3 rounded-[1rem] border border-border bg-white px-3 py-2">
                       <input
                         type="checkbox"
                         checked={field.value ?? true}
                         onChange={(e) => field.onChange(e.target.checked)}
-                        className="h-4 w-4 accent-brand-600"
+                        className="size-6 shrink-0 accent-brand-600 lg:size-4"
                       />
                       <span className="text-sm text-ink-700">Show this slide on the marketplace hero</span>
                     </label>
@@ -269,9 +293,10 @@ export function HeroSlideForm({ mode, initialSlide }: HeroSlideFormProps) {
                   </FormItem>
                 )}
               />
-            </div>
+            </FormSection>
 
-            <div className="flex flex-wrap items-center gap-3">
+            {/* md and up: inline buttons. Phones: the floating bar below. */}
+            <div className="hidden flex-wrap items-center gap-3 md:flex">
               <Button type="submit" className="rounded-full bg-brand-700 px-6 text-white hover:bg-brand-800" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? (
                   <>
@@ -285,12 +310,26 @@ export function HeroSlideForm({ mode, initialSlide }: HeroSlideFormProps) {
                 Cancel
               </Button>
             </div>
+
+            <FormActionBar
+              label="Hero slide form actions"
+              submitLabel={mode === "edit" ? "Update slide" : "Create slide"}
+              submitting={form.formState.isSubmitting}
+              onCancel={() => router.push(ROUTES.ADMIN_HERO_SLIDES)}
+            />
           </form>
         </Form>
 
-        {/* Live preview */}
-        <div className="xl:sticky xl:top-24 xl:self-start">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-ink-500">Live preview</p>
+        {/* Live preview: a collapsible row on phones, always shown from md up */}
+        <FormSection
+          bare
+          id="section-preview"
+          title="Live preview"
+          hint="How the slide looks on the marketplace"
+          defaultOpen={false}
+          className="xl:sticky xl:top-24 xl:self-start"
+        >
+          <p className="mb-2 hidden text-xs font-semibold uppercase tracking-[0.16em] text-ink-500 md:block">Live preview</p>
           <div className="relative min-h-72 overflow-hidden rounded-2xl border border-border bg-brand-950">
             {imageValue ? (
               <Image src={imageValue} alt="" fill unoptimized sizes="26rem" className="object-cover" />
@@ -322,7 +361,7 @@ export function HeroSlideForm({ mode, initialSlide }: HeroSlideFormProps) {
               ) : null}
             </div>
           </div>
-        </div>
+        </FormSection>
       </div>
     </div>
   )

@@ -80,26 +80,40 @@ export function SkTable({ rows = 6, cols = 5 }: { rows?: number; cols?: number }
 export function SkPropertyCard() {
   return (
     <div className="surface-card overflow-hidden">
-      <Sk className="h-52 w-full rounded-none" />
-      <div className="p-4 space-y-3">
-        <div className="flex gap-2">
-          <Sk className="h-5 w-14 rounded-full" />
-          <Sk className="h-5 w-20 rounded-full" />
+      {/* Phones: the compact row */}
+      <div className="flex gap-2.5 p-2 sm:hidden">
+        <Sk className="aspect-square w-25 shrink-0 rounded-xl" />
+        <div className="min-w-0 flex-1 space-y-2 py-0.5">
+          <Sk className="h-4 w-3/4" />
+          <Sk className="h-3 w-1/2" />
+          <Sk className="h-3 w-5/6" />
+          <Sk className="h-3 w-2/3" />
+          <Sk className="h-5 w-1/2" />
         </div>
-        <Sk className="h-5 w-4/5" />
-        <Sk className="h-4 w-2/3" />
-        <div className="flex gap-3 pt-1">
-          <Sk className="h-4 w-16" />
-          <Sk className="h-4 w-16" />
-          <Sk className="h-4 w-16" />
-        </div>
-        <Sk className="mt-2 h-px w-full rounded-none" />
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-2">
-            <Sk className="h-8 w-8 rounded-full" />
-            <Sk className="h-4 w-24" />
+      </div>
+      {/* sm and up: the vertical card */}
+      <div className="hidden sm:block">
+        <Sk className="h-52 w-full rounded-none" />
+        <div className="space-y-3 p-4">
+          <div className="flex gap-2">
+            <Sk className="h-5 w-14 rounded-full" />
+            <Sk className="h-5 w-20 rounded-full" />
           </div>
-          <Sk className="h-4 w-12" />
+          <Sk className="h-5 w-4/5" />
+          <Sk className="h-4 w-2/3" />
+          <div className="flex gap-3 pt-1">
+            <Sk className="h-4 w-16" />
+            <Sk className="h-4 w-16" />
+            <Sk className="h-4 w-16" />
+          </div>
+          <Sk className="mt-2 h-px w-full rounded-none" />
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-2">
+              <Sk className="h-8 w-8 rounded-full" />
+              <Sk className="h-4 w-24" />
+            </div>
+            <Sk className="h-4 w-12" />
+          </div>
         </div>
       </div>
     </div>
@@ -108,7 +122,7 @@ export function SkPropertyCard() {
 
 export function SkPropertyGrid({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => <SkPropertyCard key={i} />)}
     </div>
   )
@@ -119,15 +133,29 @@ export function SkPropertyGrid({ count = 6 }: { count?: number }) {
 export function SkProjectCard() {
   return (
     <div className="surface-card overflow-hidden">
-      <Sk className="h-56 w-full rounded-none" />
-      <div className="p-5 space-y-3">
-        <Sk className="h-5 w-14 rounded-full" />
-        <Sk className="h-6 w-3/4" />
-        <Sk className="h-4 w-full" />
-        <Sk className="h-4 w-2/3" />
-        <div className="flex gap-3 pt-1">
-          <Sk className="h-4 w-20" />
-          <Sk className="h-4 w-20" />
+      {/* Phones: the compact row */}
+      <div className="flex gap-2.5 p-2 sm:hidden">
+        <Sk className="aspect-square w-25 shrink-0 rounded-xl" />
+        <div className="min-w-0 flex-1 space-y-2 py-0.5">
+          <Sk className="h-4 w-3/4" />
+          <Sk className="h-3 w-1/2" />
+          <Sk className="h-3 w-5/6" />
+          <Sk className="h-3 w-2/3" />
+          <Sk className="h-5 w-1/2" />
+        </div>
+      </div>
+      {/* sm and up: the vertical card */}
+      <div className="hidden sm:block">
+        <Sk className="h-56 w-full rounded-none" />
+        <div className="space-y-3 p-5">
+          <Sk className="h-5 w-14 rounded-full" />
+          <Sk className="h-6 w-3/4" />
+          <Sk className="h-4 w-full" />
+          <Sk className="h-4 w-2/3" />
+          <div className="flex gap-3 pt-1">
+            <Sk className="h-4 w-20" />
+            <Sk className="h-4 w-20" />
+          </div>
         </div>
       </div>
     </div>

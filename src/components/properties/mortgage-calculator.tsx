@@ -5,9 +5,11 @@ import { formatPrice } from "@/utils/format-price"
 
 interface MortgageCalculatorProps {
   propertyPrice: number
+  /** Inside an accordion: no card or heading of its own (the section supplies them). */
+  embedded?: boolean
 }
 
-export function MortgageCalculator({ propertyPrice }: MortgageCalculatorProps) {
+export function MortgageCalculator({ propertyPrice, embedded = false }: MortgageCalculatorProps) {
   const [downPaymentPercent, setDownPaymentPercent] = useState(20)
   const [years, setYears] = useState(20)
   const [interestRate, setInterestRate] = useState(9.5)
@@ -30,11 +32,15 @@ export function MortgageCalculator({ propertyPrice }: MortgageCalculatorProps) {
   }, [downPaymentPercent, years, interestRate, propertyPrice])
 
   return (
-    <div className="surface-card p-5">
-      <p className="text-xs uppercase tracking-[0.18em] text-brand-700">Mortgage Estimate</p>
-      <h3 className="mt-2 text-lg font-semibold text-ink-900">Plan financing quickly</h3>
+    <div className={embedded ? undefined : "surface-card p-5"}>
+      {!embedded && (
+        <>
+          <p className="text-xs uppercase tracking-[0.18em] text-brand-700">Mortgage Estimate</p>
+          <h3 className="mt-2 text-lg font-semibold text-ink-900">Plan financing quickly</h3>
+        </>
+      )}
 
-      <div className="mt-5 space-y-4">
+      <div className={embedded ? "space-y-4" : "mt-5 space-y-4"}>
         <label className="block">
           <span className="text-sm font-medium text-ink-700">Down Payment: {downPaymentPercent}%</span>
           <input
@@ -44,11 +50,11 @@ export function MortgageCalculator({ propertyPrice }: MortgageCalculatorProps) {
             step={5}
             value={downPaymentPercent}
             onChange={(event) => setDownPaymentPercent(Number(event.target.value))}
-            className="mt-2 w-full"
+            className="mt-1 min-h-8 w-full sm:mt-2"
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <label className="block">
             <span className="text-sm font-medium text-ink-700">Loan Tenure (Years)</span>
             <input
@@ -74,16 +80,16 @@ export function MortgageCalculator({ propertyPrice }: MortgageCalculatorProps) {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-[1rem] bg-ink-50 p-4">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:grid-cols-3 sm:gap-3">
+        <div className="rounded-[1rem] bg-ink-50 p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-ink-500">Down Payment</p>
           <p className="mt-2 text-sm font-semibold text-ink-900">{formatPrice(loanDetails.downPayment, true)}</p>
         </div>
-        <div className="rounded-[1rem] bg-ink-50 p-4">
+        <div className="rounded-[1rem] bg-ink-50 p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-ink-500">Loan Amount</p>
           <p className="mt-2 text-sm font-semibold text-ink-900">{formatPrice(loanDetails.principal, true)}</p>
         </div>
-        <div className="rounded-[1rem] bg-brand-50 p-4">
+        <div className="col-span-2 rounded-[1rem] bg-brand-50 p-3 sm:col-span-1 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brand-700">Monthly Estimate</p>
           <p className="mt-2 text-sm font-semibold text-brand-800">{formatPrice(Math.round(loanDetails.monthlyPayment))}/mo</p>
         </div>

@@ -1,9 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { useForm, useWatch } from "react-hook-form"
+import { useForm, useWatch, type FieldErrors } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { z } from "zod"
@@ -11,7 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { FileUploader } from "@/components/common/file-uploader"
+import { TouchFileUploader } from "@/components/dashboard/touch-file-uploader"
+import { FormSection } from "@/components/dashboard/form-section"
+import { FormActionBar } from "@/components/dashboard/form-action-bar"
+import { celebrate } from "@/lib/celebrate"
 import { PropertyImagesUploader } from "@/components/forms/property-images-uploader"
 import { PanoramaBuilder } from "@/components/forms/panorama-builder"
 import { propertySchema, propertyCreateSchema } from "@/schemas/property.schema"
@@ -70,6 +73,7 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
   const router = useRouter()
   const { data: session } = useSession()
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
 
   const form = useForm<PropertyFormValues, undefined, PropertySubmitValues>({
     // Create requires at least 5 photos; edit stays lenient so older listings
@@ -83,6 +87,30 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
   const videoValues = useWatch({ control: form.control, name: "videos" }) ?? []
   const panoramaValues = useWatch({ control: form.control, name: "panorama" }) ?? []
   const selectedFacilities = useWatch({ control: form.control, name: "facilities" }) ?? []
+
+  // Phones fold the form into sections; one with a validation error opens itself.
+  const errs = form.formState.errors
+  const hasError = (...names: (keyof PropertyFormValues)[]) => names.some((name) => Boolean(errs[name]))
+
+  // A save error is shown at the top of the form; bring it into view from the sticky Save bar.
+  useEffect(() => {
+    if (submitError) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+  }, [submitError])
+
+  function onInvalid(errors: FieldErrors<PropertyFormValues>) {
+    const first = Object.keys(errors)[0] as keyof PropertyFormValues | undefined
+    if (!first) return
+    // Sections open on the next render; focus the first bad field once they have.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        try {
+          form.setFocus(first)
+        } catch {
+          // Not a focusable field (e.g. the photo grid): its error message is already visible.
+        }
+      }),
+    )
+  }
 
   const districts = useMemo(
     () => BD_DIVISIONS.find((division) => division.name === selectedDivision)?.districts.map((district) => district.name) ?? [],
@@ -102,6 +130,7 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
         await updateProperty(initialProperty.id, values, session.accessToken)
       } else {
         await createProperty(values, session.accessToken)
+        celebrate()
       }
 
       router.push(ROUTES.SELLER_PROPERTIES)
@@ -112,28 +141,39 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
   }
 
   return (
-    <div className="space-y-6">
-      <div className="surface-panel p-5">
+    <div className="space-y-3 sm:space-y-6">
+      {/* The page header above already names the screen on phones. */}
+      <div className="surface-panel hidden p-5 sm:block">
         <p className="text-xs uppercase tracking-[0.18em] text-brand-700">
           {mode === "edit" ? "Edit listing" : "New listing"}
         </p>
-        <h1 className="mt-2 text-h3">
+        <h2 className="mt-2 text-h3">
           {mode === "edit" ? "Update property details" : "Create property listing"}
-        </h1>
+        </h2>
         <p className="mt-2 text-sm text-ink-500">
           Submit a complete listing with market-ready details, media, and seller contact information.
         </p>
       </div>
 
       {submitError && (
-        <div className="rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div
+          ref={errorRef}
+          role="alert"
+          className="rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
           {submitError}
         </div>
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="surface-card grid gap-4 p-5 md:grid-cols-2">
+        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-3 sm:space-y-6">
+          <FormSection
+            id="section-basics"
+            title="Basics"
+            hint="Title, description, price"
+            invalid={hasError("title", "description", "type", "purpose", "price", "priceNegotiable")}
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
+          >
             <div className="md:col-span-2">
               <FormField
                 control={form.control}
@@ -196,7 +236,7 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
                         key={value}
                         type="button"
                         onClick={() => field.onChange(value)}
-                        className={`flex-1 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                        className={`min-h-11 flex-1 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                           field.value === value
                             ? "border-brand-700 bg-brand-700 text-white"
                             : "border-border hover:border-brand-300"
@@ -237,12 +277,12 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Negotiable</FormLabel>
-                  <label className="flex items-center gap-3 rounded-[1rem] border border-border px-3 py-2">
+                  <label className="flex min-h-11 items-center gap-3 rounded-[1rem] border border-border px-3 py-2">
                     <input
                       type="checkbox"
                       checked={field.value}
                       onChange={(event) => field.onChange(event.target.checked)}
-                      className="h-4 w-4 accent-brand-600"
+                      className="size-6 accent-brand-600 lg:size-4"
                     />
                     <span className="text-sm text-ink-700">Price can be negotiated</span>
                   </label>
@@ -250,9 +290,16 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
                 </FormItem>
               )}
             />
-          </div>
+          </FormSection>
 
-          <div className="surface-card grid gap-4 p-5 md:grid-cols-2 lg:grid-cols-3">
+          <FormSection
+            id="section-location"
+            title="Location"
+            hint="Division, district, area, address"
+            defaultOpen={mode === "create"}
+            invalid={hasError("division", "district", "area", "address", "mapPin")}
+            className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+          >
             <FormField
               control={form.control}
               name="division"
@@ -343,9 +390,16 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
                 )}
               />
             </div>
-          </div>
+          </FormSection>
 
-          <div className="surface-card grid gap-4 p-5 md:grid-cols-2 lg:grid-cols-4">
+          <FormSection
+            id="section-specs"
+            title="Size and rooms"
+            hint="Size, bedrooms, bathrooms, floors"
+            defaultOpen={mode === "create"}
+            invalid={hasError("size", "sizeUnit", "bedrooms", "bathrooms", "balconies", "floorNumber", "totalFloors")}
+            className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
+          >
             <FormField
               control={form.control}
               name="size"
@@ -406,17 +460,23 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
                 )}
               />
             ))}
-          </div>
+          </FormSection>
 
-          <div className="surface-card p-5">
-            <h2 className="text-lg font-semibold text-ink-900">Facilities & Media</h2>
-            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <FormSection
+            id="section-media"
+            title="Facilities and media"
+            hint="Facilities, photos, videos, 360 tour"
+            defaultOpen={mode === "create"}
+            invalid={hasError("facilities", "images", "videos", "videoUrl", "panorama")}
+          >
+            <h2 className="hidden text-lg font-semibold text-ink-900 md:block">Facilities & Media</h2>
+            <div className="mt-2 grid gap-2 md:mt-4 md:grid-cols-2 xl:grid-cols-3">
               {AMENITIES.map((category) => (
-                <div key={category.category} className="rounded-[1.25rem] border border-border bg-ink-50 p-4">
+                <div key={category.category} className="rounded-[1.25rem] border border-border bg-ink-50 p-3 sm:p-4">
                   <p className="text-sm font-semibold text-ink-900">{category.category}</p>
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 sm:mt-3 sm:block sm:space-y-2">
                     {category.items.map((amenity) => (
-                      <label key={amenity} className="flex items-center gap-2 text-sm text-ink-700">
+                      <label key={amenity} className="flex min-h-10 items-center gap-2 text-sm text-ink-700 lg:min-h-0">
                         <input
                           type="checkbox"
                           checked={selectedFacilities.includes(amenity)}
@@ -430,7 +490,7 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
                               { shouldDirty: true, shouldValidate: true },
                             )
                           }}
-                          className="h-4 w-4 accent-brand-600"
+                          className="size-6 shrink-0 accent-brand-600 lg:size-4"
                         />
                         {amenity}
                       </label>
@@ -452,15 +512,20 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
               {form.formState.errors.images?.message && (
                 <p className="text-sm text-red-600">{form.formState.errors.images.message}</p>
               )}
-              <p className="text-xs text-ink-500">
-                The first photo is the cover buyers see first. Drag-reorder isn&apos;t needed — use the
-                arrows or “Set cover” on any photo.
+              <p className="text-xs text-ink-600">
+                <span className="sm:hidden">
+                  The first photo is the cover buyers see first. Tap a photo to set the cover, reorder or remove it.
+                </span>
+                <span className="hidden sm:inline">
+                  The first photo is the cover buyers see first. Drag-reorder isn&apos;t needed — use the
+                  arrows or “Set cover” on any photo.
+                </span>
               </p>
             </div>
 
-            <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <FileUploader
+                <TouchFileUploader
                   kind="property-video"
                   multiple
                   maxFiles={3}
@@ -492,7 +557,7 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
             </div>
 
             <div className="mt-6 space-y-2">
-              <FileUploader
+              <TouchFileUploader
                 kind="property-image"
                 label="360° Panorama (optional)"
                 hint="One equirectangular (2:1) photo powers the interactive virtual tour · max 10 MB"
@@ -527,9 +592,16 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
               </div>
             </div>
 
-          </div>
+          </FormSection>
 
-          <div className="surface-card grid gap-4 p-5 md:grid-cols-2">
+          <FormSection
+            id="section-contact"
+            title="Contact"
+            hint="Who buyers will reach"
+            defaultOpen={mode === "create"}
+            invalid={hasError("contactName", "contactPhone", "whatsApp")}
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
+          >
             <FormField
               control={form.control}
               name="contactName"
@@ -571,9 +643,10 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
                 </FormItem>
               )}
             />
-          </div>
+          </FormSection>
 
-          <div className="flex flex-wrap items-center gap-3">
+          {/* md and up: inline buttons. Phones: the floating bar below. */}
+          <div className="hidden flex-wrap items-center gap-3 md:flex">
             <Button type="submit" className="rounded-full bg-brand-700 px-6 text-white hover:bg-brand-800" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? (
                 <>
@@ -588,6 +661,13 @@ export function PropertyForm({ mode, initialProperty, contactDefaults }: Propert
               Cancel
             </Button>
           </div>
+
+          <FormActionBar
+            label="Property form actions"
+            submitLabel={mode === "edit" ? "Update property" : "Create property"}
+            submitting={form.formState.isSubmitting}
+            onCancel={() => router.push(ROUTES.SELLER_PROPERTIES)}
+          />
         </form>
       </Form>
     </div>

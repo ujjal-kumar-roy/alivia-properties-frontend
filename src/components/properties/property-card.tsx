@@ -1,179 +1,259 @@
 import Link from "next/link"
 import Image from "next/image"
-import { MapPin, BedDouble, Bath, Maximize2, Eye } from "lucide-react"
+import { ArrowUpRight, Eye, House, MapPin, ShieldCheck, Star } from "lucide-react"
+import { CardFact } from "@/components/common/card-fact"
 import { VerifiedBadge } from "@/components/common/verified-badge"
-import { formatPrice, formatRent } from "@/utils/format-price"
-import { ROUTES } from "@/config/routes.config"
 import { SaveButton } from "@/components/properties/save-button"
 import { CompareButton } from "@/components/properties/compare-button"
+import {
+  getPropertyFacts,
+  getPropertyPrice,
+  isNewListing,
+  listedAgo,
+  sellerLabel,
+} from "@/components/properties/property-facts"
+import { ROUTES } from "@/config/routes.config"
+import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
+import { cn } from "@/lib/utils"
 import type { Property } from "@/types/property.types"
 
 interface PropertyCardProps {
   property: Property
   layout?: "grid" | "list"
+  /** Load the photo right away (first cards on a listing page). */
+  eager?: boolean
 }
 
-export function PropertyCard({ property, layout = "grid" }: PropertyCardProps) {
-  const displayPrice =
-    property.purpose === "rent"
-      ? formatRent(property.price)
-      : formatPrice(property.price, true)
+// The card icon buttons keep the glass look (tint, rim, highlight) but skip the
+// backdrop blur: a listing page has up to 24 of them, and a 36px button over a
+// photo gains nothing from a blur layer of its own.
+const CARD_ICON_BUTTON =
+  "size-8 min-h-8 min-w-8 sm:size-9 sm:min-h-9 sm:min-w-9 [-webkit-backdrop-filter:none] [backdrop-filter:none] bg-white/85"
+
+/**
+ * One listing. Phones get the compact row (square thumbnail left, facts right,
+ * about 140px tall); from `sm` it is a vertical card, or a wide row when
+ * `layout="list"`.
+ *
+ * The whole card is one link. Save and Compare are siblings of that link,
+ * positioned over the thumbnail corner, so no button ever sits inside the anchor.
+ */
+export function PropertyCard({ property: p, layout = "grid", eager = false }: PropertyCardProps) {
+  const isRent = p.purpose === "rent"
+  const isList = layout === "list"
+  const href = ROUTES.PROPERTY_DETAIL(p.slug)
+  const price = getPropertyPrice(p)
+  const facts = getPropertyFacts(p)
+  const facilities = p.facilities ?? []
+  const cover = p.images[0]
+  const ago = listedAgo(p.createdAt)
+  const fresh = isNewListing(p.createdAt)
+  const seller = sellerLabel(p)
+  const views = p.viewCount ?? 0
+  const hasBadge = Boolean(p.isFeatured || p.isVerified)
 
   return (
     <article
-      className={`group pressable-lift overflow-hidden rounded-xl border-2 border-t-4 bg-white hover:border-brand-300 hover:shadow-(--shadow-elevated) ${
-        property.purpose === "rent"
-          ? "border-ink-900/10 border-t-gold-400"
-          : "border-ink-900/10 border-t-brand-700"
-      } ${
-        layout === "list"
-          ? "md:grid md:grid-cols-[20rem_1fr] md:border-t-2 md:border-l-4 " +
-            (property.purpose === "rent" ? "md:border-l-gold-400" : "md:border-l-brand-700")
-          : ""
-      }`}
+      data-card
+      className={cn(
+        "group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) transition-[translate,scale,box-shadow] duration-200",
+        "has-[a:active]:scale-[0.99] sm:rounded-3xl sm:hover:-translate-y-1 sm:hover:shadow-(--shadow-elevated)",
+        "motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:has-[a:active]:scale-100",
+      )}
     >
-      <div className="relative">
-        <Link
-          href={ROUTES.PROPERTY_DETAIL(property.slug)}
-          className={`relative block overflow-hidden bg-muted ${layout === "list" ? "h-64 md:h-full" : "h-60"}`}
+      <Link
+        href={href}
+        className={cn(
+          "flex gap-2.5 rounded-[inherit] p-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 sm:p-0",
+          isList ? "sm:grid sm:grid-cols-[13rem_1fr] sm:gap-0 md:grid-cols-[20rem_1fr]" : "sm:block",
+        )}
+      >
+        {/* Media: square thumbnail on phones, 16:10 image from sm (full height in list layout). */}
+        <div
+          className={cn(
+            "relative aspect-square w-25 shrink-0 self-start overflow-hidden rounded-xl bg-ink-100",
+            isList
+              ? "sm:aspect-auto sm:min-h-52 sm:w-full sm:self-auto sm:rounded-none"
+              : "sm:aspect-16/10 sm:w-full sm:self-auto sm:rounded-none",
+          )}
         >
-          {property.images[0] ? (
-            <>
-              <Image
-                src={property.images[0]}
-                alt={property.title}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-ink-950 via-ink-950/10 to-transparent" />
-            </>
+          {cover ? (
+            <Image
+              src={cover}
+              alt=""
+              fill
+              sizes={
+                isList
+                  ? "(min-width: 768px) 320px, (min-width: 640px) 208px, 100px"
+                  : "(min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 640px) 46vw, 100px"
+              }
+              loading={eager ? "eager" : undefined}
+              placeholder="blur"
+              blurDataURL={CARD_BLUR_DATA_URL}
+              className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">No image</div>
+            <div className="flex h-full w-full items-center justify-center text-brand-200">
+              <House aria-hidden="true" className="size-8 sm:size-10" />
+            </div>
           )}
 
-          <div className="absolute left-3 top-3 flex gap-1.5">
-            {property.isFeatured && (
-              <VerifiedBadge type="featured" className="rounded-md border-2 shadow-sm" />
+          {/* Top-left: sale or rent, plus (from sm) the trust badges. */}
+          <div className="absolute left-1.5 top-1.5 flex flex-col items-start gap-1.5 sm:left-3 sm:top-3">
+            <span
+              className={cn(
+                "inline-flex rounded-full px-2 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wide shadow-sm sm:px-2.5 sm:py-1 sm:text-xs",
+                isRent ? "bg-gold-400 text-brand-950" : "bg-brand-700 text-white",
+              )}
+            >
+              <span className="sm:hidden">{isRent ? "Rent" : "Sale"}</span>
+              <span className="hidden sm:inline">{isRent ? "For rent" : "For sale"}</span>
+            </span>
+            {p.isFeatured && (
+              <VerifiedBadge type="featured" className="hidden shadow-sm sm:inline-flex" />
             )}
-            {property.isVerified && !property.isFeatured && (
-              <VerifiedBadge type="verified" className="rounded-md border-2 shadow-sm" />
+            {p.isVerified && (
+              <VerifiedBadge type="verified" className="hidden shadow-sm sm:inline-flex" />
             )}
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4">
-            <div className="max-w-[70%] text-white">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-white/70">
-                {property.purpose === "rent" ? "For rent" : "For sale"}
-              </p>
-              <p className="mt-1 text-xl font-semibold tracking-tight text-white">{displayPrice}</p>
-              {property.priceNegotiable && (
-                <p className="mt-1 text-xs text-white/70">Negotiable</p>
+          {/* Top-right on phones: the same trust badges as icon-only dots. */}
+          {hasBadge && (
+            <div className="absolute right-1.5 top-1.5 flex flex-col gap-1 sm:hidden">
+              {p.isFeatured && (
+                <span className="grid size-5 place-items-center rounded-full bg-gold-400 text-brand-950 shadow-sm">
+                  <Star aria-hidden="true" className="size-3 fill-current" />
+                  <span className="sr-only">Featured listing</span>
+                </span>
+              )}
+              {p.isVerified && (
+                <span className="grid size-5 place-items-center rounded-full bg-white/95 text-brand-700 shadow-sm">
+                  <ShieldCheck aria-hidden="true" className="size-3.5" />
+                  <span className="sr-only">Verified listing</span>
+                </span>
               )}
             </div>
-            <div className={`rounded-md border-2 px-3 py-1 text-xs font-bold uppercase tracking-wide shadow-sm ${
-              property.purpose === "rent"
-                ? "border-blue-700 bg-blue-50 text-blue-700"
-                : "border-emerald-700 bg-emerald-50 text-emerald-700"
-            }`}>
-              {property.purpose === "rent" ? "Rent" : "Sale"}
-            </div>
-          </div>
-        </Link>
-
-        <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
-          <SaveButton propertyId={property.id} className="h-9 w-9 rounded-md border-2 border-white shadow-sm" />
-          <CompareButton property={property} className="h-9 w-9 rounded-md border-2 border-white shadow-sm" />
+          )}
         </div>
-      </div>
 
-      <div className={`p-5 ${layout === "list" ? "flex flex-col justify-between gap-5 md:p-6" : "space-y-4"}`}>
-        <div className={layout === "list" ? "space-y-5" : "space-y-4"}>
-          <div className="space-y-2">
-            <Link
-              href={ROUTES.PROPERTY_DETAIL(property.slug)}
-              className="inline-flex min-h-11 items-center"
-            >
-              <h3 className={`text-lg font-semibold leading-snug text-ink-900 transition-colors hover:text-brand-800 ${layout === "list" ? "line-clamp-2 md:text-xl" : "line-clamp-2"}`}>
-                {property.title}
-              </h3>
-            </Link>
-            <div className="flex items-center gap-2 text-sm text-ink-500">
-              <MapPin className="h-4 w-4 shrink-0 text-brand-600" />
-              <span className="truncate">{property.area}, {property.district}</span>
-            </div>
-          </div>
+        <div className={cn("flex min-w-0 flex-1 flex-col", isList ? "sm:p-5" : "sm:p-4")}>
+          <h3 className="line-clamp-1 font-heading text-[0.95rem] font-semibold leading-tight text-ink-900 transition-colors group-hover:text-brand-700 sm:line-clamp-2 sm:text-lg">
+            {p.title}
+          </h3>
 
-          <div className="flex flex-wrap gap-2 text-xs text-ink-600">
-            {property.bedrooms !== undefined && (
-              <span className="inline-flex items-center gap-1 rounded-md border border-ink-100 bg-ink-50 px-3 py-1.5">
-                <BedDouble className="h-3.5 w-3.5 text-brand-600" />
-                {property.bedrooms} Bed
-              </span>
-            )}
-            {property.bathrooms !== undefined && (
-              <span className="inline-flex items-center gap-1 rounded-md border border-ink-100 bg-ink-50 px-3 py-1.5">
-                <Bath className="h-3.5 w-3.5 text-brand-600" />
-                {property.bathrooms} Bath
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1 rounded-md border border-ink-100 bg-ink-50 px-3 py-1.5">
-              <Maximize2 className="h-3.5 w-3.5 text-brand-600" />
-              {property.size} {property.sizeUnit}
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-500 sm:mt-1.5 sm:text-sm">
+            <MapPin aria-hidden="true" className="size-3 shrink-0 text-brand-600 sm:size-4" />
+            <span className="truncate">
+              {p.area}, {p.district}
             </span>
-            {layout === "list" && (
-              <span className="inline-flex items-center gap-1 rounded-md border border-brand-100 bg-brand-50 px-3 py-1.5 text-brand-800">
-                <Eye className="h-3.5 w-3.5" />
-                {property.viewCount} views
-              </span>
-            )}
-          </div>
+          </p>
 
-          {layout === "list" && (
-            <p className="line-clamp-3 text-sm leading-relaxed text-ink-500">
-              {property.description}
+          {/* Two rows on phones: anything that does not fit is clipped, never wrapped to a third. */}
+          {facts.length > 0 && (
+            <ul className="mt-1 flex max-h-[2.2rem] flex-wrap gap-x-2.5 gap-y-0.5 overflow-hidden sm:mt-3 sm:max-h-none sm:gap-x-3 sm:gap-y-1.5 sm:overflow-visible">
+              {facts.map((f) => (
+                <li key={f.key} className={cn("flex", f.phoneHidden && "max-sm:hidden")}>
+                  <CardFact icon={f.icon}>{f.label}</CardFact>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Tablet and up: the description in the wide layout, and amenities. */}
+          {isList && p.description && (
+            <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-500 max-sm:hidden">
+              {p.description}
             </p>
           )}
-        </div>
-
-        <div className={`flex items-center justify-between gap-4 border-t-2 border-ink-100 pt-4 ${layout === "list" ? "md:pt-5" : ""}`}>
-          <div className="min-w-0">
-            <p className="text-[0.68rem] uppercase tracking-[0.18em] text-ink-500">Seller</p>
-            <div className="mt-2 flex items-center gap-2">
-              {property.sellerAvatar && (
-                <Image
-                  src={property.sellerAvatar}
-                  alt={property.sellerName}
-                  width={28}
-                  height={28}
-                  className="rounded-md"
-                />
+          {facilities.length > 0 && (
+            <ul className="mt-3 hidden flex-wrap gap-1.5 sm:flex">
+              {facilities.slice(0, 3).map((f) => (
+                <li
+                  key={f}
+                  className="rounded-full bg-brand-50 px-2.5 py-1 text-[0.7rem] font-semibold text-brand-800"
+                >
+                  {f}
+                </li>
+              ))}
+              {facilities.length > 3 && (
+                <li className="rounded-full bg-ink-100 px-2.5 py-1 text-[0.7rem] font-semibold text-ink-600">
+                  +{facilities.length - 3}
+                </li>
               )}
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-ink-800">{property.sellerName}</p>
-                <p className="text-xs text-ink-500">{property.sellerVerified ? "Verified seller" : "Independent seller"}</p>
+            </ul>
+          )}
+
+          <div className="mt-auto pt-1 sm:pt-3">
+            <div className="flex items-end justify-between gap-2 sm:items-center sm:border-t sm:border-border/60 sm:pt-3">
+              <p className="min-w-0 truncate leading-tight tabular-nums">
+                <span className="text-[1.05rem] font-extrabold text-gold-700 sm:text-xl">
+                  {price.amount}
+                </span>
+                {price.per && (
+                  <span className="ml-0.5 text-xs font-semibold text-ink-500">{price.per}</span>
+                )}
+              </p>
+              <div className="flex shrink-0 items-center gap-2">
+                {p.priceNegotiable && (
+                  <span className="rounded-full bg-gold-100 px-2 py-0.5 text-[0.6875rem] font-bold leading-4 text-gold-800">
+                    Negotiable
+                  </span>
+                )}
+                <span className="hidden size-8 items-center justify-center rounded-full bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-700 group-hover:text-white sm:flex">
+                  <ArrowUpRight aria-hidden="true" className="size-4" />
+                </span>
               </div>
             </div>
-          </div>
 
-          {layout === "grid" ? (
-            <div className="rounded-md border border-brand-100 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-800">
-              <span className="inline-flex items-center gap-1">
-                <Eye className="h-3.5 w-3.5" />
-                {property.viewCount}
-              </span>
-            </div>
-          ) : (
-            <Link
-              href={ROUTES.PROPERTY_DETAIL(property.slug)}
-              className="inline-flex min-h-11 items-center"
-            >
-              <span className="inline-flex rounded-md bg-ink-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-ink-800">
-                View Details
-              </span>
-            </Link>
-          )}
+            {(seller || views > 0 || ago) && (
+              <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-ink-500 sm:mt-2.5">
+                <span className="flex min-w-0 flex-1 items-center gap-1">
+                  {p.sellerVerified && (
+                    <ShieldCheck
+                      role="img"
+                      aria-label="Verified seller"
+                      className="size-3.5 shrink-0 text-brand-600"
+                    />
+                  )}
+                  {p.sellerAvatar && (
+                    <Image
+                      src={p.sellerAvatar}
+                      alt=""
+                      width={24}
+                      height={24}
+                      className="hidden size-6 rounded-full object-cover sm:block"
+                    />
+                  )}
+                  {seller && <span className="truncate">{seller}</span>}
+                </span>
+                {views > 0 && (
+                  <span className="inline-flex shrink-0 items-center gap-1">
+                    <Eye aria-hidden="true" className="size-3.5" />
+                    {views.toLocaleString("en-BD")}
+                  </span>
+                )}
+                {ago && (
+                  <span className={cn("shrink-0", fresh && "font-semibold text-brand-700")}>
+                    {fresh ? `New ${ago.toLowerCase()}` : ago}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+      </Link>
+
+      {/* Save and Compare sit over the thumbnail but outside the link. Bottom corners
+          of the thumbnail on phones, a column at the image's top-right from sm. */}
+      <div
+        className={cn(
+          "pointer-events-none absolute left-3 top-16 z-10 flex w-[5.75rem] justify-between *:pointer-events-auto",
+          "sm:top-3 sm:w-auto sm:flex-col sm:gap-2",
+          isList ? "sm:left-[10rem] md:left-[17rem]" : "sm:left-auto sm:right-3",
+        )}
+      >
+        <SaveButton propertyId={p.id} variant="glass" className={CARD_ICON_BUTTON} />
+        <CompareButton property={p} variant="glass" className={CARD_ICON_BUTTON} />
       </div>
     </article>
   )

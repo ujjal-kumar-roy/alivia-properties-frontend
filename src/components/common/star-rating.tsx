@@ -11,7 +11,7 @@ interface StarRatingProps {
 
 export function StarRating({ value, count, showValue, size = "sm", className }: StarRatingProps) {
   const starSize = size === "xs" ? "h-3 w-3" : size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"
-  const textSize = size === "xs" ? "text-[10px]" : size === "sm" ? "text-xs" : "text-sm"
+  const textSize = size === "xs" ? "text-[0.6875rem]" : size === "sm" ? "text-xs" : "text-sm"
 
   return (
     <span className={cn("inline-flex items-center gap-0.5", className)}>

@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 // import { Checkbox } from "@/components/ui/checkbox"; // DISABLED — "remember me" retired, see src/auth.ts header comment
 import {
   Form,
@@ -87,22 +86,22 @@ export function LoginForm() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5">
       {error && (
-        <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+        <div role="alert" className="space-y-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
           <p>{error}</p>
           {needsVerification &&
             (resendState === "sent" ? (
               <p className="flex items-center gap-1.5 font-medium text-emerald-700">
                 <MailCheck className="h-4 w-4" />
-                Verification email sent — check your inbox.
+                Verification email sent. Check your inbox.
               </p>
             ) : (
               <button
                 type="button"
                 onClick={handleResend}
                 disabled={resendState === "sending"}
-                className="inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline disabled:opacity-60"
+                className="glass-chip text-brand-800 disabled:opacity-60"
               >
                 <RotateCw
                   className={`h-3.5 w-3.5 ${resendState === "sending" ? "animate-spin" : ""}`}
@@ -116,13 +115,13 @@ export function LoginForm() {
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5 sm:space-y-4 md:[&_input:not([type=checkbox])]:h-10">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email Address</FormLabel>
+              <FormItem className="gap-1.5">
+                <FormLabel className="text-[0.8125rem] font-semibold text-ink-800">Email Address</FormLabel>
                 <FormControl>
                   <Input
                     type="email"
@@ -141,39 +140,37 @@ export function LoginForm() {
             control={form.control}
             name="password"
             render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center justify-between">
-                  <FormLabel>Password</FormLabel>
-                  <Link
-                    href={ROUTES.FORGOT_PASSWORD}
-                    className="inline-flex min-h-11 items-center text-xs text-brand-700 hover:underline"
-                  >
+              <FormItem className="gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <FormLabel className="text-[0.8125rem] font-semibold text-ink-800">Password</FormLabel>
+                  <Link href={ROUTES.FORGOT_PASSWORD} className="glass-chip text-brand-800">
                     Forgot password?
                   </Link>
                 </div>
-                <FormControl>
-                  <div className="relative">
+                <div className="relative">
+                  <FormControl>
                     <Input
                       type={showPass ? "text" : "password"}
                       placeholder="••••••••"
                       autoComplete="current-password"
+                      className="pr-11"
                       {...field}
                       value={field.value ?? ""}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass(!showPass)}
-                      className="absolute right-1 top-1/2 flex -translate-y-1/2 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground"
-                      aria-label={showPass ? "Hide password" : "Show password"}
-                    >
-                      {showPass ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </FormControl>
+                  </FormControl>
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    className="absolute right-1 top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-ink-600 hover:text-foreground"
+                    aria-label={showPass ? "Hide password" : "Show password"}
+                  >
+                    {showPass ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -196,9 +193,9 @@ export function LoginForm() {
           />
           */}
 
-          <Button
+          <button
             type="submit"
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white gap-2"
+            className="btn-tactile btn-tactile--block"
             disabled={form.formState.isSubmitting}
           >
             {form.formState.isSubmitting ? (
@@ -208,7 +205,7 @@ export function LoginForm() {
                 <LogIn className="h-4 w-4" /> Sign In
               </>
             )}
-          </Button>
+          </button>
         </form>
       </Form>
     </div>

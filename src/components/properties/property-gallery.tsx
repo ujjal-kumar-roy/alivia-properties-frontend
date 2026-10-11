@@ -1,9 +1,10 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ChevronLeft, ChevronRight, Images } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
 import { SaveButton } from "@/components/properties/save-button"
 import { CompareButton } from "@/components/properties/compare-button"
 import { PropertyImageLightboxButton } from "@/components/properties/property-image-lightbox-button"
@@ -15,6 +16,100 @@ type PropertyGalleryProps = {
 
 export function PropertyGallery({ property }: PropertyGalleryProps) {
   const images = property.images.filter(Boolean)
+  if (images.length === 0) return null
+
+  return (
+    <>
+      <SwipeGallery property={property} images={images} />
+      <DesktopGallery property={property} images={images} />
+    </>
+  )
+}
+
+/**
+ * Phones and tablets: a full-bleed strip you swipe. Plain CSS scroll-snap does
+ * the movement (it runs on the compositor and respects momentum); the counter
+ * follows an IntersectionObserver, so there is no scroll listener and state
+ * changes only when the visible photo changes.
+ */
+function SwipeGallery({ property, images }: { property: Property; images: string[] }) {
+  const [index, setIndex] = useState(0)
+  const scroller = useRef<HTMLDivElement>(null)
+  const multiple = images.length > 1
+
+  useEffect(() => {
+    const root = scroller.current
+    if (!root || images.length < 2) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.intersectionRatio >= 0.6) {
+            setIndex(Number((entry.target as HTMLElement).dataset.index))
+          }
+        }
+      },
+      { root, threshold: 0.6 },
+    )
+    root.querySelectorAll<HTMLElement>("[data-index]").forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [images.length])
+
+  return (
+    <div className="relative -mx-4 sm:mx-0 lg:hidden">
+      <div
+        ref={scroller}
+        role="group"
+        aria-roledescription="carousel"
+        aria-label={`${property.title} photos`}
+        tabIndex={0}
+        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain scrollbar-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 sm:rounded-3xl"
+      >
+        {images.map((src, i) => (
+          <div
+            key={`${src}-${i}`}
+            data-index={i}
+            role="group"
+            aria-roledescription="slide"
+            aria-label={`${i + 1} of ${images.length}`}
+            className="relative aspect-4/3 w-full shrink-0 snap-center bg-ink-100 sm:aspect-16/9"
+          >
+            <Image
+              src={src}
+              alt={`${property.title} image ${i + 1}`}
+              fill
+              sizes="(max-width: 1023px) 100vw, 45vw"
+              loading={i === 0 ? "eager" : "lazy"}
+              fetchPriority={i === 0 ? "high" : "auto"}
+              placeholder="blur"
+              blurDataURL={CARD_BLUR_DATA_URL}
+              className="object-cover"
+            />
+          </div>
+        ))}
+      </div>
+
+      {multiple ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-ink-950/60 px-3 py-1.5 text-xs font-semibold tabular-nums text-white backdrop-blur-md"
+        >
+          <Images className="size-3.5" />
+          {index + 1} / {images.length}
+        </div>
+      ) : null}
+
+      <PropertyImageLightboxButton images={images} index={index} label={property.title} />
+
+      <div className="absolute bottom-3 right-3 z-10 flex gap-2">
+        <SaveButton propertyId={property.id} variant="glass" />
+        <CompareButton property={property} variant="glass" />
+      </div>
+    </div>
+  )
+}
+
+/** Desktop: the large photo with arrows and a thumbnail strip, as it always was. */
+function DesktopGallery({ property, images }: { property: Property; images: string[] }) {
   const [activeIndex, setActiveIndex] = useState(0)
   const activeImage = images[activeIndex]
   const hasMultipleImages = images.length > 1
@@ -26,15 +121,16 @@ export function PropertyGallery({ property }: PropertyGalleryProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="hidden flex-col gap-3 lg:flex">
       <div className="group relative h-100 overflow-hidden rounded-[1.5rem] bg-ink-100 shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
         <Image
           key={activeImage}
           src={activeImage}
           alt={`${property.title} image ${activeIndex + 1}`}
           fill
-          priority={activeIndex === 0}
-          sizes="(max-width: 1024px) 100vw, 45vw"
+          loading={activeIndex === 0 ? "eager" : undefined}
+          fetchPriority={activeIndex === 0 ? "high" : "auto"}
+          sizes="(max-width: 1023px) 100vw, 45vw"
           className="object-cover motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
         />
         <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />

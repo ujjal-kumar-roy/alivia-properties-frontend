@@ -28,9 +28,10 @@ export default async function BuyerInquiriesPage({
     {
       key: "subject",
       header: "Subject",
+      primaryOnMobile: true,
       render: (row) => (
-        <div>
-          <p className="font-semibold text-ink-900">{row.propertyTitle ?? row.projectName ?? "General inquiry"}</p>
+        <div className="min-w-0">
+          <p className="font-semibold text-ink-900 max-sm:truncate">{row.propertyTitle ?? row.projectName ?? "General inquiry"}</p>
           <p className="text-xs text-ink-500 capitalize">{row.type}</p>
         </div>
       ),
@@ -38,28 +39,35 @@ export default async function BuyerInquiriesPage({
     {
       key: "message",
       header: "Message",
-      render: (row) => <p className="line-clamp-2 max-w-xl text-sm text-ink-600">{row.message}</p>,
+      mobileLabel: false,
+      wideOnMobile: true,
+      render: (row) => <p className="line-clamp-2 max-w-xl text-sm text-ink-600 max-sm:max-w-none max-sm:text-xs">{row.message}</p>,
     },
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (row) => <InquiryStatusBadge status={row.status} />,
     },
     {
       key: "date",
       header: "Sent",
-      render: (row) => formatDateTime(row.createdAt),
+      mobileLabel: false,
+      render: (row) => <span className="text-xs text-ink-500 sm:text-sm sm:text-inherit">{formatDateTime(row.createdAt)}</span>,
     },
     {
       key: "actions",
       header: "Actions",
       render: (row) => (
-        <Link href={ROUTES.BUYER_INQUIRY_DETAIL(row.id)}>
-          <Button size="sm" variant="outline" className="rounded-full">
-            <Eye className="size-3.5" />
-            View
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full max-sm:h-9 max-sm:px-4"
+          render={<Link href={ROUTES.BUYER_INQUIRY_DETAIL(row.id)} />}
+        >
+          <Eye className="size-3.5" />
+          View
+        </Button>
       ),
     },
   ]

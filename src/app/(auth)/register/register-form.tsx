@@ -6,12 +6,11 @@ import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { CheckCircle } from "lucide-react"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Button } from "@/components/ui/button"
+import { FormSuccess } from "@/components/booking/form-success"
 import { ROUTES } from "@/config/routes.config"
+import { haptic } from "@/lib/celebrate"
 import { authService } from "@/services/auth.service"
 import { ApiError } from "@/services/http-client"
 
@@ -40,6 +39,12 @@ const registerSchema = z
   })
 
 type RegisterInput = z.infer<typeof registerSchema>
+
+const LABEL = "text-[0.8125rem] font-semibold text-ink-800"
+const ITEM = "gap-1.5"
+/** Inline link with a taller hit area; the padding is cancelled so lines do not move. */
+const INLINE_LINK =
+  "-my-1.5 inline-block py-1.5 font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800"
 
 export function RegisterForm() {
   const router = useRouter()
@@ -77,33 +82,29 @@ export function RegisterForm() {
 
   if (success) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
-        <CheckCircle className="h-10 w-10 text-green-500" />
-        <h3 className="font-bold">Account created</h3>
-        <p className="text-sm text-muted-foreground">
-          Check your email to verify the account, then sign in.
-        </p>
-      </div>
+      <FormSuccess title="Account created" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
+        Check your email to verify the account, then sign in.
+      </FormSuccess>
     )
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5 md:[&_input:not([type=checkbox])]:h-10">
         {submitError && (
-        <div aria-live="polite" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          {submitError}
-        </div>
+          <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {submitError}
+          </div>
         )}
 
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Full Name</FormLabel>
+            <FormItem className={ITEM}>
+              <FormLabel className={LABEL}>Full Name</FormLabel>
               <FormControl>
-                <Input placeholder="Md. Rafiqul Islam" {...field} value={field.value ?? ""} />
+                <Input autoComplete="name" placeholder="Md. Rafiqul Islam" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -114,10 +115,10 @@ export function RegisterForm() {
           control={form.control}
           name="email"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email Address</FormLabel>
+            <FormItem className={ITEM}>
+              <FormLabel className={LABEL}>Email Address</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="you@example.com" {...field} value={field.value ?? ""} />
+                <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -128,10 +129,10 @@ export function RegisterForm() {
           control={form.control}
           name="phone"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Phone Number</FormLabel>
+            <FormItem className={ITEM}>
+              <FormLabel className={LABEL}>Phone Number</FormLabel>
               <FormControl>
-                <Input placeholder="01700-000000" {...field} value={field.value ?? ""} />
+                <Input type="tel" autoComplete="tel" placeholder="01700-000000" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -142,54 +143,46 @@ export function RegisterForm() {
           control={form.control}
           name="role"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Account Type</FormLabel>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {ROLES.map((role) => (
-                  <label
-                    key={role}
-                    className={`flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${
-                      field.value === role
-                        ? "border-brand-500 bg-brand-50 text-brand-700"
-                        : "border-border hover:border-brand-300"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      value={role}
-                      checked={field.value === role}
-                      onChange={() => field.onChange(role)}
-                      className="peer sr-only"
-                    />
-                    <span
-                      aria-hidden="true"
-                      className="flex size-5 shrink-0 items-center justify-center rounded-full border border-ink-300 bg-white transition-colors peer-checked:border-brand-700 peer-checked:[&_span]:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-300"
+            <FormItem className={ITEM}>
+              <FormLabel id="register-role-label" className={LABEL}>
+                Account Type
+              </FormLabel>
+              <FormControl>
+                <div role="radiogroup" aria-labelledby="register-role-label" className="grid grid-cols-2 gap-2">
+                  {ROLES.map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      role="radio"
+                      aria-checked={field.value === role}
+                      onClick={() => {
+                        if (field.value !== role) haptic("tap")
+                        field.onChange(role)
+                      }}
+                      className="choice-card min-h-12 flex-col items-start gap-0 px-3 py-2"
                     >
-                      <span className="size-2.5 rounded-full bg-brand-700 opacity-0 transition-opacity" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold capitalize">{role}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <span className="text-sm font-bold capitalize">{role}</span>
+                      <span className="text-xs font-medium text-ink-600">
                         {role === "seller" ? "List properties" : "Find properties"}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </div>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3.5 sm:grid-cols-2 sm:gap-3">
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
+              <FormItem className={ITEM}>
+                <FormLabel className={LABEL}>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="Min 8 chars" {...field} value={field.value ?? ""} />
+                  <Input type="password" autoComplete="new-password" placeholder="Min 8 chars" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -199,10 +192,10 @@ export function RegisterForm() {
             control={form.control}
             name="confirmPassword"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
+              <FormItem className={ITEM}>
+                <FormLabel className={LABEL}>Confirm Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="Repeat password" {...field} value={field.value ?? ""} />
+                  <Input type="password" autoComplete="new-password" placeholder="Repeat password" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -214,32 +207,26 @@ export function RegisterForm() {
           control={form.control}
           name="agreeToTerms"
           render={({ field }) => (
-            <FormItem className="group/field flex flex-row items-start gap-2.5 space-y-0">
+            <FormItem className="flex flex-row items-start gap-2.5 space-y-0">
               <FormControl>
-                <Checkbox
+                <input
+                  type="checkbox"
+                  name={field.name}
+                  ref={field.ref}
                   checked={field.value}
-                  onCheckedChange={field.onChange}
-                  className="mt-0.5"
+                  onChange={(e) => field.onChange(e.target.checked)}
+                  onBlur={field.onBlur}
+                  className="size-6 shrink-0 cursor-pointer rounded-md accent-brand-600"
                 />
               </FormControl>
-              <div className="space-y-1.5">
-                <FormLabel className="cursor-pointer text-sm leading-snug font-normal text-muted-foreground">
+              <div className="min-w-0 space-y-1">
+                <FormLabel className="block cursor-pointer text-[0.8125rem] font-normal leading-snug text-ink-700">
                   I agree to the{" "}
-                  <Link
-                    href={ROUTES.TERMS}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800"
-                  >
+                  <Link href={ROUTES.TERMS} target="_blank" rel="noopener noreferrer" className={INLINE_LINK}>
                     Terms of Service
                   </Link>{" "}
                   and{" "}
-                  <Link
-                    href={ROUTES.PRIVACY}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800"
-                  >
+                  <Link href={ROUTES.PRIVACY} target="_blank" rel="noopener noreferrer" className={INLINE_LINK}>
                     Privacy Policy
                   </Link>
                 </FormLabel>
@@ -249,13 +236,13 @@ export function RegisterForm() {
           )}
         />
 
-        <Button
+        <button
           type="submit"
-          className="w-full bg-brand-600 text-white hover:bg-brand-700"
+          className="btn-tactile btn-tactile--block"
           disabled={form.formState.isSubmitting}
         >
           {form.formState.isSubmitting ? "Creating account…" : "Create Account"}
-        </Button>
+        </button>
       </form>
     </Form>
   )

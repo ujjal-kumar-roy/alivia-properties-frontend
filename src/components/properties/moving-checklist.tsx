@@ -1,7 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { CheckSquare, Square } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Check } from "lucide-react"
+import { GuideAvatar } from "@/components/common/guide-avatar"
+import { ProgressBar } from "@/components/common/progress-bar"
+import { celebrate, haptic, prefersReducedMotion } from "@/lib/celebrate"
 import { cn } from "@/lib/utils"
 
 const LS_KEY = "alivia_moving_checklist"
@@ -29,55 +32,120 @@ const TASKS: ChecklistTask[] = [
 
 const WEEKS = Array.from({ length: 8 }, (_, i) => i + 1)
 
+/** One short line from the guide, matched to how far along the visitor is. */
+function guideLine(done: number, total: number): string {
+  const left = total - done
+  if (left === 0) return "All done. Enjoy your new place!"
+  if (done === 0) return "Start with week 1. Tap a task to tick it off."
+  if (done * 2 >= total) return `Past halfway. ${left} to go.`
+  return `Good start. ${done} down, ${left} to go.`
+}
+
 export function MovingChecklist() {
   const [checked, setChecked] = useState<Set<string>>(new Set())
+  // The task that was just ticked, so only it pops (not every saved one on load).
+  const [popId, setPopId] = useState<string | null>(null)
+  // The confetti is a once-only reward for finishing, not for every re-tick.
+  const celebrated = useRef(false)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem(LS_KEY) ?? "[]") as string[]
+      const ids = new Set(Array.isArray(stored) ? stored : [])
+      // Finished on an earlier visit: show the cheer, but no second burst.
+      if (TASKS.every((t) => ids.has(t.id))) celebrated.current = true
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setChecked(new Set(Array.isArray(stored) ? stored : []))
+      setChecked(ids)
     } catch {
       // ignore
     }
   }, [])
 
   function toggle(id: string) {
-    setChecked((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+    const next = new Set(checked)
+    const nowChecked = !next.has(id)
+    if (nowChecked) next.add(id)
+    else next.delete(id)
+    try {
       localStorage.setItem(LS_KEY, JSON.stringify([...next]))
-      return next
-    })
+    } catch {
+      // storage unavailable (private mode): the tick still works for this visit
+    }
+    setChecked(next)
+    setPopId(nowChecked ? id : null)
+    haptic("tap")
+
+    if (nowChecked && !celebrated.current && TASKS.every((t) => next.has(t.id))) {
+      celebrated.current = true
+      celebrate()
+      panelRef.current?.scrollIntoView({
+        block: "center",
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
+      })
+    }
   }
 
   const total = TASKS.length
-  const done = checked.size
+  const done = TASKS.filter((t) => checked.has(t.id)).length
+  const pct = Math.round((done / total) * 100)
+  const complete = done === total
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl bg-brand-50 px-4 py-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-semibold text-brand-800">{done} of {total} tasks completed</span>
-          <span className="text-brand-600">{Math.round((done / total) * 100)}%</span>
+    <div className="space-y-2.5 sm:space-y-4">
+      <div
+        ref={panelRef}
+        className="scroll-mt-20 rounded-2xl border border-brand-100 bg-brand-50/70 p-3.5"
+      >
+        <div className="flex items-center gap-3">
+          <GuideAvatar mood={complete ? "cheer" : "idle"} size={44} />
+          <p className="speech-bubble min-w-0 flex-1 px-3 py-2 text-[0.9375rem]" aria-live="polite">
+            {guideLine(done, total)}
+          </p>
         </div>
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-brand-100">
-          <div
-            className="h-full rounded-full bg-brand-600 transition-all duration-300"
-            style={{ width: `${(done / total) * 100}%` }}
-          />
+        <div className="mt-3 flex items-baseline justify-between">
+          <p className="text-sm font-bold text-ink-900">
+            <span className="tabular-nums">{done}</span> of {total} done
+          </p>
+          <p className="text-xs font-semibold tabular-nums text-brand-700">{pct}%</p>
         </div>
+        <ProgressBar
+          value={pct}
+          label="Moving checklist progress"
+          tone={complete ? "gold" : "brand"}
+          className="mt-1.5 h-3"
+        />
       </div>
 
       {WEEKS.map((week) => {
         const tasks = TASKS.filter((t) => t.week === week)
         const weekDone = tasks.filter((t) => checked.has(t.id)).length
+        const weekComplete = weekDone === tasks.length
         return (
-          <div key={week} className="surface-card overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
-              <h3 className="text-sm font-bold text-ink-800">Week {week}</h3>
-              <span className="text-xs text-ink-400">{weekDone}/{tasks.length}</span>
+          <section
+            key={week}
+            aria-labelledby={`moving-week-${week}`}
+            className="reveal overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card)"
+          >
+            <div className="flex items-center justify-between border-b border-border/60 px-3.5 py-2">
+              <h2 id={`moving-week-${week}`} className="text-sm font-bold text-ink-800">
+                Week {week}
+              </h2>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 text-xs font-semibold tabular-nums",
+                  weekComplete ? "text-brand-700" : "text-ink-500",
+                )}
+              >
+                {weekComplete ? (
+                  <>
+                    <Check aria-hidden="true" className="size-3.5" strokeWidth={3} />
+                    Done
+                  </>
+                ) : (
+                  `${weekDone}/${tasks.length}`
+                )}
+              </span>
             </div>
             <ul className="divide-y divide-border/40">
               {tasks.map((task) => {
@@ -86,14 +154,27 @@ export function MovingChecklist() {
                   <li key={task.id}>
                     <button
                       type="button"
+                      role="checkbox"
+                      aria-checked={isChecked}
                       onClick={() => toggle(task.id)}
-                      className="flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-ink-50"
+                      className="flex min-h-12 w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors active:bg-brand-50 sm:hover:bg-ink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400"
                     >
-                      {isChecked
-                        ? <CheckSquare className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
-                        : <Square className="mt-0.5 h-4 w-4 shrink-0 text-ink-300" />
-                      }
-                      <span className={cn("text-sm", isChecked ? "text-ink-400 line-through" : "text-ink-800")}>
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "grid size-6 shrink-0 place-items-center rounded-lg border-2 transition-colors",
+                          isChecked ? "border-brand-600 bg-brand-600 text-white" : "border-ink-300 bg-white",
+                          popId === task.id && "anim-pop-in",
+                        )}
+                      >
+                        {isChecked && <Check className="size-4" strokeWidth={3} />}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[0.9375rem] leading-snug",
+                          isChecked ? "text-ink-500 line-through" : "text-ink-800",
+                        )}
+                      >
                         {task.label}
                       </span>
                     </button>
@@ -101,7 +182,7 @@ export function MovingChecklist() {
                 )
               })}
             </ul>
-          </div>
+          </section>
         )
       })}
     </div>

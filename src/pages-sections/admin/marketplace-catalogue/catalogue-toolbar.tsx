@@ -24,8 +24,8 @@ export function CatalogueToolbar({
   countFor: (slug: string) => number
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-border/70 bg-white p-3">
-      <div className="flex flex-1 flex-wrap gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-2.5 rounded-xl border border-border/70 bg-white p-3 sm:gap-3">
+      <div className="flex flex-1 flex-wrap gap-2.5 sm:gap-3">
         <label className="flex min-w-55 flex-1 flex-col gap-1 text-xs font-semibold text-ink-700">
           Category
           <SearchableSelect
@@ -44,7 +44,7 @@ export function CatalogueToolbar({
           />
         </label>
       </div>
-      <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={onRefresh}>
+      <Button type="button" variant="outline" size="sm" className="rounded-full max-sm:h-10 max-sm:w-full" onClick={onRefresh}>
         <RefreshCcw className="size-3.5" /> Refresh
       </Button>
     </div>

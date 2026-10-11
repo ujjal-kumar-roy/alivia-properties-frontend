@@ -5,13 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   MapPin,
-  BedDouble,
-  Bath,
-  Maximize2,
   Phone,
   MessageCircle,
   ChevronRight,
   Building2,
+  BedDouble,
+  Bath,
+  Maximize2,
   CalendarDays,
   ShieldCheck,
   ArrowRight,
@@ -19,13 +19,23 @@ import {
   Tag,
   Clock,
   Navigation,
+  FileText,
+  Sparkles,
+  Ruler,
+  Clapperboard,
+  FolderOpen,
+  Calculator,
+  TrendingUp,
+  Landmark,
+  MessageCircleQuestion,
+  Star,
+  HandCoins,
 } from "lucide-react";
 import { getProperty, getProperties } from "@/services/properties.service";
 import { getDocuments } from "@/services/documents.service";
-import { formatPrice, formatRent } from "@/utils/format-price";
+import { formatPrice } from "@/utils/format-price";
 import { toMapEmbedUrl } from "@/utils/map-embed";
 import { ROUTES } from "@/config/routes.config";
-import { Button } from "@/components/ui/button";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import { PropertyCard } from "@/components/properties/property-card";
 import { PropertyGallery } from "@/components/properties/property-gallery";
@@ -43,6 +53,12 @@ import { PropertyViewTracker } from "@/components/properties/property-view-track
 import { ReviewsSection } from "@/components/properties/reviews-section";
 import { QASection } from "@/components/properties/qa-section";
 import { SellerInquiryForm } from "@/components/properties/seller-inquiry-form";
+import { PropertyActionBar } from "@/components/properties/property-action-bar";
+import { DetailSection } from "@/components/properties/detail-section";
+import {
+  getPropertySpecs,
+  whatsappNumber,
+} from "@/components/properties/property-facts";
 import { StructuredData } from "@/components/seo/structured-data";
 import { siteConfig } from "@/config/site.config";
 
@@ -99,8 +115,15 @@ export default async function PropertyDetailPage({
     duration: ["0:23", "0:31", "0:18", "0:42"][i] ?? "0:30",
   }));
 
-  const displayPrice =
-    p.purpose === "rent" ? formatRent(p.price) : formatPrice(p.price);
+  // Rentals can be monthly or yearly; the listing says which.
+  const pricePer =
+    p.purpose === "rent"
+      ? p.rentPeriod?.toLowerCase() === "yearly"
+        ? "/year"
+        : "/month"
+      : null;
+  const priceMain = formatPrice(p.price);
+  const displayPrice = `${priceMain}${pricePer ?? ""}`;
   const publishedDate = new Intl.DateTimeFormat("en-BD", {
     day: "numeric",
     month: "long",
@@ -112,6 +135,11 @@ export default async function PropertyDetailPage({
   );
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${locationQuery}`;
   const mapEmbedUrl = toMapEmbedUrl(p.mapPin) ?? toMapEmbedUrl(p.address);
+
+  const waNumber = whatsappNumber(p.sellerWhatsApp);
+  const whatsappHref = waNumber
+    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(`Interested in: ${p.title}`)}`
+    : null;
 
   const schema = {
     "@context": "https://schema.org",
@@ -140,18 +168,33 @@ export default async function PropertyDetailPage({
     value: string;
   }[];
 
+  // Phones: one compact two-column grid replaces the stat cards and the spec cards.
+  const phoneFacts = [
+    ...getPropertySpecs(p),
+    {
+      key: "pricing",
+      icon: Tag,
+      label: "Pricing",
+      value: p.priceNegotiable ? "Negotiable" : "Fixed price",
+    },
+  ];
+
+  const isSale = p.purpose === "sale";
+  const hasBuiltSpace = p.type !== "plot" && p.type !== "land";
+  const verifiedDocs = documents.filter((d) => d.isVerified).length;
+
   return (
     <>
       <StructuredData data={schema} />
       <PropertyViewTracker propertyId={p.id} />
 
-      <div className="border-b border-border bg-ink-50">
-        <div className="container-page flex items-center gap-1.5 py-3 text-xs text-muted-foreground">
-          <Link href={ROUTES.HOME} className="hover:text-foreground">
+      <div className="hidden border-b border-border bg-ink-50 sm:block">
+        <div className="container-page flex items-center gap-1.5 py-1.5 text-xs text-muted-foreground">
+          <Link href={ROUTES.HOME} className="inline-flex min-h-8 items-center hover:text-foreground">
             Home
           </Link>
           <ChevronRight className="h-3 w-3" />
-          <Link href={ROUTES.PROPERTIES} className="hover:text-foreground">
+          <Link href={ROUTES.PROPERTIES} className="inline-flex min-h-8 items-center hover:text-foreground">
             Properties
           </Link>
           <ChevronRight className="h-3 w-3" />
@@ -161,11 +204,11 @@ export default async function PropertyDetailPage({
         </div>
       </div>
 
-      <div className="container-page section-y pt-10">
-        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
+      <div className="container-page section-y pt-2 sm:pt-10">
+        <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-8">
+          <div className="order-2 min-w-0 space-y-3 lg:order-none lg:space-y-6">
+            <div className="space-y-2 lg:space-y-4">
+              <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
                 {p.isFeatured && <VerifiedBadge type="featured" />}
                 {p.isVerified && <VerifiedBadge type="verified" />}
                 <span
@@ -180,25 +223,32 @@ export default async function PropertyDetailPage({
               </div>
 
               <div>
-                <h1 className="text-h1 text-balance max-w-4xl">{p.title}</h1>
-                <p className="mt-3 text-3xl font-semibold text-brand-700">
-                  {displayPrice}
+                <h1 className="font-heading text-[1.375rem] font-bold leading-snug tracking-tight text-balance sm:text-[clamp(1.75rem,4.5vw,3.75rem)] sm:leading-[1.1] lg:max-w-4xl">
+                  {p.title}
+                </h1>
+                <p className="mt-2 flex flex-wrap items-baseline gap-x-2 text-2xl font-extrabold tabular-nums text-brand-700 sm:mt-3 sm:text-3xl sm:font-semibold">
+                  <span>{displayPrice}</span>
+                  {p.priceNegotiable && (
+                    <span className="rounded-full bg-gold-100 px-2 py-0.5 text-xs font-bold text-gold-800 sm:hidden">
+                      Negotiable
+                    </span>
+                  )}
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-ink-500">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-500 sm:mt-3">
                   <span className="inline-flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-brand-600" />
-                    {p.address}
+                    <MapPin className="h-4 w-4 shrink-0 text-brand-600" />
+                    {p.address ?? `${p.area}, ${p.district}`}
                   </span>
-                  <span className="text-ink-300">•</span>
+                  <span className="hidden text-ink-300 sm:inline">•</span>
                   <span className="inline-flex items-center gap-1.5">
-                    <CalendarDays className="h-4 w-4 text-brand-600" />
+                    <CalendarDays className="h-4 w-4 shrink-0 text-brand-600" />
                     Listed {publishedDate}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="hidden grid-cols-3 gap-2.5 lg:grid">
               <div className="surface-card flex flex-col gap-1.5 p-4">
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-500">
                   <Eye className="size-3.5 text-brand-600" /> Views
@@ -224,14 +274,44 @@ export default async function PropertyDetailPage({
                 </span>
               </div>
             </div>
+
+            {/* Phones and tablets: key facts, two to a row. */}
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:hidden">
+              {phoneFacts.map(({ key, icon: Icon, label, value }) => (
+                <li
+                  key={key}
+                  className="flex min-w-0 items-center gap-2.5 rounded-xl border border-black/5 bg-white px-3 py-2 shadow-(--shadow-card) odd:last:col-span-2 sm:odd:last:col-span-1"
+                >
+                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700">
+                    <Icon aria-hidden="true" className="size-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold leading-tight text-ink-900">
+                      {value}
+                    </span>
+                    <span className="block truncate text-xs text-ink-500">{label}</span>
+                  </span>
+                </li>
+              ))}
+              {p.viewCount > 0 && (
+                <li className="col-span-2 flex items-center gap-1.5 px-1 text-xs text-ink-500">
+                  <Eye aria-hidden="true" className="size-3.5" />
+                  {p.viewCount.toLocaleString("en-BD")} views
+                </li>
+              )}
+            </ul>
           </div>
 
-          <PropertyGallery property={p} />
+          <div className="order-1 min-w-0 lg:order-none">
+            <PropertyGallery property={p} />
+          </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[1.3fr_0.7fr]">
-          <div className="min-w-0 space-y-8">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {/* Phones: the two columns dissolve (`contents`) so every section is one
+            grid item and can be ordered; from lg they are the real columns again. */}
+        <div className="mt-3 grid grid-cols-1 gap-2.5 lg:mt-10 lg:grid-cols-[1.3fr_0.7fr] lg:gap-10">
+          <div className="contents lg:block lg:min-w-0 lg:space-y-8">
+            <div className="hidden grid-cols-2 gap-4 sm:grid-cols-4 lg:grid">
               {specCards.map(({ icon: Icon, label, value }) => (
                 <div
                   key={label}
@@ -248,66 +328,139 @@ export default async function PropertyDetailPage({
               ))}
             </div>
 
-            <div className="surface-card p-6">
-              <h2 className="text-h3">Description</h2>
-              <p className="mt-4 text-sm leading-relaxed text-ink-600">
+            <DetailSection
+              id="description"
+              title="Description"
+              icon={FileText}
+              defaultOpen
+              className="order-1"
+            >
+              <p className="text-[0.9375rem] leading-relaxed text-ink-600 lg:text-sm">
                 {p.description}
               </p>
-            </div>
+            </DetailSection>
 
             {/* A floor plan only makes sense for built spaces, not bare plots/land. */}
-            {p.type !== "plot" && p.type !== "land" && (
+            {hasBuiltSpace && (
               <>
                 {/* 360° virtual tour temporarily disabled on the frontend — map option stays enabled.
-                <VirtualTour
-                  posterImage={p.images[0]}
-                  panoramaUrl={p.panoramaUrl}
-                  title="Virtual 360° Tour"
-                />
+                    When it comes back, wrap it like the sections below:
+                <DetailSection title="Virtual tour" icon={View} className="order-4">
+                  <VirtualTour
+                    posterImage={p.images[0]}
+                    panoramaUrl={p.panoramaUrl}
+                    title="Virtual 360° Tour"
+                  />
+                </DetailSection>
                 */}
-                {floorLevels.length > 0 && <FloorPlan levels={floorLevels} />}
+                {floorLevels.length > 0 && (
+                  <DetailSection
+                    title="Floor plan"
+                    hint={`${floorLevels.length} levels`}
+                    icon={Ruler}
+                    className="order-4"
+                  >
+                    <FloorPlan levels={floorLevels} embedded />
+                  </DetailSection>
+                )}
               </>
             )}
 
-            <VideoReel reels={reels} />
+            <DetailSection title="Video reels" icon={Clapperboard} className="order-5">
+              <VideoReel reels={reels} embedded />
+            </DetailSection>
 
-            {documents.length > 0 && <DocumentVault documents={documents} />}
-
-            {p.purpose === "sale" && (
-              <div className="grid gap-4 *:min-w-0">
-                <RoiCalculator propertyPrice={p.price} />
-                <EmiBankCompare propertyPrice={p.price} />
-              </div>
+            {documents.length > 0 && (
+              <DetailSection
+                title="Document vault"
+                hint={`${verifiedDocs} of ${documents.length} verified`}
+                icon={FolderOpen}
+                className="order-6"
+              >
+                <DocumentVault documents={documents} embedded />
+              </DetailSection>
             )}
 
-            <QASection propertyId={p.id} />
-            <ReviewsSection targetType="property" targetId={p.id} />
+            {isSale && (
+              <>
+                {/* The desktop page keeps the mortgage estimate in the sidebar. */}
+                <DetailSection
+                  title="Mortgage estimate"
+                  hint="Plan financing quickly"
+                  icon={Calculator}
+                  className="order-7 lg:hidden"
+                >
+                  <MortgageCalculator propertyPrice={p.price} embedded />
+                </DetailSection>
+                <DetailSection
+                  title="ROI calculator"
+                  hint="Yield, appreciation and total return"
+                  icon={TrendingUp}
+                  className="order-8"
+                >
+                  <RoiCalculator propertyPrice={p.price} embedded />
+                </DetailSection>
+                <DetailSection
+                  title="Bank EMI comparison"
+                  hint="Live partner-bank rates"
+                  icon={Landmark}
+                  className="order-9"
+                >
+                  <EmiBankCompare propertyPrice={p.price} embedded />
+                </DetailSection>
+              </>
+            )}
+
+            <DetailSection
+              title="Questions & answers"
+              hint="Ask the seller anything about this listing"
+              icon={MessageCircleQuestion}
+              className="order-10"
+            >
+              <QASection propertyId={p.id} embedded />
+            </DetailSection>
+            <DetailSection
+              title="Reviews"
+              hint="Verified guest ratings"
+              icon={Star}
+              className="order-11"
+            >
+              <ReviewsSection targetType="property" targetId={p.id} embedded />
+            </DetailSection>
 
             {p.facilities.length > 0 && (
-              <div className="surface-card p-6">
-                <h2 className="text-h3">Facilities</h2>
-                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <DetailSection
+                title="Facilities"
+                hint={`${p.facilities.length} amenities`}
+                icon={Sparkles}
+                className="order-2"
+              >
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
                   {p.facilities.map((facility) => (
                     <div
                       key={facility}
-                      className="flex items-center gap-3 rounded-[1rem] bg-ink-50 px-4 py-3 text-sm text-ink-700"
+                      className="flex min-w-0 items-center gap-2 rounded-xl bg-ink-50 px-3 py-2 text-[0.8125rem] text-ink-700 lg:gap-3 lg:rounded-[1rem] lg:px-4 lg:py-3 lg:text-sm"
                     >
-                      <ShieldCheck className="h-4 w-4 shrink-0 text-brand-600" />
-                      {facility}
+                      <ShieldCheck className="size-4 shrink-0 text-brand-600" />
+                      <span className="min-w-0">{facility}</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </DetailSection>
             )}
 
-            <div className="surface-card p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-h3">Location</h2>
+            <DetailSection
+              title="Location"
+              hint={p.address ?? `${p.area}, ${p.district}`}
+              icon={MapPin}
+              className="order-3"
+            >
+              <div className="mb-3 flex justify-end">
                 <a
                   href={mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-2.5 min-h-10 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-100"
+                  className="btn-glass min-h-10 text-xs"
                 >
                   <Navigation className="size-3.5" /> Get directions
                 </a>
@@ -319,10 +472,10 @@ export default async function PropertyDetailPage({
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
-                  className="mt-5 h-56 w-full rounded-[1.5rem] border border-border bg-ink-50"
+                  className="h-52 w-full rounded-2xl border border-border bg-ink-50 lg:h-56 lg:rounded-[1.5rem]"
                 />
               ) : (
-                <div className="relative mt-5 h-56 overflow-hidden rounded-[1.5rem] border border-border bg-brand-aurora">
+                <div className="relative h-48 overflow-hidden rounded-2xl border border-border bg-brand-aurora lg:h-56 lg:rounded-[1.5rem]">
                   <div className="absolute inset-0 bg-grid-fade opacity-60" />
                   <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
                     <span className="flex size-11 items-center justify-center rounded-full bg-brand-600 text-white shadow-md">
@@ -336,44 +489,43 @@ export default async function PropertyDetailPage({
                         {p.address}
                       </p>
                     )}
-                    <p className="mt-0.5 text-xs text-ink-400">
+                    <p className="mt-0.5 text-xs text-ink-500">
                       {p.division} Division
                     </p>
                   </div>
                 </div>
               )}
-            </div>
+            </DetailSection>
 
             {similar.length > 0 && (
-              <div>
+              <div className="order-last mt-2 lg:mt-0">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-brand-700">
+                    <p className="hidden text-xs uppercase tracking-[0.18em] text-brand-700 sm:block">
                       More like this
                     </p>
-                    <h2 className="mt-2 text-h3">Similar Properties</h2>
+                    <h2 className="font-heading text-lg font-bold tracking-tight sm:mt-2 sm:text-2xl md:text-3xl">
+                      Similar Properties
+                    </h2>
                   </div>
-                  <Link href={ROUTES.PROPERTIES}>
-                    <Button
-                      variant="outline"
-                      className="rounded-full border-brand-200 text-brand-700 hover:bg-brand-50"
-                    >
-                      Browse More
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
+                  <Link href={ROUTES.PROPERTIES} className="btn-glass shrink-0">
+                    Browse more
+                    <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
-                <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-3 grid grid-cols-1 gap-2.5 sm:mt-5 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
                   {similar.map((s) => (
-                    <PropertyCard key={s.id} property={s} />
+                    <div key={s.id} className="reveal min-w-0">
+                      <PropertyCard property={s} />
+                    </div>
                   ))}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
-            <div className="surface-card bg-brand-aurora p-5">
+          <div className="contents lg:block lg:min-w-0 lg:space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <div className="surface-card hidden bg-brand-aurora p-5 lg:block">
               <p className="text-xs uppercase tracking-[0.18em] text-brand-700">
                 Price snapshot
               </p>
@@ -399,11 +551,14 @@ export default async function PropertyDetailPage({
               </div>
             </div>
 
-            <div className="surface-card p-5">
-              <h3 className="font-sans text-lg font-semibold text-ink-900">
+            <div className="surface-card order-12 min-w-0 p-4 lg:p-5">
+              <h3 className="hidden font-sans text-lg font-semibold text-ink-900 lg:block">
                 Contact Seller
               </h3>
-              <div className="mt-4 flex items-center gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 lg:hidden">
+                Listed by
+              </p>
+              <div className="mt-2 flex items-center gap-3 lg:mt-4">
                 {p.sellerAvatar ? (
                   <Image
                     src={p.sellerAvatar}
@@ -438,16 +593,18 @@ export default async function PropertyDetailPage({
                 Typically replies within a few hours
               </p>
 
-              <div className="mt-5 space-y-2">
+              {/* From md: call, WhatsApp and the inquiry form live here. Below md the action bar
+                  (hidden from md) and its sheet carry the same three actions. */}
+              <div className="mt-5 hidden space-y-2 md:block">
                 <a
                   href={`tel:${p.sellerPhone}`}
                   className="flex w-full items-center gap-3 rounded-full bg-ink-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-ink-800"
                 >
                   <Phone className="h-4 w-4" /> {p.sellerPhone}
                 </a>
-                {p.sellerWhatsApp && (
+                {whatsappHref && (
                   <a
-                    href={`https://wa.me/880${p.sellerWhatsApp}?text=Interested in: ${p.title}`}
+                    href={whatsappHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex w-full items-center gap-3 rounded-full border border-brand-200 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-800 transition-colors hover:bg-brand-100"
@@ -457,7 +614,7 @@ export default async function PropertyDetailPage({
                 )}
               </div>
 
-              <div className="mt-5 border-t border-border pt-5">
+              <div className="mt-5 hidden border-t border-border pt-5 md:block">
                 <p className="mb-3 text-sm font-semibold text-ink-900">
                   Send an inquiry
                 </p>
@@ -468,36 +625,64 @@ export default async function PropertyDetailPage({
                 />
               </div>
 
-              <div className="mt-5 rounded-[1.25rem] border border-border bg-ink-50 p-4">
+              <div className="mt-4 rounded-[1.25rem] border border-border bg-ink-50 p-4 lg:mt-5">
                 <p className="text-sm leading-relaxed text-ink-600">
                   Need neutral help before talking to seller? Book consultation
                   with Alivia team.
                 </p>
-                <Link href={ROUTES.CONSULTATION}>
-                  <Button className="mt-4 w-full rounded-full bg-brand-600 text-white hover:bg-brand-700">
-                    Book Consultation
-                  </Button>
+                <Link
+                  href={ROUTES.CONSULTATION}
+                  className="btn-glass mt-3 w-full lg:mt-4"
+                >
+                  Book Consultation
                 </Link>
               </div>
             </div>
 
-            {p.purpose === "sale" && (
+            {isSale && (
               <>
-                <OfferFlow
-                  propertyId={p.id}
-                  propertyTitle={p.title}
-                  listingPrice={p.price}
-                  sellerId={p.sellerId}
-                  sellerName={p.sellerName}
-                />
-                <MortgageCalculator propertyPrice={p.price} />
+                <DetailSection
+                  title="Make an offer"
+                  hint={`Negotiate directly with ${p.sellerName}`}
+                  icon={HandCoins}
+                  className="order-13 lg:hidden"
+                >
+                  <OfferFlow
+                    propertyId={p.id}
+                    propertyTitle={p.title}
+                    listingPrice={p.price}
+                    sellerId={p.sellerId}
+                    sellerName={p.sellerName}
+                    embedded
+                  />
+                </DetailSection>
+                <div className="hidden space-y-4 lg:block">
+                  <OfferFlow
+                    propertyId={p.id}
+                    propertyTitle={p.title}
+                    listingPrice={p.price}
+                    sellerId={p.sellerId}
+                    sellerName={p.sellerName}
+                  />
+                  <MortgageCalculator propertyPrice={p.price} />
+                </div>
               </>
             )}
 
-            <ReportListingDialog propertyId={p.id} />
+            <div className="order-14 min-w-0">
+              <ReportListingDialog propertyId={p.id} />
+            </div>
           </div>
         </div>
       </div>
+
+      <PropertyActionBar
+        propertyId={p.id}
+        propertyTitle={p.title}
+        sellerName={p.sellerName}
+        sellerPhone={p.sellerPhone}
+        whatsappHref={whatsappHref}
+      />
     </>
   );
 }

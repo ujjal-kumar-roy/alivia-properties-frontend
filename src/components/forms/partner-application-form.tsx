@@ -4,9 +4,10 @@ import * as React from "react"
 import { useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { AlertCircle, CheckCircle2, Loader2, SendHorizontal } from "lucide-react"
+import { AlertCircle, Loader2, SendHorizontal } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { FormSuccess } from "@/components/booking/form-success"
+import { MobileActionBar } from "@/components/common/mobile-action-bar"
 import {
   Form,
   FormControl,
@@ -45,6 +46,9 @@ const COPY: Record<
       "Tell us about your budget range, preferred locations, expected timeline, and what you're looking for.",
   },
 }
+
+const LABEL = "text-[0.8125rem] font-semibold text-ink-800"
+const ITEM = "gap-1.5"
 
 export function PartnerApplicationForm({ type }: { type: PartnerType }) {
   const { data: session } = useSession()
@@ -104,24 +108,16 @@ export function PartnerApplicationForm({ type }: { type: PartnerType }) {
 
   if (state.status === "success") {
     return (
-      <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-5 text-green-900">
-        <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
-        <div>
-          <p className="font-medium">Application received</p>
-          <p className="mt-1 text-sm text-green-800">
-            Thanks! Our team will review your {type} application and reach out shortly.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => setState({ status: "idle" })}
-          >
+      <FormSuccess
+        title="Application received"
+        actions={
+          <button type="button" className="btn-glass" onClick={() => setState({ status: "idle" })}>
             Submit another
-          </Button>
-        </div>
-      </div>
+          </button>
+        }
+      >
+        Thanks! Our team will review your {type} application and reach out shortly.
+      </FormSuccess>
     )
   }
 
@@ -129,16 +125,16 @@ export function PartnerApplicationForm({ type }: { type: PartnerType }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3.5 md:[&_input:not([type=checkbox])]:h-10">
+        <div className="grid gap-3.5 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full name *</FormLabel>
+              <FormItem className={ITEM}>
+                <FormLabel className={LABEL}>Full name *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Rahim Uddin" {...field} />
+                  <Input autoComplete="name" placeholder="Rahim Uddin" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -148,10 +144,10 @@ export function PartnerApplicationForm({ type }: { type: PartnerType }) {
             control={form.control}
             name="phone"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Mobile *</FormLabel>
+              <FormItem className={ITEM}>
+                <FormLabel className={LABEL}>Mobile *</FormLabel>
                 <FormControl>
-                  <Input placeholder="+8801712345678" {...field} />
+                  <Input type="tel" autoComplete="tel" placeholder="+8801712345678" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -159,15 +155,15 @@ export function PartnerApplicationForm({ type }: { type: PartnerType }) {
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3.5 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email *</FormLabel>
+              <FormItem className={ITEM}>
+                <FormLabel className={LABEL}>Email *</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="you@example.com" {...field} />
+                  <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -177,10 +173,10 @@ export function PartnerApplicationForm({ type }: { type: PartnerType }) {
             control={form.control}
             name="organization"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Company / Organization</FormLabel>
+              <FormItem className={ITEM}>
+                <FormLabel className={LABEL}>Company / Organization</FormLabel>
                 <FormControl>
-                  <Input placeholder="ABC Trading Ltd. (optional)" {...field} />
+                  <Input autoComplete="organization" placeholder="ABC Trading Ltd. (optional)" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -192,8 +188,8 @@ export function PartnerApplicationForm({ type }: { type: PartnerType }) {
           control={form.control}
           name="purpose"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>{copy.purposeLabel} *</FormLabel>
+            <FormItem className={ITEM}>
+              <FormLabel className={LABEL}>{copy.purposeLabel} *</FormLabel>
               <FormControl>
                 <Input placeholder={copy.purposePlaceholder} {...field} />
               </FormControl>
@@ -206,10 +202,10 @@ export function PartnerApplicationForm({ type }: { type: PartnerType }) {
           control={form.control}
           name="details"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>{copy.detailsLabel} *</FormLabel>
+            <FormItem className={ITEM}>
+              <FormLabel className={LABEL}>{copy.detailsLabel} *</FormLabel>
               <FormControl>
-                <Textarea rows={5} placeholder={copy.detailsPlaceholder} {...field} />
+                <Textarea rows={4} placeholder={copy.detailsPlaceholder} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -217,27 +213,45 @@ export function PartnerApplicationForm({ type }: { type: PartnerType }) {
         />
 
         {state.status === "error" && (
-          <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
             <span>{state.message}</span>
           </div>
         )}
 
-        <div className="flex justify-end border-t border-border/60 pt-4">
-          <Button type="submit" disabled={submitting}>
+        {/* md and up: a normal submit under the form. */}
+        <div className="hidden justify-end border-t border-border/60 pt-4 md:flex">
+          <button type="submit" disabled={submitting} className="btn-tactile btn-tactile--sm">
             {submitting ? (
               <>
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
                 Submitting…
               </>
             ) : (
               <>
-                <SendHorizontal className="size-4" />
+                <SendHorizontal aria-hidden="true" className="size-4" />
                 Submit application
               </>
             )}
-          </Button>
+          </button>
         </div>
+
+        {/* Phones: the submit stays at thumb reach while the long form scrolls. */}
+        <MobileActionBar label="Submit application">
+          <button type="submit" disabled={submitting} className="btn-tactile btn-tactile--block flex-1">
+            {submitting ? (
+              <>
+                <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                Submitting…
+              </>
+            ) : (
+              <>
+                <SendHorizontal aria-hidden="true" className="size-4" />
+                Submit application
+              </>
+            )}
+          </button>
+        </MobileActionBar>
       </form>
     </Form>
   )

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { CheckCircle2, Loader2, MailWarning, RotateCw } from "lucide-react"
+import { Loader2, MailWarning, RotateCw } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { FormSuccess } from "@/components/booking/form-success"
 import { Input } from "@/components/ui/input"
 import { ROUTES } from "@/config/routes.config"
 import { authService } from "@/services/auth.service"
@@ -67,26 +67,23 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
 
   if (status === "verifying") {
     return (
-      <div className="flex flex-col items-center gap-3 py-6 text-center">
-        <Loader2 className="h-10 w-10 animate-spin text-brand-600" />
-        <h1 className="text-xl font-bold">Verifying your email…</h1>
-        <p className="text-sm text-muted-foreground">This will only take a moment.</p>
+      <div className="flex flex-col items-center gap-2 py-4 text-center">
+        <Loader2 aria-hidden="true" className="size-9 animate-spin text-brand-600" />
+        <h1 className="font-heading text-xl font-bold text-ink-900">Verifying your email…</h1>
+        <p className="text-sm text-ink-600">This will only take a moment.</p>
       </div>
     )
   }
 
   if (status === "success") {
     return (
-      <div className="flex flex-col items-center gap-3 py-4 text-center">
-        <CheckCircle2 className="h-12 w-12 text-emerald-500" />
-        <h1 className="text-2xl font-bold">Email verified!</h1>
-        <p className="text-sm text-muted-foreground">
+      <div className="space-y-3">
+        <h1 className="sr-only">Email verified</h1>
+        <FormSuccess title="Email verified!" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
           Your Alivia Properties account is now active. You can sign in and start exploring.
-        </p>
-        <Link href={ROUTES.LOGIN} className="mt-3 w-full">
-          <Button className="w-full bg-brand-600 text-white hover:bg-brand-700">
-            Continue to sign in
-          </Button>
+        </FormSuccess>
+        <Link href={ROUTES.LOGIN} className="btn-tactile btn-tactile--block">
+          Continue to sign in
         </Link>
       </div>
     )
@@ -94,13 +91,13 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
 
   // error or missing token → show explanation + resend form
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <MailWarning className="h-12 w-12 text-amber-500" />
-        <h1 className="text-2xl font-bold">
+    <div className="space-y-4">
+      <div className="flex flex-col items-center gap-1.5 text-center">
+        <MailWarning aria-hidden="true" className="size-9 text-amber-500" />
+        <h1 className="font-heading text-xl font-bold text-ink-900">
           {status === "missing" ? "Verify your email" : "Verification failed"}
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink-600">
           {status === "missing"
             ? "This page needs a verification link. Request a new one below."
             : errorMsg}
@@ -108,14 +105,14 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
       </div>
 
       {resent ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-700">
+        <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-center text-sm text-emerald-800">
           If an account exists for that email, a new verification link is on its way. Check
           your inbox.
         </div>
       ) : (
         <form onSubmit={handleResend} className="space-y-3">
           <div className="space-y-1.5">
-            <label htmlFor="resend-email" className="text-sm font-medium text-ink-800">
+            <label htmlFor="resend-email" className="block text-[0.8125rem] font-semibold text-ink-800">
               Resend verification link
             </label>
             <Input
@@ -125,30 +122,33 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              className="md:h-10"
+              aria-invalid={resendError ? true : undefined}
+              aria-describedby={resendError ? "resend-email-error" : undefined}
             />
+            {resendError && (
+              <p id="resend-email-error" role="alert" className="text-[0.8125rem] font-medium text-destructive">
+                {resendError}
+              </p>
+            )}
           </div>
-          {resendError && <p className="text-sm text-destructive">{resendError}</p>}
-          <Button
-            type="submit"
-            disabled={resending}
-            className="w-full gap-2 bg-brand-600 text-white hover:bg-brand-700"
-          >
+          <button type="submit" disabled={resending} className="btn-tactile btn-tactile--block">
             {resending ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Sending…
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Sending…
               </>
             ) : (
               <>
-                <RotateCw className="h-4 w-4" /> Resend verification email
+                <RotateCw aria-hidden="true" className="h-4 w-4" /> Resend verification email
               </>
             )}
-          </Button>
+          </button>
         </form>
       )}
 
-      <div className="text-center text-sm text-muted-foreground">
-        Already verified?{" "}
-        <Link href={ROUTES.LOGIN} className="font-medium text-brand-700 hover:underline">
+      <div className="flex items-center justify-center gap-2 text-sm text-ink-600">
+        Already verified?
+        <Link href={ROUTES.LOGIN} className="glass-chip">
           Sign in
         </Link>
       </div>

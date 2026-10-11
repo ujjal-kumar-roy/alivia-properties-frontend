@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { FileUploader } from "@/components/common/file-uploader"
+import { TouchFileUploader } from "@/components/dashboard/touch-file-uploader"
 import { Input } from "@/components/ui/input"
 import {
   Sheet,
@@ -167,15 +167,15 @@ export function SupplierFormSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
+      <SheetContent side="right" className="w-full max-w-none gap-0 overflow-y-auto overscroll-contain sm:max-w-lg">
+        <SheetHeader className="px-4 pb-3 pt-4">
           <SheetTitle>{form.id ? "Edit listing" : "Add listing"}</SheetTitle>
         </SheetHeader>
         <div className="space-y-4 px-4 pb-4">
           {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
           <label className="grid gap-1.5 text-xs font-semibold text-ink-700">
             Listing type
-            <select value={form.kind} onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as ProviderKind }))} className="h-10 rounded-lg border border-border bg-white px-3 text-sm font-normal">
+            <select value={form.kind} onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as ProviderKind }))} className="h-11 rounded-lg border border-border bg-white px-3 text-sm font-normal">
               <option value="SUPPLIER">Supplier</option>
               <option value="SERVICE">Service provider</option>
             </select>
@@ -196,8 +196,8 @@ export function SupplierFormSheet({
             Email
             <Input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
           </label>
-          <FileUploader kind="category-image" label="Logo" value={form.logo ? [form.logo] : []} onChange={(urls) => setForm((f) => ({ ...f, logo: urls[0] ?? "" }))} />
-          <FileUploader kind="category-image" label="Cover image" value={form.coverImage ? [form.coverImage] : []} onChange={(urls) => setForm((f) => ({ ...f, coverImage: urls[0] ?? "" }))} />
+          <TouchFileUploader kind="category-image" label="Logo" value={form.logo ? [form.logo] : []} onChange={(urls) => setForm((f) => ({ ...f, logo: urls[0] ?? "" }))} />
+          <TouchFileUploader kind="category-image" label="Cover image" value={form.coverImage ? [form.coverImage] : []} onChange={(urls) => setForm((f) => ({ ...f, coverImage: urls[0] ?? "" }))} />
           <label className="grid gap-1.5 text-xs font-semibold text-ink-700">
             Tagline
             <Textarea value={form.tagline} onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))} />
@@ -210,10 +210,22 @@ export function SupplierFormSheet({
             Brand tags (one per line)
             <Textarea value={form.brands} onChange={(e) => setForm((f) => ({ ...f, brands: e.target.value }))} />
           </label>
-          <Button type="button" disabled={saving || !form.name || !form.phone} onClick={save}>
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-            Save listing
-          </Button>
+          {/* Pinned to the bottom of the sheet so Save never scrolls away. */}
+          <div className="sticky bottom-0 -mx-4 border-t border-border/60 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+            <button
+              type="button"
+              className="btn-tactile btn-tactile--block sm:hidden"
+              disabled={saving || !form.name || !form.phone}
+              onClick={save}
+            >
+              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              Save listing
+            </button>
+            <Button type="button" className="hidden sm:inline-flex" disabled={saving || !form.name || !form.phone} onClick={save}>
+              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              Save listing
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

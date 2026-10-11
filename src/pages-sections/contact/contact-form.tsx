@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useSession } from "next-auth/react"
-import { Button } from "@/components/ui/button"
 import { AdminFormNotice } from "@/components/common/admin-form-notice"
+import { Field, FIELD_CLASS, useInlineValidation } from "@/components/booking/form-fields"
+import { FormSuccess } from "@/components/booking/form-success"
 import { ROUTES } from "@/config/routes.config"
 import { inquiriesService } from "@/services/inquiries.service"
 import { ApiError } from "@/services/http-client"
@@ -13,6 +14,7 @@ export function ContactForm() {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const { errors, validate, clear } = useInlineValidation()
 
   // Admins receive these inquiries — they manage them from the dashboard
   // rather than submitting the public form themselves.
@@ -20,11 +22,17 @@ export function ContactForm() {
     return <AdminFormNotice manageHref={ROUTES.ADMIN_INQUIRIES} />
   }
 
+  const invalid = (name: string) => ({
+    "aria-invalid": errors[name] ? true : undefined,
+    "aria-describedby": errors[name] ? `contact-${name}-error` : undefined,
+  })
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     // Capture the form node synchronously: after the `await` below, React has
     // finished dispatching the event and resets `e.currentTarget` to null.
     const form = e.currentTarget
+    if (!validate(form)) return
     setSubmitting(true)
     setSubmitError(null)
 
@@ -63,55 +71,49 @@ export function ContactForm() {
 
   if (submitted) {
     return (
-      <div className="rounded-xl bg-brand-50 p-8 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
-          <svg className="h-6 w-6 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h3 className="text-base font-bold text-ink-900">Message sent</h3>
-        <p className="mt-1 text-sm text-ink-600">We&apos;ll get back to you within 24 hours.</p>
-      </div>
+      <FormSuccess title="Message sent">
+        Thank you. We&apos;ll get back to you within 24 hours.
+      </FormSuccess>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      onInput={(e) => clear((e.target as HTMLInputElement).name)}
+      noValidate
+      className="space-y-3.5"
+    >
       {submitError && (
-        <div aria-live="polite" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+        <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {submitError}
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label htmlFor="contact-name" className="text-xs font-medium text-ink-700">Full Name *</label>
-          <input id="contact-name" name="name" required className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" placeholder="Your name" />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="contact-phone" className="text-xs font-medium text-ink-700">Phone *</label>
-          <input id="contact-phone" name="phone" required type="tel" className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" placeholder="+8801712345678" />
-        </div>
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+        <Field id="contact-name" label="Full Name *" error={errors.name}>
+          <input id="contact-name" name="name" required autoComplete="name" className={FIELD_CLASS} placeholder="Your name" {...invalid("name")} />
+        </Field>
+        <Field id="contact-phone" label="Phone *" error={errors.phone}>
+          <input id="contact-phone" name="phone" required type="tel" autoComplete="tel" className={FIELD_CLASS} placeholder="+8801712345678" {...invalid("phone")} />
+        </Field>
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="contact-email" className="text-xs font-medium text-ink-700">Email Address *</label>
-        <input id="contact-email" name="email" required type="email" className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" placeholder="you@example.com" />
-      </div>
+      <Field id="contact-email" label="Email Address *" error={errors.email}>
+        <input id="contact-email" name="email" required type="email" autoComplete="email" className={FIELD_CLASS} placeholder="you@example.com" {...invalid("email")} />
+      </Field>
 
-      <div className="space-y-1">
-        <label htmlFor="contact-subject" className="text-xs font-medium text-ink-700">Subject *</label>
-        <input id="contact-subject" name="subject" required className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" placeholder="How can we help?" />
-      </div>
+      <Field id="contact-subject" label="Subject *" error={errors.subject}>
+        <input id="contact-subject" name="subject" required className={FIELD_CLASS} placeholder="How can we help?" {...invalid("subject")} />
+      </Field>
 
-      <div className="space-y-1">
-        <label htmlFor="contact-message" className="text-xs font-medium text-ink-700">Message *</label>
-        <textarea id="contact-message" name="message" required rows={5} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" placeholder="Tell us more about your inquiry…" />
-      </div>
+      <Field id="contact-message" label="Message *" error={errors.message}>
+        <textarea id="contact-message" name="message" required rows={4} className={FIELD_CLASS} placeholder="Tell us more about your inquiry…" {...invalid("message")} />
+      </Field>
 
-      <Button type="submit" className="w-full rounded-full" disabled={submitting}>
+      <button type="submit" className="btn-tactile btn-tactile--block" disabled={submitting}>
         {submitting ? "Sending…" : "Send Message"}
-      </Button>
+      </button>
     </form>
   )
 }

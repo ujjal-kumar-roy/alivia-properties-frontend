@@ -31,7 +31,7 @@ type ProjectFactsInput = {
   units?: ProjectUnit[]
 }
 
-function numberRange(values: Array<number | undefined>): string | null {
+export function numberRange(values: Array<number | undefined>): string | null {
   const present = values.filter((value): value is number => value != null)
   if (present.length === 0) return null
 
@@ -41,7 +41,7 @@ function numberRange(values: Array<number | undefined>): string | null {
 
   return minimum === maximum
     ? format(minimum)
-    : `${format(minimum)}–${format(maximum)}`
+    : `${format(minimum)}-${format(maximum)}`
 }
 
 export function buildProjectFacts(input: ProjectFactsInput): ProjectFact[] {

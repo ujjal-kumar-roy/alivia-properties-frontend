@@ -9,7 +9,14 @@ function formatBdt(amount: number): string {
   return `৳${Math.round(amount).toLocaleString("en-BD")}`
 }
 
-export function RoiCalculator({ propertyPrice }: { propertyPrice: number }) {
+export function RoiCalculator({
+  propertyPrice,
+  embedded = false,
+}: {
+  propertyPrice: number
+  /** Inside an accordion: no card or heading of its own (the section supplies them). */
+  embedded?: boolean
+}) {
   const [monthlyRent, setMonthlyRent] = useState(Math.round(propertyPrice * 0.004))
   const [annualExpensesPct, setAnnualExpensesPct] = useState(2)
   const [appreciationPct, setAppreciationPct] = useState(5)
@@ -27,18 +34,20 @@ export function RoiCalculator({ propertyPrice }: { propertyPrice: number }) {
     : Infinity
 
   return (
-    <div className="surface-card p-5">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold-100 text-gold-700">
-          <TrendingUp className="h-4 w-4" />
+    <div className={embedded ? undefined : "surface-card p-5"}>
+      {!embedded && (
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold-100 text-gold-700">
+            <TrendingUp className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-h3">ROI Calculator</h3>
+            <p className="text-xs text-ink-500">Estimate yield, appreciation, and total return</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-h3">ROI Calculator</h3>
-          <p className="text-xs text-ink-500">Estimate yield, appreciation, and total return</p>
-        </div>
-      </div>
+      )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-1 sm:grid-cols-2 sm:gap-3">
         <SliderInput
           label="Monthly rent estimate"
           value={monthlyRent}
@@ -77,13 +86,13 @@ export function RoiCalculator({ propertyPrice }: { propertyPrice: number }) {
         />
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:grid-cols-4 sm:gap-3">
         <Stat label="Gross yield" value={`${grossYield.toFixed(2)}%`} />
         <Stat label="Net yield" value={`${netYield.toFixed(2)}%`} />
         <Stat label="Total return" value={formatBdt(totalReturn)} />
         <Stat
           label="Break-even"
-          value={breakEvenYears === Infinity ? "—" : `${breakEvenYears.toFixed(1)} yrs`}
+          value={breakEvenYears === Infinity ? "-" : `${breakEvenYears.toFixed(1)} yrs`}
         />
       </div>
     </div>
@@ -109,7 +118,7 @@ function SliderInput({
 }) {
   return (
     <label className="block">
-      <div className="mb-1.5 flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 sm:mb-1.5">
         <span className="text-xs font-medium text-ink-600">{label}</span>
         <span className="text-xs font-semibold text-ink-900">{format(value)}</span>
       </div>
@@ -120,7 +129,7 @@ function SliderInput({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-brand-600"
+        className="min-h-8 w-full accent-brand-600"
       />
     </label>
   )

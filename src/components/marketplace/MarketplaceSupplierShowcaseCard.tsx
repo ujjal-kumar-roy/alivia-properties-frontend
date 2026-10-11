@@ -25,7 +25,6 @@ import {
   supplierInitials,
   toSupplierVideoEmbedUrl,
 } from "@/components/marketplace/supplier-media-utils";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ROUTES } from "@/config/routes.config";
 import { cn } from "@/lib/utils";
@@ -51,16 +50,16 @@ function MetricTile({
   return (
     <div
       className={cn(
-        "rounded-2xl border px-3.5 py-3",
+        "rounded-xl border px-2 py-1.5 sm:rounded-2xl sm:px-3.5 sm:py-3",
         tone === "good" && "border-emerald-200 bg-emerald-50",
         tone === "danger" && "border-red-200 bg-red-50",
         tone === "default" && "border-border/70 bg-ink-50/70",
       )}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">
+      <p className="truncate text-[0.6875rem] font-semibold uppercase tracking-wide text-ink-500 sm:tracking-[0.16em]">
         {label}
       </p>
-      <p className="mt-1 text-lg font-semibold text-ink-900">{value}</p>
+      <p className="mt-0.5 text-base font-semibold tabular-nums text-ink-900 sm:mt-1 sm:text-lg">{value}</p>
     </div>
   );
 }
@@ -118,10 +117,10 @@ export function MarketplaceSupplierShowcaseCard({
 
   return (
     <>
-      <article className="group overflow-hidden rounded-[28px] border border-border/70 bg-white shadow-(--shadow-card) transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-(--shadow-elevated) motion-reduce:transform-none motion-reduce:transition-none">
+      <article data-card className="group overflow-hidden rounded-2xl border border-border/70 bg-white shadow-(--shadow-card) sm:rounded-[28px] transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-(--shadow-elevated) motion-reduce:transform-none motion-reduce:transition-none">
         <div className="grid lg:grid-cols-[0.92fr_1.08fr]">
           <div className="flex flex-col border-b border-border/70 lg:border-r lg:border-b-0">
-            <div className="relative aspect-16/10 overflow-hidden bg-brand-100 lg:aspect-auto lg:min-h-0 lg:flex-1">
+            <div className="relative aspect-video overflow-hidden bg-brand-100 sm:aspect-16/10 lg:aspect-auto lg:min-h-0 lg:flex-1">
               {activeItem ? (
                 activeItem.type === "image" ? (
                   <button
@@ -226,7 +225,7 @@ export function MarketplaceSupplierShowcaseCard({
             </div>
 
             {items.length > 1 && (
-              <div className="grid grid-cols-5 gap-2 border-t border-border/60 bg-ink-50/60 p-3 sm:grid-cols-6">
+              <div className="hidden grid-cols-5 gap-2 border-t border-border/60 bg-ink-50/60 p-3 sm:grid sm:grid-cols-6">
                 {items.map((item, index) => {
                   const thumbSrc =
                     item.type === "image" ? item.src : item.poster;
@@ -279,7 +278,7 @@ export function MarketplaceSupplierShowcaseCard({
             )}
           </div>
 
-          <div className="flex flex-col p-5 sm:p-6">
+          <div className="flex flex-col p-3.5 sm:p-6">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-brand-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-700">
                 {supplier.kind === "service" || supplier.kind === "SERVICE"
@@ -312,7 +311,7 @@ export function MarketplaceSupplierShowcaseCard({
               <div className="min-w-0 flex-1">
                 <Link
                   href={ROUTES.MARKETPLACE_SUPPLIER(supplier.slug)}
-                  className="font-heading text-2xl font-semibold text-ink-900 transition-colors hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+                  className="font-heading text-xl font-semibold text-ink-900 transition-colors hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 sm:text-2xl"
                 >
                   {supplier.name}
                 </Link>
@@ -342,7 +341,7 @@ export function MarketplaceSupplierShowcaseCard({
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 grid grid-cols-4 gap-1.5 sm:mt-5 sm:grid-cols-2 sm:gap-3">
               <MetricTile
                 label="In Stock"
                 value={stockCountLabel}
@@ -370,7 +369,7 @@ export function MarketplaceSupplierShowcaseCard({
               />
             </div>
 
-            <div className="mt-5 rounded-[24px] border border-red-200 bg-red-50 px-4 py-3.5">
+            <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 sm:mt-5 sm:rounded-[24px] sm:px-4 sm:py-3.5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-red-600">
                 Bangladesh Market Price
               </p>
@@ -379,7 +378,7 @@ export function MarketplaceSupplierShowcaseCard({
               </p>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-sm text-ink-600">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-ink-600 sm:mt-5 sm:gap-y-2">
               {supplier.responseTimeHours ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Clock3
@@ -402,7 +401,7 @@ export function MarketplaceSupplierShowcaseCard({
             </div>
 
             {popularProducts.length > 0 && (
-              <div className="mt-5">
+              <div className="mt-5 hidden sm:block">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">
                   Popular Supply Lines
                 </p>
@@ -422,7 +421,7 @@ export function MarketplaceSupplierShowcaseCard({
             )}
 
             {(supplier.serviceAreas?.length ?? 0) > 0 && (
-              <div className="mt-4">
+              <div className="mt-4 hidden sm:block">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-500">
                   Coverage
                 </p>
@@ -439,26 +438,20 @@ export function MarketplaceSupplierShowcaseCard({
               </div>
             )}
 
-            <div className="mt-6 flex flex-wrap gap-2">
-              <Link href={quoteHref}>
-                <Button
-                  size="lg"
-                  className="gap-2 bg-gold-400 text-ink-900 hover:bg-gold-300"
-                >
-                  <FileText aria-hidden="true" className="size-4" />
-                  Request a Quote
-                </Button>
+            <div className="mt-4 flex flex-wrap gap-2 sm:mt-6">
+              <Link
+                href={quoteHref}
+                className="btn-tactile btn-tactile--sm btn-tactile--gold flex-1 sm:flex-none"
+              >
+                <FileText aria-hidden="true" className="size-4" />
+                Request a Quote
               </Link>
-              <Link href={ROUTES.MARKETPLACE_SUPPLIER(supplier.slug)}>
-                <Button size="lg" variant="outline">
-                  View Profile
-                </Button>
+              <Link href={ROUTES.MARKETPLACE_SUPPLIER(supplier.slug)} className="btn-glass">
+                View Profile
               </Link>
-              <a href={`tel:${supplier.phone}`}>
-                <Button size="lg" variant="outline" className="gap-2">
-                  <Phone aria-hidden="true" className="size-4" />
-                  Call Now
-                </Button>
+              <a href={`tel:${supplier.phone}`} className="btn-glass">
+                <Phone aria-hidden="true" className="size-4" />
+                Call Now
               </a>
             </div>
           </div>

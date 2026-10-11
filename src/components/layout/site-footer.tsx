@@ -66,12 +66,12 @@ export function SiteFooter() {
 
   return (
     <footer className="border-t border-ink-200 bg-ink-950 text-white">
-      <div className="container-page py-8 md:py-10">
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.8fr_1.1fr] lg:items-start">
+      <div className="container-page py-5 md:py-10">
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_0.8fr_1.1fr] lg:items-start lg:gap-8">
           <div>
             <Link
               href={ROUTES.HOME}
-              className="inline-flex min-h-11 items-center font-heading text-base font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+              className="inline-flex min-h-9 md:min-h-11 items-center font-heading text-base font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
             >
               {siteConfig.shortName}
               <span className="ml-1 text-gold-400">Properties</span>
@@ -84,7 +84,7 @@ export function SiteFooter() {
                 href={`https://wa.me/${siteConfig.contact.whatsApp}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-brand-600/40 bg-brand-700/20 px-4 text-sm font-semibold text-brand-200 transition-colors duration-200 hover:bg-brand-700/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                className="inline-flex min-h-9 md:min-h-11 items-center gap-2 rounded-full border border-brand-600/40 bg-brand-700/20 px-4 text-sm font-semibold text-brand-200 transition-colors duration-200 hover:bg-brand-700/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
               >
                 <MessageCircle aria-hidden="true" className="size-4" />
                 WhatsApp
@@ -96,7 +96,7 @@ export function SiteFooter() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="flex size-11 items-center justify-center rounded-full border border-white/10 text-ink-400 transition-colors duration-200 hover:border-brand-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                  className="flex size-10 items-center justify-center rounded-full border border-white/10 md:size-11 text-ink-400 transition-colors duration-200 hover:border-brand-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
                 >
                   <Icon className="size-4" />
                 </a>
@@ -105,7 +105,7 @@ export function SiteFooter() {
           </div>
 
           <nav aria-label="Footer navigation">
-            <h2 className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-ink-500">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-400">
               Explore
             </h2>
             <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 sm:max-w-sm">
@@ -113,7 +113,7 @@ export function SiteFooter() {
                 <li key={href}>
                   <Link
                     href={href}
-                    className="inline-flex min-h-11 items-center text-sm text-ink-400 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                    className="inline-flex min-h-9 md:min-h-11 items-center text-sm text-ink-400 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
                   >
                     {label}
                   </Link>
@@ -123,14 +123,14 @@ export function SiteFooter() {
           </nav>
 
           <address className="not-italic">
-            <h2 className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-ink-500">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-400">
               Contact
             </h2>
             <ul className="mt-3 space-y-1 text-sm text-ink-400">
               <li>
                 <a
                   href={`tel:${siteConfig.contact.phoneRaw}`}
-                  className="inline-flex min-h-11 items-center gap-2 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                  className="inline-flex min-h-9 md:min-h-11 items-center gap-2 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
                 >
                   <Phone aria-hidden="true" className="size-4 text-brand-400" />
                   {siteConfig.contact.phone}
@@ -139,13 +139,13 @@ export function SiteFooter() {
               <li>
                 <a
                   href={`mailto:${siteConfig.contact.email}`}
-                  className="inline-flex min-h-11 items-center gap-2 break-all transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+                  className="inline-flex min-h-9 md:min-h-11 items-center gap-2 break-all transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
                 >
                   <Mail aria-hidden="true" className="size-4 shrink-0 text-brand-400" />
                   {siteConfig.contact.email}
                 </a>
               </li>
-              <li className="flex min-h-11 items-start gap-2 pt-2">
+              <li className="flex min-h-9 md:min-h-11 items-start gap-2 pt-2">
                 <MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand-400" />
                 <span className="leading-relaxed">{siteConfig.contact.address}</span>
               </li>
@@ -155,18 +155,18 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-white/8">
-        <div className="container-page flex flex-col gap-2 py-3 text-xs text-ink-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="container-page flex flex-col gap-1 py-2 text-xs text-ink-400 sm:flex-row sm:items-center sm:justify-between md:py-3">
           <p>
             © {year} <span className="text-ink-400">{siteConfig.name}</span>. All rights reserved.
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <Link href={ROUTES.PRIVACY} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
+            <Link href={ROUTES.PRIVACY} className="inline-flex min-h-9 md:min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
               Privacy
             </Link>
-            <Link href={ROUTES.TERMS} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
+            <Link href={ROUTES.TERMS} className="inline-flex min-h-9 md:min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
               Terms
             </Link>
-            <Link href={ROUTES.CONTACT} className="inline-flex min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
+            <Link href={ROUTES.CONTACT} className="inline-flex min-h-9 md:min-h-11 items-center transition-colors duration-200 hover:text-ink-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
               Support
             </Link>
           </div>

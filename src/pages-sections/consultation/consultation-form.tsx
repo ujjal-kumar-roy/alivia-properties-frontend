@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useSession } from "next-auth/react"
-import { Button } from "@/components/ui/button"
 import { AdminFormNotice } from "@/components/common/admin-form-notice"
+import { Field, FIELD_CLASS, useInlineValidation } from "@/components/booking/form-fields"
+import { FormSuccess } from "@/components/booking/form-success"
 import { ROUTES } from "@/config/routes.config"
 import { bookingsService } from "@/services/bookings.service"
 import { ApiError } from "@/services/http-client"
@@ -22,6 +23,7 @@ export function ConsultationForm() {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const { errors, validate, clear } = useInlineValidation()
 
   // Admins receive these consultation bookings — they manage them from the
   // dashboard rather than submitting the public form themselves.
@@ -29,11 +31,17 @@ export function ConsultationForm() {
     return <AdminFormNotice manageHref={ROUTES.ADMIN_BOOKINGS} />
   }
 
+  const invalid = (name: string) => ({
+    "aria-invalid": errors[name] ? true : undefined,
+    "aria-describedby": errors[name] ? `consult-${name}-error` : undefined,
+  })
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     // Capture the form node synchronously: after the `await` below, React has
     // finished dispatching the event and resets `e.currentTarget` to null.
     const form = e.currentTarget
+    if (!validate(form)) return
     setSubmitting(true)
     setSubmitError(null)
 
@@ -69,76 +77,68 @@ export function ConsultationForm() {
 
   if (submitted) {
     return (
-      <div className="rounded-xl bg-brand-50 p-8 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-100">
-          <svg className="h-6 w-6 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h3 className="text-base font-bold text-ink-900">Booking received</h3>
-        <p className="mt-1 text-sm text-ink-600">Our team will confirm within 2 hours.</p>
-      </div>
+      <FormSuccess title="Booking received">
+        Our team will confirm within 2 hours.
+      </FormSuccess>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      onInput={(e) => clear((e.target as HTMLInputElement).name)}
+      noValidate
+      className="space-y-3.5"
+    >
       {submitError && (
-        <div aria-live="polite" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+        <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {submitError}
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label htmlFor="consult-name" className="text-xs font-medium text-ink-700">Full Name *</label>
-          <input id="consult-name" name="name" required className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" placeholder="Your name" />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="consult-phone" className="text-xs font-medium text-ink-700">Phone *</label>
-          <input id="consult-phone" name="phone" required type="tel" className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" placeholder="+8801712345678" />
-        </div>
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+        <Field id="consult-name" label="Full Name *" error={errors.name}>
+          <input id="consult-name" name="name" required autoComplete="name" className={FIELD_CLASS} placeholder="Your name" {...invalid("name")} />
+        </Field>
+        <Field id="consult-phone" label="Phone *" error={errors.phone}>
+          <input id="consult-phone" name="phone" required type="tel" autoComplete="tel" className={FIELD_CLASS} placeholder="+8801712345678" {...invalid("phone")} />
+        </Field>
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="consult-email" className="text-xs font-medium text-ink-700">Email *</label>
-        <input id="consult-email" name="email" required type="email" className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" placeholder="you@example.com" />
-      </div>
+      <Field id="consult-email" label="Email *" error={errors.email}>
+        <input id="consult-email" name="email" required type="email" autoComplete="email" className={FIELD_CLASS} placeholder="you@example.com" {...invalid("email")} />
+      </Field>
 
-      <div className="space-y-1">
-        <label htmlFor="consult-type" className="text-xs font-medium text-ink-700">Consultation type *</label>
-        <select id="consult-type" name="consultationType" required className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+      <Field id="consult-type" label="Consultation type *" error={errors.consultationType}>
+        <select id="consult-type" name="consultationType" required className={FIELD_CLASS} {...invalid("consultationType")}>
           <option value="">Select type…</option>
           {CONSULTATION_TYPES.map((type) => (
             <option key={type.value} value={type.value}>{type.label}</option>
           ))}
         </select>
-      </div>
+      </Field>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label htmlFor="consult-date" className="text-xs font-medium text-ink-700">Preferred date *</label>
-          <input id="consult-date" name="preferredDate" required type="date" className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="consult-time" className="text-xs font-medium text-ink-700">Preferred time *</label>
-          <select id="consult-time" name="preferredTime" required className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+        <Field id="consult-date" label="Preferred date *" error={errors.preferredDate}>
+          <input id="consult-date" name="preferredDate" required type="date" className={FIELD_CLASS} {...invalid("preferredDate")} />
+        </Field>
+        <Field id="consult-time" label="Preferred time *" error={errors.preferredTime}>
+          <select id="consult-time" name="preferredTime" required className={FIELD_CLASS} {...invalid("preferredTime")}>
             <option value="">Select time…</option>
             {TIME_SLOTS.map((slot) => (
               <option key={slot} value={slot}>{slot}</option>
             ))}
           </select>
-        </div>
+        </Field>
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="consult-message" className="text-xs font-medium text-ink-700">Message</label>
-        <textarea id="consult-message" name="message" rows={3} className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" placeholder="Any specific apartments, areas, or requirements…" />
-      </div>
+      <Field id="consult-message" label="Message" error={errors.message}>
+        <textarea id="consult-message" name="message" rows={3} className={FIELD_CLASS} placeholder="Any specific apartments, areas, or requirements…" {...invalid("message")} />
+      </Field>
 
-      <Button type="submit" className="w-full rounded-full" disabled={submitting}>
+      <button type="submit" className="btn-tactile btn-tactile--block" disabled={submitting}>
         {submitting ? "Booking…" : "Book Free Consultation"}
-      </Button>
+      </button>
     </form>
   )
 }

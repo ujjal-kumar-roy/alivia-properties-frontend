@@ -11,7 +11,7 @@ export default async function NotificationsPage() {
   const unread = res?.data.unreadCount ?? 0
 
   return (
-    <div className="section-y">
+    <div className="py-4 sm:py-8 lg:py-12">
       <div className="container-page max-w-3xl">
         <NotificationsList initialItems={items} initialUnread={unread} />
       </div>

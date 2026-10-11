@@ -15,7 +15,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes.config";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { resolveHeroIcon } from "@/lib/hero-icons";
@@ -53,11 +52,11 @@ const DEFAULT_SLIDES: Slide[] = [
   },
   {
     id: "default-2",
-    eyebrow: "New launch — booking open",
+    eyebrow: "New launch, booking open",
     eyebrowIcon: Sparkles,
     title: "Own a home in Bangladesh's fastest-growing address",
     subtitle:
-      "Pre-launch pricing on Alivia Riverside Towers, Jolshiri Abashon — a limited number of units remain.",
+      "Pre-launch pricing on Alivia Riverside Towers, Jolshiri Abashon. A limited number of units remain.",
     image:
       "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=80",
     primary: { label: "View the launch", href: ROUTES.PROJECTS },
@@ -302,7 +301,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       style={{ touchAction: "pan-y" }}
-      className="relative isolate flex min-h-136 items-center overflow-hidden bg-brand-950 md:min-h-160"
+      className="relative isolate flex min-h-[22.5rem] items-center overflow-hidden bg-brand-950 sm:min-h-136 md:min-h-160"
     >
       {/* Slide imagery (atmospheric — the text below carries the meaning) */}
       <div aria-hidden="true" className="absolute inset-0 -z-10">
@@ -331,7 +330,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
         ))}
       </div>
 
-      <div className="container-page max-w-373! relative z-10 py-20 md:py-28">
+      <div className="container-page max-w-373! relative z-10 pb-16 pt-8 sm:py-20 md:py-28">
         <div
           ref={contentRef}
           aria-live={playing ? "off" : "polite"}
@@ -345,7 +344,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
             className="animate-in fade-in-0 slide-in-from-bottom-3 duration-500 ease-out motion-reduce:animate-none"
           >
             {active.eyebrow ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+              <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-white backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-xs sm:tracking-[0.16em]">
                 <EyebrowIcon
                   aria-hidden="true"
                   className="size-3.5 text-gold-300"
@@ -354,38 +353,33 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
               </span>
             ) : null}
 
-            <h1 className="text-h1 mt-5 text-balance font-heading font-bold text-white">
+            <h1 className="text-h1 mt-3 text-balance font-heading font-bold text-white sm:mt-5">
               {active.title}
             </h1>
 
             {active.subtitle ? (
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg">
+              <p className="mt-2.5 line-clamp-3 max-w-xl text-[0.9375rem] leading-snug text-white/85 sm:mt-4 sm:line-clamp-none sm:text-lg sm:leading-relaxed">
                 {active.subtitle}
               </p>
             ) : null}
 
             {active.primary || active.secondary ? (
-              <div className="mt-8 flex flex-wrap items-center gap-3">
+              <div className="mt-4 flex flex-wrap items-center gap-2.5 sm:mt-8 sm:gap-3">
                 {active.primary ? (
-                  <Link href={active.primary.href}>
-                    <Button
-                      size="lg"
-                      className="gap-2 rounded-full bg-gold-400 px-6 font-bold text-brand-950 shadow-md shadow-gold-950/20 hover:bg-gold-300"
-                    >
-                      {active.primary.label}
-                      <ArrowRight aria-hidden="true" className="size-4" />
-                    </Button>
+                  <Link
+                    href={active.primary.href}
+                    className="btn-tactile btn-tactile--gold btn-tactile--sm sm:!min-h-[calc(3.25rem+var(--tactile-depth))] sm:!px-6 sm:!text-base"
+                  >
+                    {active.primary.label}
+                    <ArrowRight aria-hidden="true" className="size-4" />
                   </Link>
                 ) : null}
                 {active.secondary ? (
-                  <Link href={active.secondary.href}>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="rounded-full border-white/30 bg-white/10 px-6 font-semibold text-white hover:bg-white/20 hover:text-white"
-                    >
-                      {active.secondary.label}
-                    </Button>
+                  <Link
+                    href={active.secondary.href}
+                    className="btn-glass min-h-10 sm:!min-h-[3.25rem] sm:!px-6 sm:!text-base"
+                  >
+                    {active.secondary.label}
                   </Link>
                 ) : null}
               </div>
@@ -395,13 +389,13 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
       </div>
 
       {/* Controls — grouped at the bottom so they never collide with the copy */}
-      <div className="absolute inset-x-0 bottom-6 z-20 flex justify-center px-4">
+      <div className="absolute inset-x-0 bottom-3 z-20 flex justify-center px-4 sm:bottom-6">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={prev}
             aria-label="Previous slide"
-            className="liquid-glass-control glass-interactive flex size-11 items-center justify-center rounded-full text-brand-900 transition-[transform,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-950"
+            className="liquid-glass-control glass-interactive hidden size-11 items-center justify-center rounded-full text-brand-900 transition-[transform,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-950 sm:flex"
           >
             <ChevronLeft aria-hidden="true" className="size-5" />
           </button>
@@ -416,7 +410,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
                   onClick={() => goTo(i)}
                   aria-label={`Go to slide ${i + 1}`}
                   aria-current={isActive ? "true" : undefined}
-                  className="flex h-11 items-center justify-center px-0.5 focus-visible:outline-none"
+                  className="flex h-9 items-center justify-center px-0.5 focus-visible:outline-none sm:h-11"
                 >
                   <span
                     className={cn(
@@ -445,7 +439,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
             type="button"
             onClick={next}
             aria-label="Next slide"
-            className="liquid-glass-control glass-interactive flex size-11 items-center justify-center rounded-full text-brand-900 transition-[transform,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-950"
+            className="liquid-glass-control glass-interactive hidden size-11 items-center justify-center rounded-full text-brand-900 transition-[transform,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-950 sm:flex"
           >
             <ChevronRight aria-hidden="true" className="size-5" />
           </button>
@@ -455,7 +449,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
               type="button"
               onClick={() => setUserPaused((p) => !p)}
               aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
-              className="liquid-glass-control glass-interactive ml-1 flex size-11 items-center justify-center rounded-full text-brand-900 transition-[transform,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-950"
+              className="liquid-glass-control glass-interactive ml-1 flex size-9 items-center justify-center rounded-full text-brand-900 transition-[transform,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-950 sm:size-11"
             >
               {userPaused ? (
                 <Play aria-hidden="true" className="size-4" />

@@ -164,7 +164,7 @@ export function PanoramaBuilder({ galleryUrls, onBuilt, kind = "property-image" 
         Build a 360° from photos
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto overscroll-contain sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Build a 360° tour from your photos</DialogTitle>
         </DialogHeader>
@@ -214,7 +214,7 @@ export function PanoramaBuilder({ galleryUrls, onBuilt, kind = "property-image" 
                     className="object-cover"
                   />
                   {selected && (
-                    <span className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-brand-700 text-[0.7rem] font-bold text-white shadow">
+                    <span className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-brand-700 text-[0.75rem] font-bold text-white shadow">
                       {index + 1}
                     </span>
                   )}
@@ -239,8 +239,8 @@ export function PanoramaBuilder({ galleryUrls, onBuilt, kind = "property-image" 
           </div>
 
           {photos.length === 0 && (
-            <p className="text-center text-xs text-ink-400">
-              No photos yet — add a few room shots to get started.
+            <p className="text-center text-xs text-ink-500">
+              No photos yet. Add a few room shots to get started.
             </p>
           )}
 
@@ -265,17 +265,17 @@ export function PanoramaBuilder({ galleryUrls, onBuilt, kind = "property-image" 
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <span className="text-xs text-ink-500">
+            <span className="text-xs text-ink-600">
               {order.length} selected
               {order.length > 0 && order.length < MIN_PHOTOS
                 ? ` · pick ${MIN_PHOTOS - order.length} more`
                 : ""}
             </span>
-            <div className="flex gap-2">
+            <div className="flex w-full gap-2 sm:w-auto">
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full"
+                className="h-10 flex-1 rounded-full sm:h-8 sm:flex-none"
                 disabled={order.length < MIN_PHOTOS || building}
                 onClick={build}
               >
@@ -292,7 +292,7 @@ export function PanoramaBuilder({ galleryUrls, onBuilt, kind = "property-image" 
               </Button>
               <Button
                 type="button"
-                className="rounded-full bg-brand-700 text-white hover:bg-brand-800"
+                className="h-10 flex-1 rounded-full bg-brand-700 text-white hover:bg-brand-800 sm:h-8 sm:flex-none"
                 disabled={!previewUrl || saving}
                 onClick={useResult}
               >

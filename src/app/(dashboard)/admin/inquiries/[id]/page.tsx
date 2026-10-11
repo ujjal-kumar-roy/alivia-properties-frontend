@@ -22,8 +22,9 @@ export default async function AdminInquiryDetailPage({
   if (!session?.user || !inquiry) notFound()
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 sm:space-y-5">
       <DashboardPageHeader
+        className="max-sm:hidden"
         title="Inquiry detail"
         description="Review the conversation and update the lead status."
       />

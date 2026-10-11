@@ -5,10 +5,10 @@ import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { CheckCircle, ArrowLeft } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { FormSuccess } from "@/components/booking/form-success"
 import { ROUTES } from "@/config/routes.config"
 import { authService } from "@/services/auth.service"
 import { ApiError } from "@/services/http-client"
@@ -40,33 +40,31 @@ export default function ForgotPasswordPage() {
 
   return (
     <>
-      <Link href={ROUTES.LOGIN} className="mb-6 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to Login
+      <Link href={ROUTES.LOGIN} className="glass-chip mb-3 gap-1 pl-2.5 sm:mb-5">
+        <ArrowLeft aria-hidden="true" className="size-4" /> Back to Login
       </Link>
 
-      <div className="mb-6">
-        <h1 className="mb-1 text-2xl font-bold">Reset your password</h1>
-        <p className="text-sm text-muted-foreground">
+      <div className="mb-3.5 sm:mb-6">
+        <h1 className="font-heading text-xl font-bold tracking-tight text-ink-900 sm:text-2xl">Reset your password</h1>
+        <p className="mt-0.5 text-[0.8125rem] text-ink-600 sm:text-sm">
           Enter your registered email and we&apos;ll send you a reset link.
         </p>
       </div>
 
       {sent ? (
-        <div className="flex flex-col items-center gap-3 py-6 text-center">
-          <CheckCircle className="h-10 w-10 text-green-500" />
-          <h3 className="font-bold">Check your inbox</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className="space-y-3">
+          <FormSuccess title="Check your inbox" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
             If an account exists for that email, a reset link has been sent.
-          </p>
-          <Link href={ROUTES.LOGIN} className="mt-2 text-sm text-brand-700 hover:underline">
+          </FormSuccess>
+          <Link href={ROUTES.LOGIN} className="btn-tactile btn-tactile--block">
             Return to Login
           </Link>
         </div>
       ) : (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5 md:[&_input:not([type=checkbox])]:h-10">
             {submitError && (
-              <div aria-live="polite" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {submitError}
               </div>
             )}
@@ -74,22 +72,22 @@ export default function ForgotPasswordPage() {
               control={form.control}
               name="email"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email Address</FormLabel>
+                <FormItem className="gap-1.5">
+                  <FormLabel className="text-[0.8125rem] font-semibold text-ink-800">Email Address</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="you@example.com" {...field} value={field.value ?? ""} />
+                    <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button
+            <button
               type="submit"
-              className="w-full bg-brand-600 text-white hover:bg-brand-700"
+              className="btn-tactile btn-tactile--block"
               disabled={form.formState.isSubmitting}
             >
               {form.formState.isSubmitting ? "Sending…" : "Send Reset Link"}
-            </Button>
+            </button>
           </form>
         </Form>
       )}

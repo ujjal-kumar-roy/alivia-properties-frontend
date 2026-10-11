@@ -1,24 +1,30 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
 import {
-  ArrowLeft,
+  ArrowRight,
   Check,
-  ChevronRight,
   Eye,
   Layers,
+  MapPin,
   Package,
   Play,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
   Star,
+  Truck,
 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { GetQuoteForm } from "@/components/marketplace/GetQuoteForm"
+import {
+  GetQuoteForm,
+  QUOTE_FORM_SCREEN_COUNT,
+} from "@/components/marketplace/GetQuoteForm"
+import { MediaImage } from "@/components/marketplace/MediaImage"
+import { GuidedShell } from "@/components/marketplace/wizard/GuidedShell"
+import { ROUTES } from "@/config/routes.config"
+import { haptic } from "@/lib/celebrate"
 import {
   marketplaceService,
   type TreeCategory,
@@ -29,12 +35,10 @@ import { cn } from "@/lib/utils"
 
 type Step = 1 | 2 | 3 | 4
 
-const STEP_LABELS: Record<Step, string> = {
-  1: "What",
-  2: "Type",
-  3: "Sellers",
-  4: "Details",
-}
+/** Screens before the form: department, category, sellers. */
+const PICK_SCREENS = 3
+/** One progress bar across the picks and every question of the form. */
+const TOTAL_SCREENS = PICK_SCREENS + QUOTE_FORM_SCREEN_COUNT
 
 type Props = {
   tree: TreeDepartment[]
@@ -61,7 +65,8 @@ export function QuoteWizard({ tree, initial }: Props) {
   }, [tree, initial?.dept, initial?.cat])
 
   const [step, setStep] = React.useState<Step>(start.step)
-  const [prev, setPrev] = React.useState<Step[]>(
+  // Screens already visited, so Back honours auto-skipped levels.
+  const history = React.useRef<Step[]>(
     start.step === 1 ? [] : ([1, 2, 3] as Step[]).filter((s) => s < start.step),
   )
   const [dept, setDept] = React.useState<TreeDepartment | undefined>(start.dept)
@@ -74,41 +79,36 @@ export function QuoteWizard({ tree, initial }: Props) {
   )
 
   // ── Navigation (auto-skips single-child levels, back respects skips) ─────────
-  const advanceTo = React.useCallback(
-    (target: Step) => {
-      setPrev((p) => [...p, step])
-      setStep(target)
-    },
-    [step],
-  )
+  function advanceTo(target: Step) {
+    // A double tap must not record the same screen twice.
+    if (history.current[history.current.length - 1] !== step) history.current.push(step)
+    setStep(target)
+  }
 
-  function selectDepartment(d: TreeDepartment) {
-    setDept(d)
-    setCat(undefined)
-    if (d.categories.length === 1) {
-      setCat(d.categories[0])
+  function pickDepartment(d: TreeDepartment) {
+    haptic("tap")
+    if (dept?.slug !== d.slug) {
+      setDept(d)
+      setCat(undefined)
+    }
+  }
+
+  function continueFromDepartment() {
+    if (!dept) return
+    if (dept.categories.length === 1) {
+      setCat(dept.categories[0])
       advanceTo(3)
     } else advanceTo(2)
   }
 
-  function selectCategory(c: TreeCategory) {
+  function pickCategory(c: TreeCategory) {
+    haptic("tap")
     setCat(c)
-    advanceTo(3)
   }
 
   function back() {
-    setPrev((p) => {
-      const next = [...p]
-      const last = next.pop()
-      if (last != null) setStep(last)
-      return next
-    })
-  }
-
-  function jumpTo(target: Step) {
-    if (target >= step) return
-    setPrev((p) => p.filter((s) => s < target))
-    setStep(target)
+    const last = history.current.pop()
+    if (last != null) setStep(last)
   }
 
   // ── Load suppliers when a category is chosen ─────────────────────────────────
@@ -138,6 +138,7 @@ export function QuoteWizard({ tree, initial }: Props) {
   }, [catSlug])
 
   function toggleSupplier(id: string) {
+    haptic("tap")
     setSelectedSupplierIds((ids) =>
       ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id],
     )
@@ -147,75 +148,146 @@ export function QuoteWizard({ tree, initial }: Props) {
     .filter((s) => selectedSupplierIds.includes(s.id))
     .map((s) => s.name)
 
-  return (
-    <div>
-      <WizardProgress step={step} onJump={jumpTo} />
+  // ── Step 4: the request form, one question per screen ────────────────────────
+  if (step === 4 && cat) {
+    return (
+      <GetQuoteForm
+        guided="always"
+        mode="batch"
+        supplierIds={selectedSupplierIds}
+        redirectOnSuccess
+        progress={{ offset: PICK_SCREENS, total: TOTAL_SCREENS }}
+        onExit={back}
+        context={{
+          categorySlug: cat.slug,
+          categoryName: cat.name,
+          supplierName: selectedSupplierNames.join(", ") || undefined,
+        }}
+      />
+    )
+  }
 
-      {/* Breadcrumb of choices */}
-      {(dept || cat) && (
-        <div className="mb-5 flex flex-wrap items-center gap-1.5 text-xs text-ink-600">
-          {dept && <Crumb label={dept.name} onClick={() => jumpTo(1)} />}
-          {cat && (
-            <>
-              <ChevronRight className="size-3 text-ink-400" />
-              <Crumb label={cat.name} onClick={() => jumpTo(2)} />
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── Step 1: Department ─────────────────────────────────────────────── */}
-      {step === 1 && (
-        <StepShell
-          eyebrow="Step 1 of 4"
-          title="What are you looking for?"
-          lead="Tap one to get started."
-        >
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {tree.map((d) => (
-              <TileButton
-                key={d.slug}
+  // ── Steps 1 to 3: pick what, which type, which sellers ───────────────────────
+  if (step === 1) {
+    return (
+      <GuidedShell
+        step={0}
+        total={TOTAL_SCREENS}
+        bubble="Hi, I am your Alivia guide. What do you need today?"
+        backHref={ROUTES.MARKETPLACE}
+        backLabel="Back to marketplace"
+        action={(placement, { guard }) => (
+          <ContinueButton
+            placement={placement}
+            enabled={Boolean(dept)}
+            popOnUnlock
+            onClick={guard(() => {
+              haptic("tap")
+              continueFromDepartment()
+            })}
+          />
+        )}
+      >
+        <h2 className="font-heading text-xl font-semibold text-ink-900">
+          What are you looking for?
+        </h2>
+        <p className="mt-0.5 text-sm text-ink-600">Tap one to get started.</p>
+        <ul className="mt-3 grid gap-2.5">
+          {tree.map((d) => (
+            <li key={d.slug}>
+              <ChoiceTile
                 title={d.name}
                 description={d.description}
                 meta={`${d.categories.length} categories`}
                 iconUrl={d.iconUrl}
                 fallbackIcon={<Layers className="size-5" />}
-                onClick={() => selectDepartment(d)}
+                selected={dept?.slug === d.slug}
+                onSelect={() => pickDepartment(d)}
               />
-            ))}
-          </div>
-        </StepShell>
-      )}
+            </li>
+          ))}
+        </ul>
+      </GuidedShell>
+    )
+  }
 
-      {/* ── Step 2: Category ───────────────────────────────────────────────── */}
-      {step === 2 && dept && (
-        <StepShell
-          eyebrow="Step 2 of 4"
-          title={`Pick a type in ${dept.name}`}
-          lead="Narrow down to the product group you need."
-        >
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {dept.categories.map((c) => (
-              <TileButton
-                key={c.slug}
+  if (step === 2 && dept) {
+    return (
+      <GuidedShell
+        step={1}
+        total={TOTAL_SCREENS}
+        bubble={`Nice choice. Which type of ${dept.name} do you need?`}
+        onBack={back}
+        action={(placement, { guard }) => (
+          <ContinueButton
+            placement={placement}
+            enabled={Boolean(cat)}
+            popOnUnlock
+            onClick={guard(() => {
+              if (!cat) return
+              haptic("tap")
+              advanceTo(3)
+            })}
+          />
+        )}
+      >
+        <h2 className="font-heading text-xl font-semibold text-ink-900">
+          Pick a type in {dept.name}
+        </h2>
+        <p className="mt-0.5 text-sm text-ink-600">Narrow down to the product group you need.</p>
+        <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          {dept.categories.map((c) => (
+            <li key={c.slug}>
+              <ChoiceTile
+                compact
                 title={c.name}
                 description={c.description}
                 iconUrl={c.iconUrl}
                 fallbackIcon={<Package className="size-5" />}
-                onClick={() => selectCategory(c)}
+                selected={cat?.slug === c.slug}
+                onSelect={() => pickCategory(c)}
               />
-            ))}
-          </div>
-        </StepShell>
-      )}
+            </li>
+          ))}
+        </ul>
+      </GuidedShell>
+    )
+  }
 
-      {/* ── Step 3: Suppliers (multi-select) ───────────────────────────────── */}
-      {step === 3 && cat && (
-        <StepShell
-          eyebrow="Step 3 of 4"
-          title={`Choose sellers for ${cat.name}`}
-          lead="Select one or more — or skip and let Alivia match you."
-        >
+  if (step === 3 && cat) {
+    const loading = suppliersState === "loading" || suppliersState === "idle"
+    return (
+      <GuidedShell
+        step={2}
+        total={TOTAL_SCREENS}
+        mood={loading ? "think" : "idle"}
+        bubble={
+          loading
+            ? "One moment while I find sellers for you."
+            : suppliers.length === 0
+              ? "No sellers listed here yet, but I can still match you. Just continue."
+              : "Pick the sellers you like, or skip and I will match you with verified ones."
+        }
+        onBack={back}
+        action={(placement, { guard }) => (
+          <ContinueButton
+            placement={placement}
+            label={selectedSupplierIds.length > 0 ? `Continue (${selectedSupplierIds.length})` : "Skip, match me"}
+            onClick={guard(() => {
+              haptic("tap")
+              advanceTo(4)
+            })}
+          />
+        )}
+      >
+        <h2 className="font-heading text-xl font-semibold text-ink-900">
+          Choose sellers for {cat.name}
+        </h2>
+        <p className="mt-0.5 text-sm text-ink-600">
+          Select one or more, or skip and let Alivia match you.
+        </p>
+
+        <div className="mt-3">
           <SupplierStep
             state={suppliersState}
             suppliers={suppliers}
@@ -224,184 +296,133 @@ export function QuoteWizard({ tree, initial }: Props) {
             onSelectAll={() => setSelectedSupplierIds(suppliers.map((s) => s.id))}
             onClear={() => setSelectedSupplierIds([])}
           />
-
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4">
-            <p className="text-sm text-ink-600">
-              {selectedSupplierIds.length > 0
-                ? `${selectedSupplierIds.length} seller${selectedSupplierIds.length === 1 ? "" : "s"} selected`
-                : "No sellers selected — we'll route your request to verified matches."}
-            </p>
-            <Button onClick={() => advanceTo(4)} className="gap-1.5">
-              {selectedSupplierIds.length > 0 ? "Continue" : "Skip — match me"}
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </StepShell>
-      )}
-
-      {/* ── Step 4: Request form ───────────────────────────────────────────── */}
-      {step === 4 && cat && (
-        <StepShell
-          eyebrow="Step 4 of 4"
-          title="Tell us what you need"
-          lead="Fill in the details and submit — verified suppliers usually reply within 24 hours."
-        >
-          <div className="mb-5 rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-3 text-sm text-brand-900">
-            <span className="font-medium">Requesting:</span> {cat.name}
-            {selectedSupplierNames.length > 0 ? (
-              <>
-                {" "}
-                <span className="text-brand-700">·</span> {selectedSupplierNames.join(", ")}
-              </>
-            ) : (
-              <>
-                {" "}
-                <span className="text-brand-700">·</span> Alivia will match suppliers
-              </>
-            )}
-          </div>
-
-          <GetQuoteForm
-            mode="batch"
-            supplierIds={selectedSupplierIds}
-            redirectOnSuccess
-            context={{
-              categorySlug: cat.slug,
-              categoryName: cat.name,
-              supplierName: selectedSupplierNames.join(", ") || undefined,
-            }}
-          />
-        </StepShell>
-      )}
-
-      {/* Back control */}
-      {prev.length > 0 && (
-        <div className="mt-6">
-          <button
-            type="button"
-            onClick={back}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-600 hover:text-brand-700"
-          >
-            <ArrowLeft className="size-4" /> Back
-          </button>
         </div>
-      )}
-    </div>
-  )
+
+        <p className="mt-4 text-sm text-ink-600" aria-live="polite">
+          {selectedSupplierIds.length > 0
+            ? `${selectedSupplierIds.length} seller${selectedSupplierIds.length === 1 ? "" : "s"} selected`
+            : "No sellers selected. We will route your request to verified matches."}
+        </p>
+      </GuidedShell>
+    )
+  }
+
+  return null
 }
 
 // ─── Pieces ────────────────────────────────────────────────────────────────────
 
-function WizardProgress({ step, onJump }: { step: Step; onJump: (s: Step) => void }) {
-  const steps: Step[] = [1, 2, 3, 4]
-  return (
-    <ol className="mb-6 flex items-center gap-1.5 sm:gap-2">
-      {steps.map((s, i) => {
-        const done = s < step
-        const active = s === step
-        return (
-          <li key={s} className="flex flex-1 items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              disabled={!done}
-              onClick={() => onJump(s)}
-              className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors",
-                active && "bg-brand-700 text-white ring-2 ring-brand-200",
-                done && "bg-brand-600 text-white hover:bg-brand-700",
-                !active && !done && "bg-ink-100 text-ink-500",
-              )}
-              aria-current={active ? "step" : undefined}
-            >
-              {done ? <Check className="size-3.5" /> : s}
-            </button>
-            <span
-              className={cn(
-                "hidden text-xs font-medium sm:inline",
-                active ? "text-ink-900" : "text-ink-500",
-              )}
-            >
-              {STEP_LABELS[s]}
-            </span>
-            {i < steps.length - 1 && (
-              <span
-                className={cn("h-px flex-1", s < step ? "bg-brand-300" : "bg-ink-200")}
-                aria-hidden
-              />
-            )}
-          </li>
-        )
-      })}
-    </ol>
-  )
-}
-
-function StepShell({
-  eyebrow,
-  title,
-  lead,
-  children,
+/** The single full-width action of a screen. It pops when it unlocks. */
+function ContinueButton({
+  placement,
+  enabled = true,
+  popOnUnlock = false,
+  label = "Continue",
+  onClick,
 }: {
-  eyebrow: string
-  title: string
-  lead?: string
-  children: React.ReactNode
+  placement: "bar" | "inline"
+  enabled?: boolean
+  /** Replay the card-pop on the button the moment it becomes available. */
+  popOnUnlock?: boolean
+  label?: string
+  onClick: () => void
 }) {
-  return (
-    <section>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">
-        {eyebrow}
-      </p>
-      <h2 className="mt-1 font-heading text-xl font-semibold text-ink-900 sm:text-2xl">{title}</h2>
-      {lead && <p className="mt-1 text-sm text-ink-600">{lead}</p>}
-      <div className="mt-5">{children}</div>
-    </section>
-  )
-}
-
-function Crumb({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       type="button"
+      disabled={!enabled}
       onClick={onClick}
-      className="rounded-full bg-ink-50 px-2.5 py-1 font-medium text-ink-700 hover:bg-ink-100 hover:text-brand-700"
+      className={cn(
+        "btn-tactile",
+        placement === "bar" ? "flex-1" : "min-w-56",
+        popOnUnlock &&
+          enabled &&
+          "animate-[choice-pop_280ms_cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:animate-none",
+      )}
     >
       {label}
+      <ArrowRight aria-hidden="true" className="size-4" />
     </button>
   )
 }
 
-function TileButton({
+/** A round check that fills when its card is chosen. */
+function CheckDot({ selected, className }: { selected: boolean; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+        selected ? "border-brand-600 bg-brand-600 text-white" : "border-ink-300 text-transparent",
+        className,
+      )}
+    >
+      <Check className={cn("size-3.5", selected && "anim-pop-in")} strokeWidth={3} />
+    </span>
+  )
+}
+
+function ChoiceTile({
   title,
   description,
   meta,
   iconUrl,
   fallbackIcon,
-  onClick,
+  selected,
+  compact = false,
+  onSelect,
 }: {
   title: string
   description?: string | null
   meta?: string
   iconUrl?: string | null
   fallbackIcon: React.ReactNode
-  onClick: () => void
+  selected: boolean
+  /** Half-width tile: icon and name only. */
+  compact?: boolean
+  onSelect: () => void
 }) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="mobile-liquid-glass group flex h-full flex-col rounded-2xl border border-border/70 bg-white p-4 text-left shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-(--shadow-elevated)"
+      aria-pressed={selected}
+      onClick={onSelect}
+      className={cn("choice-card relative h-full", compact && "!min-h-16 !gap-2.5 !px-2.5 !py-2")}
     >
-      <span className="flex size-11 items-center justify-center overflow-hidden rounded-xl bg-brand-50 text-brand-700">
-        {iconUrl ? (
-          <Image src={iconUrl} alt="" width={44} height={44} unoptimized className="size-full object-cover" />
-        ) : (
-          fallbackIcon
+      <span
+        className={cn(
+          "flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-50 text-brand-700",
+          compact ? "size-10" : "size-11",
         )}
+      >
+        <MediaImage
+          src={iconUrl}
+          alt=""
+          width={44}
+          height={44}
+          unoptimized
+          className="size-full object-cover"
+          fallback={fallbackIcon}
+        />
       </span>
-      <span className="mt-3 font-semibold text-ink-900 group-hover:text-brand-700">{title}</span>
-      {description && <span className="mt-1 line-clamp-2 text-xs text-ink-600">{description}</span>}
-      {meta && <span className="mt-auto pt-2 text-[11px] font-medium text-ink-500">{meta}</span>}
+      <span className={cn("min-w-0 flex-1", compact && "pr-3")}>
+        <span className={cn("block font-bold leading-tight", compact ? "line-clamp-2 text-[0.8125rem]" : "text-[0.9375rem]")}>
+          {title}
+        </span>
+        {description && !compact ? (
+          <span className="mt-0.5 line-clamp-1 block text-xs font-medium text-ink-500">
+            {description}
+          </span>
+        ) : null}
+      </span>
+      {meta && !compact ? (
+        <span className="hidden shrink-0 text-xs font-semibold text-ink-500 min-[400px]:block">{meta}</span>
+      ) : null}
+      {compact ? (
+        <CheckDot selected={selected} className="absolute right-1.5 top-1.5 size-5" />
+      ) : (
+        <CheckDot selected={selected} />
+      )}
     </button>
   )
 }
@@ -425,9 +446,9 @@ function SupplierStep({
 
   if (state === "loading" || state === "idle") {
     return (
-      <div className="grid gap-4 sm:grid-cols-2">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-72 rounded-2xl border border-border/60 bg-ink-50/60 skeleton" />
+      <div className="grid gap-2.5 sm:grid-cols-2" aria-busy="true">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="skeleton h-24 rounded-2xl border border-border/60 bg-ink-50/60" />
         ))}
       </div>
     )
@@ -435,27 +456,31 @@ function SupplierStep({
 
   if (suppliers.length === 0) {
     return (
-      <EmptyNote text="No verified sellers listed here yet — continue and our marketplace team will return vetted matches within 24 hours." />
+      <EmptyNote text="No verified sellers listed here yet. Continue and our marketplace team will return vetted matches within 24 hours." />
     )
   }
 
   return (
     <>
-      <div className="mb-3 flex items-center gap-3 text-xs">
+      <div className="mb-2 flex items-center gap-1 text-xs">
         <button
           type="button"
           onClick={onSelectAll}
-          className="font-medium text-brand-700 hover:underline"
+          className="min-h-9 rounded-full px-2 font-semibold text-brand-700 hover:underline"
         >
           Select all ({suppliers.length})
         </button>
         {selectedIds.length > 0 && (
-          <button type="button" onClick={onClear} className="text-ink-500 hover:text-ink-800">
+          <button
+            type="button"
+            onClick={onClear}
+            className="min-h-9 rounded-full px-2 font-medium text-ink-500 hover:text-ink-800"
+          >
             Clear
           </button>
         )}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-2.5 sm:grid-cols-2">
         {suppliers.map((s) => (
           <SupplierSelectCard
             key={s.id}
@@ -467,7 +492,7 @@ function SupplierStep({
         ))}
       </div>
 
-      {/* Product video lightbox */}
+      {/* Seller video lightbox */}
       <Dialog
         open={!!videoOf}
         onOpenChange={(open) => {
@@ -475,7 +500,7 @@ function SupplierStep({
         }}
       >
         <DialogContent className="sm:max-w-2xl">
-          <DialogTitle>{videoOf?.name} — product video</DialogTitle>
+          <DialogTitle>{videoOf?.name}: product video</DialogTitle>
           {videoOf?.videoUrl ? (
             <video
               key={videoOf.id}
@@ -514,13 +539,7 @@ function SupplierSelectCard({
   onToggle: () => void
   onPlay: () => void
 }) {
-  const images = React.useMemo(
-    () => [s.coverImage, ...(s.gallery ?? [])].filter(Boolean) as string[],
-    [s.coverImage, s.gallery],
-  )
-  const [imgIdx, setImgIdx] = React.useState(0)
-  const active = images[imgIdx] ?? images[0]
-  const inStock = s.inStock !== false
+  const thumb = s.coverImage ?? s.gallery?.[0] ?? s.logo ?? undefined
 
   // Simulated "live viewers": deterministic initial value (SSR-safe) that gently
   // fluctuates client-side for a real-time feel. No backend tracking required.
@@ -533,151 +552,102 @@ function SupplierSelectCard({
   }, [])
 
   return (
-    <div
-      className={cn(
-        "mobile-liquid-glass group relative overflow-hidden rounded-2xl border bg-white shadow-(--shadow-card) transition-all hover:shadow-(--shadow-elevated)",
-        checked ? "border-brand-500 ring-2 ring-brand-300" : "border-border/70 hover:border-brand-200",
-      )}
-    >
-      {/* Full-card selection target (keyboard + click). Inner controls float above it. */}
+    <div className="relative">
+      {/* The whole row selects; the video button below is a sibling, not nested. */}
       <button
         type="button"
         aria-pressed={checked}
-        aria-label={`${checked ? "Deselect" : "Select"} ${s.name}`}
         onClick={onToggle}
-        className="absolute inset-0 z-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
-      />
+        className="choice-card !items-start !gap-3 !p-2.5 !pr-11"
+      >
+        <span className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-brand-100">
+          <MediaImage
+            src={thumb}
+            alt=""
+            fill
+            unoptimized
+            sizes="56px"
+            className="object-cover"
+            fallback={
+              <span className="flex size-full items-center justify-center font-heading text-base font-bold text-brand-600/60">
+                {initials(s.name)}
+              </span>
+            }
+          />
+        </span>
 
-      <div className="pointer-events-none relative z-10">
-        {/* Media */}
-        <div className="relative aspect-[16/9] w-full overflow-hidden bg-brand-100">
-          {active ? (
-            <Image
-              src={active}
-              alt={s.name}
-              fill
-              unoptimized
-              sizes="(max-width: 640px) 100vw, 50vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex size-full items-center justify-center bg-linear-to-br from-brand-100 to-brand-200">
-              <span className="font-heading text-3xl font-bold text-brand-600/40">{initials(s.name)}</span>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-linear-to-t from-black/55 via-black/5 to-transparent" />
-
-          {/* Stock badge */}
-          <span
-            className={cn(
-              "absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-              inStock ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700",
-            )}
-          >
-            <span className={cn("size-1.5 rounded-full", inStock ? "bg-green-500" : "bg-red-500")} />
-            {inStock ? "In stock" : "Out of stock"}
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1">
+            <span className="truncate text-[0.9375rem] font-bold leading-tight">{s.name}</span>
+            {s.isVerified ? (
+              <ShieldCheck aria-label="Verified" className="size-3.5 shrink-0 text-brand-600" />
+            ) : null}
           </span>
-
-          {/* Select indicator (visual) */}
-          <span
-            className={cn(
-              "absolute right-2.5 top-2.5 flex size-7 items-center justify-center rounded-full border-2 transition-colors",
-              checked ? "border-white bg-brand-600 text-white" : "border-white/80 bg-black/20 text-transparent",
-            )}
-          >
-            <Check className="size-4" />
+          <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-ink-500">
+            <MapPin aria-hidden="true" className="size-3 shrink-0" />
+            <span className="truncate">{s.location}</span>
           </span>
-
-          {/* Live viewers */}
-          <span className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-            <span className="relative flex size-1.5">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-green-400 opacity-75 motion-reduce:hidden" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-green-400" />
-            </span>
-            <Eye className="size-3" />
-            {live} watching
-          </span>
-
-          {/* Video play */}
-          {s.videoUrl ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onPlay()
-              }}
-              aria-label={`Play ${s.name} video`}
-              className="pointer-events-auto absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-brand-700 shadow-md transition-transform hover:scale-105"
-            >
-              <Play className="size-5 translate-x-px fill-current" />
-            </button>
-          ) : null}
-        </div>
-
-        {/* Gallery thumbnails */}
-        {images.length > 1 && (
-          <div className="pointer-events-auto flex gap-1.5 px-3 pt-3">
-            {images.slice(0, 4).map((src, i) => (
-              <button
-                key={`${src}-${i}`}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setImgIdx(i)
-                }}
-                aria-label={`View photo ${i + 1} of ${s.name}`}
-                className={cn(
-                  "relative h-11 w-14 shrink-0 overflow-hidden rounded-md border-2 transition-colors",
-                  i === imgIdx ? "border-brand-500" : "border-transparent opacity-70 hover:opacity-100",
-                )}
-              >
-                <Image src={src} alt="" fill unoptimized sizes="56px" className="object-cover" />
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Info */}
-        <div className="flex items-start gap-3 p-3.5">
-          <span className="relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-ink-50 text-sm font-semibold text-brand-700">
-            {s.logo ? (
-              <Image src={s.logo} alt={`${s.name} logo`} fill unoptimized sizes="44px" className="object-contain p-1" />
-            ) : (
-              initials(s.name)
-            )}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="truncate font-semibold text-ink-900">{s.name}</span>
-              {s.isVerified && <ShieldCheck className="size-3.5 shrink-0 text-brand-600" />}
-            </div>
-            <p className="mt-0.5 truncate text-xs text-ink-600">{s.location}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-ink-500">
+          <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs font-medium text-ink-600">
+            {s.rating > 0 ? (
               <span className="inline-flex items-center gap-0.5">
-                <Star className="size-3 fill-gold-400 text-gold-400" />
+                <Star aria-hidden="true" className="size-3 fill-gold-400 text-gold-400" />
                 {s.rating.toFixed(1)} ({s.reviewCount})
               </span>
-              {typeof s.itemsSold === "number" && s.itemsSold > 0 && (
-                <span className="inline-flex items-center gap-0.5">
-                  <ShoppingBag className="size-3" />
-                  {formatCompact(s.itemsSold)} sold
-                </span>
-              )}
-              {s.deliveryDays ? <span>· {s.deliveryDays}d delivery</span> : null}
-            </div>
-            {/* Price — red bold per spec */}
-            {s.priceRange && <p className="mt-1.5 text-sm font-bold text-red-600">{s.priceRange}</p>}
-          </div>
-        </div>
-      </div>
+            ) : null}
+            {typeof s.itemsSold === "number" && s.itemsSold > 0 ? (
+              <span className="inline-flex items-center gap-0.5">
+                <ShoppingBag aria-hidden="true" className="size-3" />
+                {formatCompact(s.itemsSold)} sold
+              </span>
+            ) : null}
+            {s.deliveryDays ? (
+              <span className="inline-flex items-center gap-0.5">
+                <Truck aria-hidden="true" className="size-3" />
+                {s.deliveryDays}d delivery
+              </span>
+            ) : null}
+            <span className="inline-flex items-center gap-1 text-ink-500">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-green-400 opacity-75 motion-reduce:hidden" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-green-500" />
+              </span>
+              <Eye aria-hidden="true" className="size-3" />
+              {live} watching
+            </span>
+          </span>
+          {s.priceRange ? (
+            <span className="mt-1 block truncate text-[0.8125rem] font-extrabold text-gold-700">
+              {s.priceRange}
+            </span>
+          ) : null}
+        </span>
+      </button>
+
+      <CheckDot
+        selected={checked}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+      />
+
+      {s.videoUrl ? (
+        <button
+          type="button"
+          onClick={onPlay}
+          aria-label={`Play ${s.name} video`}
+          className="absolute left-3 top-3 flex size-14 items-center justify-center rounded-xl"
+        >
+          <span className="flex size-7 items-center justify-center rounded-full bg-white/90 text-brand-700 shadow">
+            <Play aria-hidden="true" className="size-3.5 translate-x-px fill-current" />
+          </span>
+        </button>
+      ) : null}
     </div>
   )
 }
 
 function EmptyNote({ text }: { text: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-ink-50/50 p-5 text-sm text-ink-600">
-      <Sparkles className="mt-0.5 size-5 shrink-0 text-brand-600" />
+    <div className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-ink-50/50 p-4 text-sm text-ink-600">
+      <Sparkles aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-brand-600" />
       <p>{text}</p>
     </div>
   )

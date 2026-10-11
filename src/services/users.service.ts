@@ -1,9 +1,8 @@
-import { auth } from "@/auth"
 import { ApiError, httpClient, type Paginated } from "./http-client"
 import { normalizeRole, type User } from "@/types/user.types"
 
 async function sessionToken(): Promise<string | undefined> {
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   return session?.accessToken
 }
 

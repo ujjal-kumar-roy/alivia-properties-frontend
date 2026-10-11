@@ -99,41 +99,44 @@ export function SellerCataloguePanel({
   }
 
   return (
-    <div className="space-y-5">
-      {/* Supplier switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-white p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-ink-600">Supplier:</span>
+    <div className="space-y-3 sm:space-y-5">
+      {/* Supplier switcher: one scrolling row of chips on phones, a wrapped row from sm */}
+      <div className="rounded-2xl sm:border sm:border-border/70 sm:bg-white sm:p-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-semibold text-ink-600">
+            Supplier
+            <span className="sr-only">:</span>
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-full max-sm:h-9"
+            onClick={refresh}
+          >
+            <RefreshCcw className="size-3.5" /> Refresh
+          </Button>
+        </div>
+        <div
+          role="group"
+          aria-label="Supplier"
+          className="-mx-3 mt-2 flex gap-1.5 overflow-x-auto px-3 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:py-0"
+        >
           {suppliers.map((supplier) => (
             <button
               key={supplier.id}
               type="button"
+              className="glass-chip backdrop-blur-none"
+              aria-pressed={supplier.id === selectedSupplier?.id}
               onClick={() => {
                 setSelectedSupplierId(supplier.id);
               }}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                supplier.id === selectedSupplier?.id
-                  ? "bg-brand-600 text-white"
-                  : "bg-ink-100 text-ink-700 hover:bg-ink-200",
-              )}
             >
               {supplier.name}
-              <span className="ml-1.5 opacity-70">
-                {(supplier.products ?? []).length}
-              </span>
+              <span className="opacity-70">{(supplier.products ?? []).length}</span>
             </button>
           ))}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="rounded-full"
-          onClick={refresh}
-        >
-          <RefreshCcw className="size-3.5" /> Refresh
-        </Button>
       </div>
 
       {message ? (
@@ -149,9 +152,9 @@ export function SellerCataloguePanel({
 
       {/* Existing products */}
       <section className="surface-card overflow-hidden">
-        <div className="flex items-center justify-between gap-2 border-b border-border/70 px-5 py-4">
-          <div>
-            <h2 className="font-heading text-lg font-semibold text-ink-900">
+        <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3 sm:px-5 sm:py-4">
+          <div className="min-w-0">
+            <h2 className="truncate font-heading text-base font-semibold text-ink-900 sm:text-lg">
               {selectedSupplier?.name} catalogue
             </h2>
             <p className="mt-0.5 text-xs text-ink-500">
@@ -159,10 +162,11 @@ export function SellerCataloguePanel({
               buyers can request a quote on
             </p>
           </div>
-          <Link href={`/seller/marketplace-catalogue/products/new?supplierId=${selectedSupplier?.id ?? ""}`}>
-            <Button type="button" size="sm">
-              <Plus className="size-3.5" /> Add product
-            </Button>
+          <Link
+            href={`/seller/marketplace-catalogue/products/new?supplierId=${selectedSupplier?.id ?? ""}`}
+            className="btn-tactile btn-tactile--sm shrink-0"
+          >
+            <Plus className="size-4" /> Add product
           </Link>
         </div>
 
@@ -173,13 +177,13 @@ export function SellerCataloguePanel({
               No products yet
             </p>
             <p className="text-xs text-ink-500">
-              Use the form to add your first product or service line.
+              Use Add product to list your first product or service line.
             </p>
           </div>
         ) : (
           <ul className="divide-y divide-border/70">
             {products.map((product) => (
-              <li key={product.id} className="flex items-center gap-3 p-4">
+              <li key={product.id} className="flex items-center gap-3 p-3 sm:p-4">
                 <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-ink-50">
                   {product.image ? (
                     <Image
@@ -203,7 +207,7 @@ export function SellerCataloguePanel({
                     </p>
                     <span
                       className={cn(
-                        "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                        "rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold",
                         product.inStock
                           ? "bg-emerald-50 text-emerald-700"
                           : "bg-amber-50 text-amber-700",
@@ -224,11 +228,15 @@ export function SellerCataloguePanel({
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
-                  <Link href={`/seller/marketplace-catalogue/products/${product.id}`}>
-                    <Button type="button" size="sm" variant="outline" aria-label={`Edit ${product.name}`}>
-                      <Pencil className="size-3.5" />
-                    </Button>
-                  </Link>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="max-sm:size-9 max-sm:p-0"
+                    aria-label={`Edit ${product.name}`}
+                    render={<Link href={`/seller/marketplace-catalogue/products/${product.id}`} />}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
                   <Button
                     type="button"
                     size="icon"

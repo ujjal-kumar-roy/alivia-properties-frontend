@@ -64,6 +64,7 @@ export type Project = {
   nearbyLandmarks?: NearbyLandmark[]
   views?: ProjectView[]
   developerName?: string
+  viewCount?: number
   isFeatured?: boolean
   featured?: boolean            // alias for pages that use featured
   createdAt?: string

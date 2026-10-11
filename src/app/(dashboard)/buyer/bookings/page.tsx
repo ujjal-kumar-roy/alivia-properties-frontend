@@ -24,26 +24,34 @@ export default async function BuyerBookingsPage({
     {
       key: "type",
       header: "Consultation",
+      primaryOnMobile: true,
       render: (row) => (
-        <div>
-          <p className="font-semibold text-ink-900 capitalize">{row.consultationType}</p>
-          <p className="text-xs text-ink-500">{row.propertyTitle ?? row.projectName ?? "General request"}</p>
+        <div className="min-w-0">
+          <p className="font-semibold text-ink-900 capitalize max-sm:truncate">{row.consultationType}</p>
+          <p className="text-xs text-ink-500 max-sm:truncate">{row.propertyTitle ?? row.projectName ?? "General request"}</p>
         </div>
       ),
     },
     {
       key: "schedule",
       header: "Schedule",
-      render: (row) => `${formatDate(row.preferredDate)} · ${row.preferredTime}`,
+      mobileLabel: false,
+      render: (row) => (
+        <span className="text-xs font-medium text-ink-800 sm:text-sm sm:font-normal sm:text-inherit">
+          {`${formatDate(row.preferredDate)} · ${row.preferredTime}`}
+        </span>
+      ),
     },
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (row) => <BookingStatusBadge status={row.status} />,
     },
     {
       key: "created",
       header: "Requested",
+      hideOnMobile: true,
       render: (row) => formatDateTime(row.createdAt),
     },
   ]

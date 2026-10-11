@@ -3,63 +3,42 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowUpRight, Building2, Eye, Flame, Layers, MapPin, MessageCircle, Sparkles, Star } from "lucide-react"
+import {
+  ArrowUpRight,
+  BedDouble,
+  Building2,
+  CalendarClock,
+  Eye,
+  Flame,
+  Layers,
+  MapPin,
+  Maximize2,
+  MessageCircle,
+  Sparkles,
+  Star,
+} from "lucide-react"
 
+import { CardFact } from "@/components/common/card-fact"
 import { ROUTES } from "@/config/routes.config"
+import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
 import { isRecent } from "@/utils/format-date"
-import { formatPrice } from "@/utils/format-price"
-import { pickLocationText } from "@/utils/project-location"
-import type { Project } from "@/types/project.types"
+import type { FlagshipProject } from "@/utils/flagship-project"
 
-export type FlagshipProject = {
-  slug: string
-  name: string
-  location: string
-  status: string
-  price: string | null
-  units: string | null
-  cover: string | null
-  availableUnits?: number | null
-  totalUnits?: number | null
-  isFeatured?: boolean
-  createdAt?: string
-}
-
-/** Normalise a full `Project` into the flat shape the flagship card renders. */
-export function toFlagshipProject(p: Project): FlagshipProject {
-  const total = p.totalUnits ?? null
-  const from = p.priceFrom ?? 0
-  return {
-    slug: p.slug ?? "",
-    name: p.name ?? "Alivia Apartment",
-    location: pickLocationText(
-      [p.location, p.area, p.division],
-      "Jolshiri Abashon, Rupganj",
-    ),
-    status: p.status ?? "ongoing",
-    price: from > 0 ? formatPrice(from, true) : null,
-    units: total ? `${total} units` : null,
-    cover: p.coverImage ?? p.coverImageUrl ?? p.galleryImages?.[0] ?? null,
-    availableUnits: p.availableUnits ?? null,
-    totalUnits: total,
-    isFeatured: p.isFeatured ?? p.featured ?? false,
-    createdAt: p.createdAt,
-  }
-}
+export type { FlagshipProject } from "@/utils/flagship-project"
 
 type Merch =
-  | { kind: "low-stock"; label: string }
-  | { kind: "featured"; label: string }
-  | { kind: "new"; label: string }
+  | { kind: "low-stock"; label: string; short: string }
+  | { kind: "featured"; label: string; short: string }
+  | { kind: "new"; label: string; short: string }
   | null
 
 function merchBadge(p: FlagshipProject): Merch {
   const { availableUnits: a, totalUnits: t } = p
   if (typeof a === "number" && typeof t === "number" && t > 0 && a > 0 && a / t <= 0.25) {
-    return { kind: "low-stock", label: `Only ${a} unit${a === 1 ? "" : "s"} left` }
+    return { kind: "low-stock", label: `Only ${a} unit${a === 1 ? "" : "s"} left`, short: `${a} left` }
   }
-  if (p.isFeatured) return { kind: "featured", label: "Featured" }
-  if (isRecent(p.createdAt, 30)) return { kind: "new", label: "New launch" }
+  if (p.isFeatured) return { kind: "featured", label: "Featured", short: "Featured" }
+  if (isRecent(p.createdAt, 30)) return { kind: "new", label: "New launch", short: "New" }
   return null
 }
 
@@ -91,7 +70,8 @@ const STATUS_STYLE: Record<string, string> = {
  * that is a sibling of the card link (not nested), so the markup stays
  * valid. Collapsed it is a 44px white circle; on hover / keyboard focus
  * the label slides open to its left, turning it into a pill. `aria-label`
- * keeps it usable while collapsed and on touch, where hover never fires.
+ * keeps it usable while collapsed. Tablet and up only: touch has no hover,
+ * and phones get the whole card as one big tap target instead.
  */
 function ImageCta({
   href,
@@ -120,38 +100,58 @@ function ImageCta({
 
 /**
  * The flagship apartment card. Self-contained `<article>` so it can be dropped
- * into any grid — the landing "Find your next landmark" section and the
- * /apartments listing both render it, keeping the two pages visually identical.
+ * into any grid: the landing "Find your next landmark" section and the
+ * /apartments listing both render it, keeping the two pages identical.
+ *
+ * Phones get a compact row (square thumbnail left, facts right, about 130px
+ * tall) so a screen shows 5 to 6 projects; from `sm` it becomes the larger
+ * vertical card with amenities and an availability bar.
  */
 export function FlagshipProjectCard({ project: p }: { project: FlagshipProject }) {
   const merch = merchBadge(p)
   const MerchIcon = merch ? MERCH_ICON[merch.kind] : null
+  const href = p.slug ? ROUTES.PROJECT_DETAIL(p.slug) : ROUTES.PROJECTS
+  const status = p.status.toLowerCase()
+  const left = p.availableUnits ?? null
+  const total = p.totalUnits ?? null
+  const soldPct =
+    left != null && total != null && total > 0
+      ? Math.round(((total - left) / total) * 100)
+      : null
+  const amenities = p.amenities ?? []
 
   return (
-    <article className="group relative min-w-0 overflow-hidden rounded-3xl border border-black/5 bg-white shadow-(--shadow-card) transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-(--shadow-elevated) motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+    <article
+      data-card
+      className="group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) transition-[translate,scale,box-shadow] duration-200 active:scale-[0.99] sm:rounded-3xl sm:hover:-translate-y-1 sm:hover:shadow-(--shadow-elevated) motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
+    >
       <Link
-        href={p.slug ? ROUTES.PROJECT_DETAIL(p.slug) : ROUTES.PROJECTS}
-        className="block rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400"
+        href={href}
+        className="flex gap-2.5 rounded-[inherit] p-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 sm:block sm:p-0"
       >
-        <div className="relative aspect-16/10 w-full overflow-hidden bg-ink-100">
+        {/* Media: square thumbnail on phones, 16:10 image from sm. */}
+        <div className="relative aspect-square w-25 shrink-0 self-start overflow-hidden rounded-xl bg-ink-100 sm:aspect-16/10 sm:w-full sm:self-auto sm:rounded-none">
           {p.cover ? (
             <Image
               src={p.cover}
               alt={p.name}
               fill
-              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100px"
+              placeholder="blur"
+              blurDataURL={CARD_BLUR_DATA_URL}
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full items-center justify-center text-brand-200">
-              <Building2 aria-hidden="true" className="h-10 w-10" />
+              <Building2 aria-hidden="true" className="h-8 w-8 sm:h-10 sm:w-10" />
             </div>
           )}
-          <div className="absolute left-0 top-0 flex flex-col items-start gap-2 p-3">
+
+          <div className="absolute left-0 top-0 flex flex-col items-start gap-2 p-1.5 sm:p-3">
             <span
               className={
-                "inline-flex rounded-full px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-wider " +
-                (STATUS_STYLE[p.status.toLowerCase()] ?? "bg-white/90 text-ink-700")
+                "inline-flex rounded-full px-2 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wide sm:px-2.5 sm:py-1 sm:tracking-wider " +
+                (STATUS_STYLE[status] ?? "bg-white/90 text-ink-700")
               }
             >
               {p.status}
@@ -159,7 +159,7 @@ export function FlagshipProjectCard({ project: p }: { project: FlagshipProject }
             {merch && MerchIcon && (
               <span
                 className={
-                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-wider shadow-sm " +
+                  "hidden items-center gap-1 rounded-full px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-wider shadow-sm sm:inline-flex " +
                   MERCH_STYLE[merch.kind]
                 }
               >
@@ -168,23 +168,110 @@ export function FlagshipProjectCard({ project: p }: { project: FlagshipProject }
               </span>
             )}
           </div>
+
+          {merch && MerchIcon && (
+            <span
+              className={
+                "absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 py-[3px] text-[0.6875rem] font-bold uppercase tracking-wide sm:hidden " +
+                MERCH_STYLE[merch.kind]
+              }
+            >
+              <MerchIcon aria-hidden="true" className="size-2.5" />
+              {merch.short}
+            </span>
+          )}
         </div>
-        <div className="p-5">
-          <p className="font-heading text-lg font-semibold text-ink-900 transition-colors group-hover:text-brand-700">
+
+        <div className="flex min-w-0 flex-1 flex-col sm:p-4">
+          <h3 className="line-clamp-1 font-heading text-[0.95rem] font-semibold leading-tight text-ink-900 transition-colors group-hover:text-brand-700 sm:text-lg">
             {p.name}
-          </p>
-          <p className="mt-1 flex items-center gap-1 text-xs text-ink-500">
-            <MapPin aria-hidden="true" className="h-3 w-3 shrink-0" />
+          </h3>
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-500 sm:mt-1">
+            <MapPin aria-hidden="true" className="size-3 shrink-0" />
             <span className="truncate">{p.location}</span>
           </p>
-          <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
-            <div>
+
+          <ul className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-0.5 sm:mt-2.5 sm:gap-x-3 sm:gap-y-1">
+            {p.bedrooms && (
+              <li>
+                <CardFact icon={BedDouble}>{p.bedrooms}</CardFact>
+              </li>
+            )}
+            {p.size && (
+              <li>
+                <CardFact icon={Maximize2}>{p.size}</CardFact>
+              </li>
+            )}
+            {p.floors != null && (
+              <li>
+                <CardFact icon={Layers}>
+                  {p.floors} Floor{p.floors === 1 ? "" : "s"}
+                </CardFact>
+              </li>
+            )}
+            {(status === "completed" || p.handover) && (
+              <li>
+                <CardFact icon={CalendarClock}>
+                  {status === "completed" ? "Ready to move in" : `Handover ${p.handover}`}
+                </CardFact>
+              </li>
+            )}
+          </ul>
+
+          {/* Tablet and up: amenities, developer, and a real availability bar. */}
+          {amenities.length > 0 && (
+            <ul className="mt-3 hidden flex-wrap gap-1.5 sm:flex">
+              {amenities.slice(0, 3).map((a) => (
+                <li
+                  key={a}
+                  className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-800"
+                >
+                  {a}
+                </li>
+              ))}
+              {amenities.length > 3 && (
+                <li className="rounded-full bg-ink-100 px-2.5 py-1 text-xs font-semibold text-ink-600">
+                  +{amenities.length - 3}
+                </li>
+              )}
+            </ul>
+          )}
+          {soldPct != null && left != null && total != null && (
+            <div className="mt-3 hidden sm:block">
+              <div className="flex items-center justify-between text-xs font-semibold text-ink-600">
+                <span>
+                  {left} of {total} units available
+                </span>
+                {p.views ? (
+                  <span className="inline-flex items-center gap-1 font-medium text-ink-500">
+                    <Eye aria-hidden="true" className="size-3" />
+                    {p.views.toLocaleString("en-BD")} views
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-ink-100">
+                <div
+                  className="h-full rounded-full bg-gold-400"
+                  style={{ width: `${Math.max(soldPct, 4)}%` }}
+                />
+              </div>
+            </div>
+          )}
+          {p.developer && (
+            <p className="mt-2.5 hidden text-xs text-ink-500 sm:block">by {p.developer}</p>
+          )}
+
+          <div className="mt-auto flex items-end justify-between gap-2 pt-1.5 sm:mt-3 sm:items-center sm:border-t sm:border-border/60 sm:pt-3">
+            <div className="min-w-0">
               {p.price ? (
                 <>
-                  <p className="text-[0.62rem] uppercase tracking-wider text-ink-400">
-                    Starting from
+                  <p className="hidden text-[0.6875rem] uppercase tracking-wider text-ink-500 sm:block">
+                    {p.priceIsRange ? "Price range" : "Starting from"}
                   </p>
-                  <p className="font-heading text-base font-bold text-gold-600">
+                  <p className="truncate text-[0.95rem] font-extrabold leading-tight tabular-nums text-gold-700 sm:text-base">
+                    {!p.priceIsRange && (
+                      <span className="mr-1 text-xs font-semibold text-ink-500 sm:hidden">From</span>
+                    )}
                     {p.price}
                   </p>
                 </>
@@ -195,22 +282,22 @@ export function FlagshipProjectCard({ project: p }: { project: FlagshipProject }
                 </span>
               )}
             </div>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-700 group-hover:text-white">
-              <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              {left != null && left > 0 && (
+                <span className="text-xs font-bold text-amber-700 sm:hidden">{left} left</span>
+              )}
+              <span className="hidden size-8 items-center justify-center rounded-full bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-700 group-hover:text-white sm:flex">
+                <ArrowUpRight aria-hidden="true" className="size-4" />
+              </span>
+            </div>
           </div>
         </div>
       </Link>
 
-      {/* Action buttons over the image: the icon circles fade in when the
-          card is hovered/focused; each expands to its label on its own hover.
-          Pure CSS (group-hover) — no state, so hovering never re-renders. */}
-      <div className="pointer-events-none absolute right-3 top-3 z-10 flex flex-col items-end gap-2.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 motion-reduce:transition-none">
-        <ImageCta
-          href={p.slug ? ROUTES.PROJECT_DETAIL(p.slug) : ROUTES.PROJECTS}
-          icon={Eye}
-          label="View Details"
-        />
+      {/* Action buttons over the image (hover / keyboard focus, tablet and up).
+          Pure CSS (group-hover), so hovering never re-renders. */}
+      <div className="pointer-events-none absolute right-3 top-3 z-10 hidden flex-col items-end gap-2.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 sm:flex motion-reduce:transition-none">
+        <ImageCta href={href} icon={Eye} label="View Details" />
         <ImageCta
           href={p.slug ? `${ROUTES.PROJECT_DETAIL(p.slug)}#enquire` : ROUTES.CONTACT}
           icon={MessageCircle}
@@ -233,27 +320,43 @@ export function FlagshipProjects({ projects }: { projects: FlagshipProject[] }) 
   )
 
   return (
-    <section className="container-page section-y-sm">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-eyebrow mb-1.5">Explore Alivia</p>
-          <h2 className="text-balance font-heading text-3xl font-bold uppercase leading-tight tracking-tight text-brand-950 sm:text-4xl">
-            Find your next <span className="text-gold-600">landmark.</span>
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-ink-600">
-            Browse ongoing, upcoming, and completed Alivia projects.
-          </p>
+    <section className="container-page py-6 sm:py-10 md:py-14">
+      <header className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-eyebrow mb-1">Explore Alivia</p>
+            <h2 className="text-balance font-heading text-2xl font-bold uppercase leading-tight tracking-tight text-brand-950 sm:text-4xl">
+              Find your next <span className="text-gold-600">landmark.</span>
+            </h2>
+            <p className="mt-1.5 max-w-xl text-[0.8125rem] leading-5 text-ink-600 sm:mt-2 sm:text-sm sm:leading-6">
+              Browse ongoing, upcoming, and completed Alivia projects.
+            </p>
+          </div>
+
+          {/* Phones: the "see everything" link sits beside the title. */}
+          <Link
+            href={ROUTES.PROJECTS}
+            className="-mr-1 inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full px-2 text-sm font-semibold text-brand-700 transition-colors hover:text-brand-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 sm:hidden"
+          >
+            View all
+            <ArrowUpRight aria-hidden="true" className="size-3.5" />
+          </Link>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-ink-100 bg-ink-50/80 p-1">
+        <div className="flex items-center gap-3">
+          <div
+            role="group"
+            aria-label="Filter projects by status"
+            className="flex flex-1 items-center gap-1 overflow-x-auto rounded-2xl border border-ink-100 bg-ink-50/80 p-1 scrollbar-none sm:flex-none"
+          >
             {FILTERS.map((f) => (
               <button
                 key={f.id}
                 type="button"
+                aria-pressed={filter === f.id}
                 onClick={() => setFilter(f.id)}
                 className={
-                  "rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 " +
+                  "min-h-9 flex-1 whitespace-nowrap rounded-xl px-3.5 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 sm:flex-none " +
                   (filter === f.id
                     ? "bg-brand-700 text-white shadow-sm"
                     : "text-ink-600 hover:text-ink-900")
@@ -266,7 +369,7 @@ export function FlagshipProjects({ projects }: { projects: FlagshipProject[] }) 
 
           <Link
             href={ROUTES.PROJECTS}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-2xl bg-brand-700 px-4 text-xs font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+            className="hidden min-h-11 items-center gap-1.5 rounded-2xl bg-brand-700 px-4 text-xs font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 sm:inline-flex"
           >
             View all apartments
             <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
@@ -288,16 +391,16 @@ export function FlagshipProjects({ projects }: { projects: FlagshipProject[] }) 
           </p>
           <Link
             href={ROUTES.PROJECTS}
-            className="mt-5 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-brand-700 px-5 text-sm font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+            className="btn-tactile btn-tactile--sm mt-5"
           >
             View projects
             <ArrowUpRight aria-hidden="true" className="size-4" />
           </Link>
         </div>
       ) : (
-        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-2.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
           {filtered.map((p) => (
-            <li key={p.slug || p.name} className="min-w-0">
+            <li key={p.slug || p.name} className="reveal min-w-0">
               <FlagshipProjectCard project={p} />
             </li>
           ))}

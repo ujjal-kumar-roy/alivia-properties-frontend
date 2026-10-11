@@ -1,6 +1,9 @@
 "use client"
 
 import { DataTable, type DataTableColumn } from "@/components/dashboard/data-table"
+import { FilterBar } from "@/components/dashboard/filter-bar"
+import { MobileActionBar } from "@/components/common/mobile-action-bar"
+import { RowActions, type RowAction } from "@/components/dashboard/row-actions"
 import { ListingStatusBadge } from "@/components/dashboard/listing-status-badge"
 import { InquiryStatusBadge } from "@/components/dashboard/inquiry-status-badge"
 import { BookingStatusBadge } from "@/components/dashboard/booking-status-badge"
@@ -74,6 +77,10 @@ import {
 const BRAND = "#0d9488"
 const GOLD = "#f59e0b"
 const PIE_COLORS = ["#0d9488", "#f59e0b", "#0ea5e9", "#a855f7", "#ef4444", "#22c55e"]
+/** Low-priority table columns: shown from xl, where the sidebar layout has room for them. */
+const FROM_XL = "hidden xl:table-cell"
+/** Charts sit in a 56-64px tall box; trim the default gutters so phones keep the plot area. */
+const CHART_MARGIN = { top: 8, right: 8, bottom: 0, left: -4 }
 
 function ChartCard({
   title,
@@ -85,14 +92,14 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="surface-card p-5">
-      <div className="mb-3 flex items-end justify-between">
+    <div className="surface-card min-w-0 p-3 sm:p-5">
+      <div className="mb-2 flex items-end justify-between sm:mb-3">
         <div>
           <h3 className="text-sm font-semibold text-ink-900">{title}</h3>
           {hint ? <p className="text-xs text-ink-500">{hint}</p> : null}
         </div>
       </div>
-      <div className="h-64">{children}</div>
+      <div className="h-56 min-w-0 sm:h-64">{children}</div>
     </div>
   )
 }
@@ -115,17 +122,17 @@ export function AdminDashboardCharts({
   recentActivity: ActivityItem[]
 }) {
   return (
-    <section className="grid gap-4 lg:grid-cols-3">
-      <div className="lg:col-span-2">
+    <section className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
+      <div className="min-w-0 lg:col-span-2">
         <ChartCard title="Listings per month" hint="Last 12 months">
           {monthlyListings.length === 0 ? (
             <EmptyChart label="No listing data yet" />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyListings}>
+              <BarChart data={monthlyListings} margin={CHART_MARGIN}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={8} />
+                <YAxis tick={{ fontSize: 11 }} width={34} allowDecimals={false} />
                 <Tooltip />
                 <Bar dataKey="value" fill={BRAND} radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -153,14 +160,14 @@ export function AdminDashboardCharts({
                 ))}
               </Pie>
               <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ResponsiveContainer>
         )}
       </ChartCard>
 
-      <div className="lg:col-span-3">
-        <div className="surface-card p-5">
+      <div className="min-w-0 lg:col-span-3">
+        <div className="surface-card p-3 sm:p-5">
           <div className="mb-3 flex items-end justify-between">
             <div>
               <h3 className="text-sm font-semibold text-ink-900">
@@ -188,7 +195,7 @@ export function AdminDashboardCharts({
                       {a.description}
                     </p>
                   </div>
-                  <time className="shrink-0 text-[0.7rem] text-ink-400">
+                  <time className="shrink-0 text-[0.6875rem] text-ink-500">
                     {new Date(a.timestamp).toLocaleDateString()}
                   </time>
                 </li>
@@ -209,16 +216,16 @@ export function AdminInsightsCharts({
   propertyStatusByQuarter: PropertyStatusPoint[]
 }) {
   return (
-    <section className="grid gap-4 lg:grid-cols-2">
+    <section className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
       <ChartCard title="Bookings trend" hint="Monthly consultations &amp; site visits">
         {monthlyBookings.length === 0 ? (
           <EmptyChart label="No booking data yet" />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={monthlyBookings}>
+            <LineChart data={monthlyBookings} margin={CHART_MARGIN}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={8} />
+              <YAxis tick={{ fontSize: 11 }} width={34} allowDecimals={false} />
               <Tooltip />
               <Line
                 type="monotone"
@@ -237,12 +244,12 @@ export function AdminInsightsCharts({
           <EmptyChart label="No status data yet" />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={propertyStatusByQuarter}>
+            <BarChart data={propertyStatusByQuarter} margin={CHART_MARGIN}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} minTickGap={8} />
+              <YAxis tick={{ fontSize: 11 }} width={34} allowDecimals={false} />
               <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="pending" stackId="a" fill="#f59e0b" />
               <Bar dataKey="approved" stackId="a" fill="#0ea5e9" />
               <Bar dataKey="verified" stackId="a" fill={BRAND} />
@@ -384,7 +391,7 @@ export function AdminPropertiesTable({
         <div className="min-w-0">
           <Link
             href={ROUTES.PROPERTY_DETAIL(p.slug)}
-            className="block truncate font-semibold text-ink-900 hover:text-brand-700"
+            className="-my-1 block truncate py-1 font-semibold text-ink-900 hover:text-brand-700"
           >
             {p.title}
           </Link>
@@ -397,7 +404,8 @@ export function AdminPropertiesTable({
     {
       key: "type",
       header: "Type",
-      hideOnMobile: true,
+      className: FROM_XL,
+      mobileLabel: false,
       render: (p) => (
         <span className="text-xs font-medium uppercase tracking-wide text-ink-600">
           {p.type}
@@ -407,6 +415,7 @@ export function AdminPropertiesTable({
     {
       key: "purpose",
       header: "Purpose",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (p) => (
         <span className="text-xs font-medium capitalize text-ink-600">
@@ -417,8 +426,9 @@ export function AdminPropertiesTable({
     {
       key: "price",
       header: "Price",
+      mobileLabel: false,
       render: (p) => (
-        <span className="text-sm font-semibold text-brand-700">
+        <span className="text-sm font-semibold text-brand-700 tabular-nums">
           {p.purpose === "rent" ? formatRent(p.price) : formatPrice(p.price, true)}
         </span>
       ),
@@ -426,15 +436,17 @@ export function AdminPropertiesTable({
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (p) => <ListingStatusBadge status={p.status} />,
     },
     {
       key: "date",
       header: "Submitted",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (p) => (
         <span className="text-xs text-ink-500">
-          {p.createdAt ? formatDate(p.createdAt) : "—"}
+          {p.createdAt ? formatDate(p.createdAt) : "-"}
         </span>
       ),
     },
@@ -447,129 +459,85 @@ export function AdminPropertiesTable({
         const isFeatured = p.isFeatured || p.status === "featured"
         const canApprove = p.status === "pending" || p.status === "rejected"
         const canReject = p.status !== "rejected"
-        return (
-          <div className="flex items-center justify-end gap-1">
-            <Link href={ROUTES.PROPERTY_DETAIL(p.slug)} title="View listing">
-              <Button
-                size="icon"
-                variant="outline"
-                className="size-8 rounded-full"
-                aria-label="View listing"
-              >
-                <Eye className="size-3.5" />
-              </Button>
-            </Link>
-
-            {canApprove ? (
-              <Button
-                size="icon"
-                variant="outline"
-                disabled={busy}
-                onClick={() => approve(p)}
-                title="Approve"
-                aria-label="Approve listing"
-                className="size-8 rounded-full border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-              >
-                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-              </Button>
-            ) : null}
-
-            <Button
-              size="icon"
-              variant="outline"
-              disabled={busy}
-              onClick={() => toggleVerify(p)}
-              title={isVerified ? "Remove verification" : "Verify"}
-              aria-label={isVerified ? "Remove verification" : "Verify listing"}
-              className={cn(
-                "size-8 rounded-full",
-                isVerified
-                  ? "border-brand-300 bg-brand-50 text-brand-700"
-                  : "border-border/70 text-ink-600 hover:bg-brand-50",
-              )}
-            >
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
-            </Button>
-
-            <Button
-              size="icon"
-              variant="outline"
-              disabled={busy}
-              onClick={() => toggleFeature(p)}
-              title={isFeatured ? "Unfeature" : "Feature"}
-              aria-label={isFeatured ? "Unfeature listing" : "Feature listing"}
-              className={cn(
-                "size-8 rounded-full",
-                isFeatured
-                  ? "border-gold-300 bg-gold-50 text-gold-700"
-                  : "border-border/70 text-ink-600 hover:bg-gold-50",
-              )}
-            >
-              {busy ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Star className={cn("size-3.5", isFeatured && "fill-gold-400")} />
-              )}
-            </Button>
-
-            {canReject ? (
-              <Button
-                size="icon"
-                variant="outline"
-                disabled={busy}
-                onClick={() => {
-                  setRejectTarget(p)
-                  setRejectReason("")
-                  setError(null)
-                }}
-                title="Reject"
-                aria-label="Reject listing"
-                className="size-8 rounded-full border-amber-200 text-amber-700 hover:bg-amber-50"
-              >
-                <X className="size-3.5" />
-              </Button>
-            ) : null}
-
-            <Button
-              size="icon"
-              variant="outline"
-              disabled={busy}
-              onClick={() => {
-                setDeleteTarget(p)
-                setError(null)
-              }}
-              title="Delete"
-              aria-label="Delete listing"
-              className="size-8 rounded-full border-red-200 text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
-          </div>
+        const actions: RowAction[] = [
+          {
+            key: "view",
+            label: "View listing",
+            icon: Eye,
+            href: ROUTES.PROPERTY_DETAIL(p.slug),
+          },
+        ]
+        if (canApprove) {
+          actions.push({
+            key: "approve",
+            label: "Approve listing",
+            icon: Check,
+            tone: "success",
+            busy,
+            primary: true,
+            onSelect: () => approve(p),
+          })
+        }
+        actions.push(
+          {
+            key: "verify",
+            label: isVerified ? "Remove verification" : "Verify listing",
+            icon: ShieldCheck,
+            busy,
+            onSelect: () => toggleVerify(p),
+            className: isVerified ? "border-brand-300 bg-brand-50 text-brand-700" : undefined,
+          },
+          {
+            key: "feature",
+            label: isFeatured ? "Unfeature listing" : "Feature listing",
+            icon: Star,
+            busy,
+            iconClassName: isFeatured ? "fill-gold-400" : undefined,
+            onSelect: () => toggleFeature(p),
+            className: isFeatured
+              ? "border-gold-300 bg-gold-50 text-gold-700"
+              : "hover:bg-gold-50",
+          },
         )
+        if (canReject) {
+          actions.push({
+            key: "reject",
+            label: "Reject listing",
+            icon: X,
+            tone: "warning",
+            disabled: busy,
+            onSelect: () => {
+              setRejectTarget(p)
+              setRejectReason("")
+              setError(null)
+            },
+          })
+        }
+        actions.push({
+          key: "delete",
+          label: "Delete listing",
+          icon: Trash2,
+          tone: "danger",
+          disabled: busy,
+          onSelect: () => {
+            setDeleteTarget(p)
+            setError(null)
+          },
+        })
+        return <RowActions actions={actions} menuLabel={`Actions for ${p.title}`} />
       },
     },
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {hideFilters ? null : (
-        <div className="flex flex-wrap items-center gap-2">
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setFilter("status", f.value)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-                status === f.value
-                  ? "border-brand-700 bg-brand-700 text-white"
-                  : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <FilterBar
+          groups={[
+            { name: "status", label: "Status", value: status, options: STATUS_FILTERS },
+          ]}
+          onChange={setFilter}
+        />
       )}
 
       {error ? (
@@ -718,14 +686,16 @@ export function AdminSellersTable({
     {
       key: "phone",
       header: "Phone",
-      hideOnMobile: true,
+      className: FROM_XL,
+      mobileLabel: false,
       render: (s) => (
-        <span className="text-xs text-ink-600">{s.phone ?? "—"}</span>
+        <span className="text-xs text-ink-600">{s.phone ?? "-"}</span>
       ),
     },
     {
       key: "verified",
       header: "Status",
+      badgeOnMobile: true,
       render: (s) =>
         s.isVerified ? (
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
@@ -742,10 +712,11 @@ export function AdminSellersTable({
     {
       key: "joined",
       header: "Joined",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (s) => (
         <span className="text-xs text-ink-500">
-          {s.createdAt ? formatDate(s.createdAt) : "—"}
+          {s.createdAt ? formatDate(s.createdAt) : "-"}
         </span>
       ),
     },
@@ -753,11 +724,14 @@ export function AdminSellersTable({
       key: "actions",
       header: "Actions",
       render: (s) => (
-        <Link href={ROUTES.ADMIN_USER_DETAIL(s.id)}>
-          <Button size="sm" variant="outline" className="rounded-full">
-            View
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full max-sm:h-9 max-sm:px-4"
+          render={<Link href={ROUTES.ADMIN_USER_DETAIL(s.id)} />}
+        >
+          View
+        </Button>
       ),
     },
   ]
@@ -769,24 +743,11 @@ export function AdminSellersTable({
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {filters.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter("verified", f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              verified === f.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[{ name: "verified", label: "Verification", value: verified, options: filters }]}
+        onChange={setFilter}
+      />
       <DataTable
         columns={columns}
         data={sellers}
@@ -836,6 +797,7 @@ export function AdminUsersTable({
     {
       key: "role",
       header: "Role",
+      badgeOnMobile: true,
       render: (u) => (
         <span
           className={cn(
@@ -850,30 +812,32 @@ export function AdminUsersTable({
     {
       key: "phone",
       header: "Phone",
-      hideOnMobile: true,
-      render: (u) => <span className="text-xs text-ink-600">{u.phone ?? "—"}</span>,
+      className: FROM_XL,
+      mobileLabel: false,
+      render: (u) => <span className="text-xs text-ink-600">{u.phone ?? "-"}</span>,
     },
     {
       key: "verified",
       header: "Verified",
-      hideOnMobile: true,
+      mobileLabel: false,
       render: (u) =>
         u.isVerified ? (
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
             <BadgeCheck className="h-3 w-3" />
-            Yes
+            Verified
           </span>
         ) : (
-          <span className="text-xs text-ink-500">—</span>
+          <span className="text-xs text-ink-500">-</span>
         ),
     },
     {
       key: "joined",
       header: "Joined",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (u) => (
         <span className="text-xs text-ink-500">
-          {u.createdAt ? formatDate(u.createdAt) : "—"}
+          {u.createdAt ? formatDate(u.createdAt) : "-"}
         </span>
       ),
     },
@@ -881,34 +845,24 @@ export function AdminUsersTable({
       key: "actions",
       header: "Actions",
       render: (u) => (
-        <Link href={ROUTES.ADMIN_USER_DETAIL(u.id)}>
-          <Button size="sm" variant="outline" className="rounded-full">
-            View
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full max-sm:h-9 max-sm:px-4"
+          render={<Link href={ROUTES.ADMIN_USER_DETAIL(u.id)} />}
+        >
+          View
+        </Button>
       ),
     },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {filters.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter("role", f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              role === f.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[{ name: "role", label: "Role", value: role, options: filters }]}
+        onChange={setFilter}
+      />
       <DataTable
         columns={columns}
         data={users}
@@ -1009,16 +963,16 @@ export function AdminProjectsTable({
       key: "project",
       header: "Apartment",
       primaryOnMobile: true,
-      className: "w-[24rem] max-w-[24rem]",
+      className: "xl:w-[24rem] xl:max-w-[24rem]",
       render: (p) => (
-        <div className="min-w-0 max-w-[18rem]">
+        <div className="min-w-0 max-w-[18rem] max-sm:max-w-none">
           <Link
             href={ROUTES.PROJECT_DETAIL(p.slug)}
-            className="block truncate font-semibold text-ink-900 hover:text-brand-700"
+            className="-my-1 block truncate py-1 font-semibold text-ink-900 hover:text-brand-700"
           >
             {p.name}
           </Link>
-          <p className="mt-0.5 max-w-[18rem] truncate break-all text-xs text-ink-500" title={p.location}>
+          <p className="mt-0.5 max-w-[18rem] truncate break-all text-xs text-ink-500 max-sm:max-w-none" title={p.location}>
             {p.location}
           </p>
         </div>
@@ -1027,6 +981,7 @@ export function AdminProjectsTable({
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (p) => {
         const style = PROJECT_STATUS_STYLES[p.status] ?? PROJECT_STATUS_STYLES.ongoing
         return (
@@ -1044,30 +999,32 @@ export function AdminProjectsTable({
     {
       key: "units",
       header: "Units",
-      hideOnMobile: true,
+      mobileLabel: false,
       render: (p) => (
         <span className="text-xs text-ink-700">
           {p.availableUnits != null && p.totalUnits != null
             ? `${p.availableUnits} / ${p.totalUnits} avail.`
             : p.totalUnits != null
               ? `${p.totalUnits} total`
-              : "—"}
+              : "-"}
         </span>
       ),
     },
     {
       key: "handover",
       header: "Handover",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (p) => (
         <span className="text-xs text-ink-500">
-          {p.handoverDate ? formatDate(p.handoverDate) : "—"}
+          {p.handoverDate ? formatDate(p.handoverDate) : "-"}
         </span>
       ),
     },
     {
       key: "featured",
       header: "Featured",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (p) =>
         p.isFeatured ? (
@@ -1076,7 +1033,7 @@ export function AdminProjectsTable({
             Yes
           </span>
         ) : (
-          <span className="text-xs text-ink-400">—</span>
+          <span className="text-xs text-ink-500">-</span>
         ),
     },
     {
@@ -1086,94 +1043,68 @@ export function AdminProjectsTable({
         const busy = busyId === p.id
         const isFeatured = Boolean(p.isFeatured)
         const isCompleted = p.status === "completed"
-        return (
-          <div className="flex items-center justify-end gap-1">
-            <Link href={ROUTES.PROJECT_DETAIL(p.slug)} title="View apartment">
-              <Button size="icon" variant="outline" className="size-8 rounded-full" aria-label="View apartment">
-                <Eye className="size-3.5" />
-              </Button>
-            </Link>
-
-            <Link href={ROUTES.ADMIN_PROJECT_EDIT(p.id)} title="Edit apartment">
-              <Button size="icon" variant="outline" className="size-8 rounded-full" aria-label="Edit apartment">
-                <Pencil className="size-3.5" />
-              </Button>
-            </Link>
-
-            {!isCompleted ? (
-              <Button
-                size="icon"
-                variant="outline"
-                disabled={busy}
-                onClick={() => markComplete(p)}
-                title="Mark complete"
-                aria-label="Mark apartment complete"
-                className="size-8 rounded-full border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-              >
-                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />}
-              </Button>
-            ) : null}
-
-            <Button
-              size="icon"
-              variant="outline"
-              disabled={busy}
-              onClick={() => toggleFeature(p)}
-              title={isFeatured ? "Unfeature" : "Feature"}
-              aria-label={isFeatured ? "Unfeature apartment" : "Feature apartment"}
-              className={cn(
-                "size-8 rounded-full",
-                isFeatured
-                  ? "border-gold-300 bg-gold-50 text-gold-700"
-                  : "border-border/70 text-ink-600 hover:bg-gold-50",
-              )}
-            >
-              {busy ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Star className={cn("size-3.5", isFeatured && "fill-gold-400")} />
-              )}
-            </Button>
-
-            <Button
-              size="icon"
-              variant="outline"
-              disabled={busy}
-              onClick={() => {
-                setDeleteTarget(p)
-                setError(null)
-              }}
-              title="Delete"
-              aria-label="Delete apartment"
-              className="size-8 rounded-full border-red-200 text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
-          </div>
+        const actions: RowAction[] = [
+          {
+            key: "view",
+            label: "View apartment",
+            icon: Eye,
+            href: ROUTES.PROJECT_DETAIL(p.slug),
+          },
+          {
+            key: "edit",
+            label: "Edit apartment",
+            icon: Pencil,
+            href: ROUTES.ADMIN_PROJECT_EDIT(p.id),
+            primary: true,
+          },
+        ]
+        if (!isCompleted) {
+          actions.push({
+            key: "complete",
+            label: "Mark apartment complete",
+            icon: CheckCircle2,
+            tone: "success",
+            busy,
+            onSelect: () => markComplete(p),
+          })
+        }
+        actions.push(
+          {
+            key: "feature",
+            label: isFeatured ? "Unfeature apartment" : "Feature apartment",
+            icon: Star,
+            busy,
+            iconClassName: isFeatured ? "fill-gold-400" : undefined,
+            onSelect: () => toggleFeature(p),
+            className: isFeatured
+              ? "border-gold-300 bg-gold-50 text-gold-700"
+              : "hover:bg-gold-50",
+          },
+          {
+            key: "delete",
+            label: "Delete apartment",
+            icon: Trash2,
+            tone: "danger",
+            disabled: busy,
+            onSelect: () => {
+              setDeleteTarget(p)
+              setError(null)
+            },
+          },
         )
+        return <RowActions actions={actions} menuLabel={`Actions for ${p.name}`} />
       },
     },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {PROJECT_STATUS_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter("status", f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              status === f.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[
+          { name: "status", label: "Status", value: status, options: PROJECT_STATUS_FILTERS },
+        ]}
+        onChange={setFilter}
+      />
 
       {error ? (
         <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -1292,13 +1223,14 @@ export function AdminInquiriesTable({
     {
       key: "type",
       header: "Type",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (i) => {
         const isPartner = i.type === "supplier" || i.type === "investor"
         return (
           <span
             className={cn(
-              "inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize",
+              "inline-block rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold capitalize",
               isPartner ? "bg-gold-100 text-gold-800" : "bg-ink-100 text-ink-600",
             )}
           >
@@ -1310,9 +1242,12 @@ export function AdminInquiriesTable({
     {
       key: "related",
       header: "Related to",
-      hideOnMobile: true,
+      mobileLabel: "Re",
+      wideOnMobile: true,
+      // Locked to one request type: every row would repeat "Supplier application", so skip it on phones.
+      hideOnMobile: Boolean(lockedType),
       render: (i) => (
-        <span className="truncate text-xs text-ink-700">
+        <span className="block truncate text-xs text-ink-700">
           {i.type === "supplier"
             ? "Supplier application"
             : i.type === "investor"
@@ -1324,12 +1259,14 @@ export function AdminInquiriesTable({
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (i) => <InquiryStatusBadge status={i.status} />,
     },
     {
       key: "date",
       header: "Date",
-      hideOnMobile: true,
+      className: FROM_XL,
+      mobileLabel: false,
       render: (i) => (
         <span className="text-xs text-ink-500">{formatDate(i.createdAt)}</span>
       ),
@@ -1338,52 +1275,30 @@ export function AdminInquiriesTable({
       key: "actions",
       header: "Actions",
       render: (i) => (
-        <Link href={`${basePath}/${i.id}`}>
-          <Button size="sm" variant="outline" className="rounded-full">
-            <Eye className="size-3.5" />
-            View
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full max-sm:h-9 max-sm:px-4"
+          render={<Link href={`${basePath}/${i.id}`} />}
+        >
+          <Eye className="size-3.5" />
+          View
+        </Button>
       ),
     },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {INQUIRY_STATUS_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter("status", f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              status === f.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-        {!lockedType && <span className="mx-2 text-border/60">|</span>}
-        {!lockedType &&
-          INQUIRY_TYPE_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setFilter("type", f.value)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-                type === f.value
-                  ? "border-ink-700 bg-ink-700 text-white"
-                  : "border-border/70 bg-white text-ink-700 hover:bg-ink-50",
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[
+          { name: "status", label: "Status", value: status, options: INQUIRY_STATUS_FILTERS },
+          ...(lockedType
+            ? []
+            : [{ name: "type", label: "Type", value: type, options: INQUIRY_TYPE_FILTERS }]),
+        ]}
+        onChange={setFilter}
+      />
       <DataTable
         columns={columns}
         data={inquiries}
@@ -1428,6 +1343,7 @@ export function AdminBookingsTable({
     {
       key: "type",
       header: "Consultation",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (b) => (
         <span className="text-xs font-medium capitalize text-ink-600">
@@ -1438,18 +1354,20 @@ export function AdminBookingsTable({
     {
       key: "related",
       header: "Related to",
-      hideOnMobile: true,
+      mobileLabel: "Re",
+      wideOnMobile: true,
       render: (b) => (
-        <span className="truncate text-xs text-ink-700">
-          {b.projectName ?? b.propertyTitle ?? "—"}
+        <span className="block truncate text-xs text-ink-700">
+          {b.projectName ?? b.propertyTitle ?? "-"}
         </span>
       ),
     },
     {
       key: "datetime",
       header: "Appointment",
+      mobileLabel: false,
       render: (b) => (
-        <div>
+        <div className="flex items-baseline gap-1.5 sm:block">
           <p className="text-xs font-medium text-ink-800">{formatDate(b.preferredDate)}</p>
           <p className="text-xs text-ink-500">{b.preferredTime}</p>
         </div>
@@ -1458,11 +1376,13 @@ export function AdminBookingsTable({
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (b) => <BookingStatusBadge status={b.status} />,
     },
     {
       key: "submitted",
       header: "Submitted",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (b) => (
         <span className="text-xs text-ink-500">{formatDate(b.createdAt)}</span>
@@ -1472,34 +1392,26 @@ export function AdminBookingsTable({
       key: "actions",
       header: "Actions",
       render: (b) => (
-        <Link href={ROUTES.ADMIN_BOOKING_DETAIL(b.id)}>
-          <Button size="sm" variant="outline" className="rounded-full">
-            View
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full max-sm:h-9 max-sm:px-4"
+          render={<Link href={ROUTES.ADMIN_BOOKING_DETAIL(b.id)} />}
+        >
+          View
+        </Button>
       ),
     },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {BOOKING_STATUS_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter("status", f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              status === f.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[
+          { name: "status", label: "Status", value: status, options: BOOKING_STATUS_FILTERS },
+        ]}
+        onChange={setFilter}
+      />
       <DataTable
         columns={columns}
         data={bookings}
@@ -1541,6 +1453,7 @@ export function AdminBlogTable({
     {
       key: "author",
       header: "Author",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (p) => (
         <span className="text-xs text-ink-700">
@@ -1551,22 +1464,25 @@ export function AdminBlogTable({
     {
       key: "readMinutes",
       header: "Read",
-      hideOnMobile: true,
+      className: FROM_XL,
+      mobileLabel: false,
       render: (p) => (
-        <span className="text-xs text-ink-500">{p.readMinutes} min</span>
+        <span className="text-xs text-ink-500">{p.readMinutes} min read</span>
       ),
     },
     {
       key: "views",
       header: "Views",
-      hideOnMobile: true,
+      className: FROM_XL,
+      mobileLabel: false,
       render: (p) => (
-        <span className="text-xs text-ink-500">{(p.viewCount ?? 0).toLocaleString()}</span>
+        <span className="text-xs text-ink-500">{(p.viewCount ?? 0).toLocaleString()} views</span>
       ),
     },
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (p) =>
         p.isPublished ? (
           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
@@ -1583,6 +1499,7 @@ export function AdminBlogTable({
     {
       key: "publishedAt",
       header: "Date",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (p) => (
         <span className="text-xs text-ink-500">{formatDate(p.publishedAt)}</span>
@@ -1592,38 +1509,75 @@ export function AdminBlogTable({
       key: "actions",
       header: "Actions",
       render: (p) => (
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href={ROUTES.ADMIN_BLOG_EDIT(p.id)}>
-            <Button size="sm" variant="outline" className="rounded-full">
+        <>
+          {/* sm and up: the original labelled buttons */}
+          <div className="hidden flex-wrap items-center gap-2 sm:flex">
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full"
+              render={<Link href={ROUTES.ADMIN_BLOG_EDIT(p.id)} />}
+            >
               Edit
             </Button>
-          </Link>
-          <Button
-            size="sm"
-            variant="outline"
-            className="rounded-full"
-            disabled={busyId === p.id}
-            onClick={() => togglePublished(p)}
-          >
-            {busyId === p.id ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : p.isPublished ? (
-              <EyeOff className="h-3.5 w-3.5" />
-            ) : (
-              <Eye className="h-3.5 w-3.5" />
-            )}
-            {p.isPublished ? "Draft" : "Publish"}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="rounded-full border-red-200 text-red-700 hover:bg-red-50"
-            disabled={busyId === p.id}
-            onClick={() => removePost(p)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full"
+              disabled={busyId === p.id}
+              onClick={() => togglePublished(p)}
+            >
+              {busyId === p.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : p.isPublished ? (
+                <EyeOff className="h-3.5 w-3.5" />
+              ) : (
+                <Eye className="h-3.5 w-3.5" />
+              )}
+              {p.isPublished ? "Draft" : "Publish"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full border-red-200 text-red-700 hover:bg-red-50"
+              aria-label={`Delete ${p.title}`}
+              disabled={busyId === p.id}
+              onClick={() => removePost(p)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          {/* Phones: Edit plus one overflow menu */}
+          <div className="sm:hidden">
+            <RowActions
+              menuLabel={`Actions for ${p.title}`}
+              actions={[
+                {
+                  key: "edit",
+                  label: "Edit post",
+                  icon: Pencil,
+                  href: ROUTES.ADMIN_BLOG_EDIT(p.id),
+                  primary: true,
+                },
+                {
+                  key: "publish",
+                  label: p.isPublished ? "Move to draft" : "Publish post",
+                  icon: p.isPublished ? EyeOff : Eye,
+                  busy: busyId === p.id,
+                  onSelect: () => togglePublished(p),
+                },
+                {
+                  key: "delete",
+                  label: "Delete post",
+                  icon: Trash2,
+                  tone: "danger",
+                  disabled: busyId === p.id,
+                  onSelect: () => removePost(p),
+                },
+              ]}
+            />
+          </div>
+        </>
       ),
     },
   ]
@@ -1669,24 +1623,11 @@ export function AdminBlogTable({
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {filters.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter("status", f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              status === f.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[{ name: "status", label: "Status", value: status, options: filters }]}
+        onChange={setFilter}
+      />
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
@@ -1743,17 +1684,19 @@ export function AdminReportsTable({
     {
       key: "reporter",
       header: "Reported by",
-      hideOnMobile: true,
+      mobileLabel: "By",
+      wideOnMobile: true,
       render: (r) => (
         <div className="min-w-0">
           <p className="truncate text-xs font-medium text-ink-800">{r.name}</p>
-          <p className="truncate text-xs text-ink-500">{r.email}</p>
+          <p className="truncate text-xs text-ink-500 max-sm:hidden">{r.email}</p>
         </div>
       ),
     },
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (r) => (
         <span
           className={cn(
@@ -1768,7 +1711,8 @@ export function AdminReportsTable({
     {
       key: "date",
       header: "Reported",
-      hideOnMobile: true,
+      className: FROM_XL,
+      mobileLabel: false,
       render: (r) => (
         <span className="text-xs text-ink-500">{formatDate(r.createdAt)}</span>
       ),
@@ -1777,35 +1721,27 @@ export function AdminReportsTable({
       key: "actions",
       header: "Actions",
       render: (r) => (
-        <Link href={`${ROUTES.ADMIN_INQUIRIES}/${r.id}`}>
-          <Button size="sm" variant="outline" className="rounded-full">
-            <Eye className="size-3.5" />
-            Review
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full max-sm:h-9 max-sm:px-4"
+          render={<Link href={`${ROUTES.ADMIN_INQUIRIES}/${r.id}`} />}
+        >
+          <Eye className="size-3.5" />
+          Review
+        </Button>
       ),
     },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {REPORT_STATUS_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter("status", f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              status === f.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[
+          { name: "status", label: "Status", value: status, options: REPORT_STATUS_FILTERS },
+        ]}
+        onChange={setFilter}
+      />
       <DataTable
         columns={columns}
         data={reports}
@@ -1877,7 +1813,7 @@ export function AdminSettingsForm({
   ]
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-lg space-y-5">
+    <form onSubmit={handleSubmit} className="max-w-lg space-y-4 sm:space-y-5">
       {fields.map((f) => (
         <div key={f.name} className="space-y-1.5">
           <label htmlFor={f.name} className="text-sm font-medium text-ink-800">
@@ -1902,7 +1838,15 @@ export function AdminSettingsForm({
         </div>
       ) : null}
 
-      <div className="flex items-center gap-3 pt-2">
+      {saved && (
+        <p role="status" className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 md:hidden">
+          <CheckCircle2 className="size-4" />
+          Settings saved
+        </p>
+      )}
+
+      {/* md and up: the inline button. Phones: a sticky bar so Save is always at the thumb. */}
+      <div className="hidden items-center gap-3 pt-2 md:flex">
         <Button type="submit" className="rounded-full" disabled={saving}>
           {saving ? (
             <>
@@ -1920,6 +1864,18 @@ export function AdminSettingsForm({
           </span>
         )}
       </div>
+      <MobileActionBar label="Save settings">
+        <button type="submit" className="btn-tactile btn-tactile--block flex-1" disabled={saving}>
+          {saving ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Saving
+            </>
+          ) : (
+            "Save changes"
+          )}
+        </button>
+      </MobileActionBar>
     </form>
   )
 }
@@ -1951,7 +1907,7 @@ export function BuyerProfileForm({ buyer }: { buyer: Buyer | null }) {
   ]
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-lg space-y-5 pt-2">
+    <form onSubmit={handleSubmit} className="max-w-lg space-y-4 pt-2 sm:space-y-5">
       {fields.map((f) => (
         <div key={f.name} className="space-y-1.5">
           <label htmlFor={`buyer-${f.name}`} className="text-sm font-medium text-ink-800">
@@ -1967,10 +1923,20 @@ export function BuyerProfileForm({ buyer }: { buyer: Buyer | null }) {
           />
         </div>
       ))}
-      <div className="flex items-center gap-3 pt-2">
+      {saved && (
+        <p role="status" className="text-sm font-medium text-emerald-700 md:hidden">
+          Profile saved
+        </p>
+      )}
+      <div className="hidden items-center gap-3 pt-2 md:flex">
         <Button type="submit" className="rounded-full">Save changes</Button>
         {saved && <span className="text-xs font-medium text-emerald-600">Profile saved</span>}
       </div>
+      <MobileActionBar label="Save profile">
+        <button type="submit" className="btn-tactile btn-tactile--block flex-1">
+          Save changes
+        </button>
+      </MobileActionBar>
     </form>
   )
 }
@@ -1995,7 +1961,7 @@ export function SellerPropertiesTable({
         <div className="min-w-0">
           <Link
             href={ROUTES.PROPERTY_DETAIL(p.slug)}
-            className="block truncate font-semibold text-ink-900 hover:text-brand-700"
+            className="-my-1 block truncate py-1 font-semibold text-ink-900 hover:text-brand-700"
           >
             {p.title}
           </Link>
@@ -2008,8 +1974,9 @@ export function SellerPropertiesTable({
     {
       key: "price",
       header: "Price",
+      mobileLabel: false,
       render: (p) => (
-        <span className="text-sm font-semibold text-brand-700">
+        <span className="text-sm font-semibold text-brand-700 tabular-nums">
           {p.purpose === "rent" ? formatRent(p.price) : formatPrice(p.price, true)}
         </span>
       ),
@@ -2017,15 +1984,17 @@ export function SellerPropertiesTable({
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (p) => <ListingStatusBadge status={p.status} />,
     },
     {
       key: "date",
       header: "Added",
-      hideOnMobile: true,
+      className: FROM_XL,
+      mobileLabel: false,
       render: (p) => (
         <span className="text-xs text-ink-500">
-          {p.createdAt ? formatDate(p.createdAt) : "—"}
+          {p.createdAt ? formatDate(p.createdAt) : "-"}
         </span>
       ),
     },
@@ -2033,11 +2002,14 @@ export function SellerPropertiesTable({
       key: "actions",
       header: "Actions",
       render: (p) => (
-        <Link href={ROUTES.SELLER_PROPERTY_EDIT(p.id)}>
-          <Button size="sm" variant="outline" className="rounded-full">
-            Edit
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full max-sm:h-9 max-sm:px-4"
+          render={<Link href={ROUTES.SELLER_PROPERTY_EDIT(p.id)} />}
+        >
+          Edit
+        </Button>
       ),
     },
   ]
@@ -2051,24 +2023,11 @@ export function SellerPropertiesTable({
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {statusFilters.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter("status", f.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              status === f.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[{ name: "status", label: "Status", value: status, options: statusFilters }]}
+        onChange={setFilter}
+      />
       <DataTable
         columns={columns}
         data={properties}

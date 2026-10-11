@@ -1,7 +1,6 @@
 import Image from "next/image"
 import { ShieldCheck, Building2, Users, Clock } from "lucide-react"
 import { siteConfig } from "@/config/site.config"
-import { SectionHeader } from "@/components/common/section-header"
 import { StatsSection } from "@/pages-sections/home/stats-section"
 
 const MILESTONES = [
@@ -13,42 +12,63 @@ const MILESTONES = [
   { year: "2025", title: "New Developments",     description: "Alivia Heights and Alivia Skyline announced as our most ambitious apartments to date." },
 ]
 
+const PILLARS = [
+  {
+    icon: Building2,
+    title: "Our Vision",
+    body: "To become Bangladesh's most trusted and innovative real estate platform — making property ownership accessible, transparent, and rewarding for every Bangladeshi family.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Our Mission",
+    body: "To provide verified, high-quality real estate services through transparent processes, expert guidance, and technology — ensuring every transaction is safe, fair, and efficient.",
+  },
+]
+
+const TRUST = [
+  { icon: ShieldCheck, label: "RAJUK Registered",  sub: "Fully compliant" },
+  { icon: Building2,   label: "14+ Years",          sub: "In real estate" },
+  { icon: Users,       label: "1,800+ Families",    sub: "Served with pride" },
+  { icon: Clock,       label: "12 Apartments",        sub: "Delivered on time" },
+]
+
+const SECTION_TITLE =
+  "font-heading text-lg font-bold tracking-tight text-ink-900 sm:text-2xl md:text-3xl"
+
 export default function AboutUsPage() {
   return (
     <>
-      {/* Hero */}
-      <section className="bg-ink-900 text-white py-20">
+      {/* Hero: title and two lines of copy on phones. */}
+      <section className="bg-ink-900 py-5 text-white sm:py-14 md:py-20">
         <div className="container-page max-w-3xl text-center">
-          <p className="text-eyebrow text-gold-400 mb-3">About Alivia Properties</p>
-          <h1 className="text-h1 text-white mb-4">Building Trust Since 2011</h1>
-          <p className="text-lead text-ink-300">
+          <p className="text-eyebrow mb-3 hidden text-gold-400 sm:block">About Alivia Properties</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
+            Building Trust Since 2011
+          </h1>
+          <p className="mx-auto mt-2 line-clamp-2 max-w-2xl text-[0.9375rem] leading-snug text-ink-300 sm:mt-4 sm:line-clamp-none sm:text-lg sm:leading-relaxed">
             {siteConfig.description}
           </p>
         </div>
       </section>
 
       {/* Vision & Mission */}
-      <section className="section-y bg-white">
+      <section className="bg-white py-4 sm:py-10 md:py-14">
         <div className="container-page">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-brand-50 flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-brand-600" />
+          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-10">
+            {PILLARS.map(({ icon: Icon, title, body }) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-black/5 bg-white p-3.5 shadow-(--shadow-card) md:space-y-3 md:border-0 md:p-0 md:shadow-none"
+              >
+                <div className="flex items-center gap-2.5 md:block">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 md:size-10">
+                    <Icon aria-hidden="true" className="size-5 text-brand-600" />
+                  </div>
+                  <h2 className="font-heading text-base font-semibold text-ink-900 md:mt-3 md:text-2xl">{title}</h2>
+                </div>
+                <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink-600 md:mt-0 md:text-sm">{body}</p>
               </div>
-              <h3 className="text-h3">Our Vision</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                To become Bangladesh&apos;s most trusted and innovative real estate platform — making property ownership accessible, transparent, and rewarding for every Bangladeshi family.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-brand-50 flex items-center justify-center">
-                <ShieldCheck className="h-5 w-5 text-brand-600" />
-              </div>
-              <h3 className="text-h3">Our Mission</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                To provide verified, high-quality real estate services through transparent processes, expert guidance, and technology — ensuring every transaction is safe, fair, and efficient.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -57,67 +77,72 @@ export default function AboutUsPage() {
       <StatsSection />
 
       {/* Founder */}
-      <section className="section-y bg-ink-50">
+      <section className="bg-ink-50 py-5 sm:py-10 md:py-14">
         <div className="container-page">
-          <SectionHeader eyebrow="Leadership" title="A Word from Our Founder" />
-          <div className="mt-10 max-w-3xl mx-auto bg-white rounded-2xl p-8 border border-border shadow-card flex flex-col sm:flex-row gap-8 items-start">
-            <div className="shrink-0">
-              <div className="h-20 w-20 rounded-full bg-muted overflow-hidden">
-                <Image src={siteConfig.founder.avatar} alt={siteConfig.founder.name} width={80} height={80} className="object-cover" />
-              </div>
+          <p className="text-eyebrow mb-2 hidden text-center sm:block">Leadership</p>
+          <h2 className={`${SECTION_TITLE} text-center`}>A Word from Our Founder</h2>
+          <div className="reveal mx-auto mt-3 flex max-w-3xl items-start gap-3 rounded-2xl border border-black/5 bg-white p-3.5 shadow-(--shadow-card) sm:mt-8 sm:gap-8 sm:p-8">
+            <div className="size-14 shrink-0 overflow-hidden rounded-full bg-muted sm:size-20">
+              <Image
+                src={siteConfig.founder.avatar}
+                alt={siteConfig.founder.name}
+                width={80}
+                height={80}
+                className="size-full object-cover"
+              />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground leading-relaxed italic mb-4">
+            <div className="min-w-0">
+              <p className="mb-3 text-[0.9375rem] italic leading-relaxed text-ink-700 sm:mb-4 sm:text-sm">
                 &ldquo;{siteConfig.founder.message}&rdquo;
               </p>
-              <p className="font-bold text-sm">{siteConfig.founder.name}</p>
-              <p className="text-xs text-brand-600">{siteConfig.founder.title}</p>
+              <p className="text-sm font-bold text-ink-900">{siteConfig.founder.name}</p>
+              <p className="text-xs text-brand-700">{siteConfig.founder.title}</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Timeline */}
-      <section className="section-y bg-white">
+      <section className="bg-white py-5 sm:py-10 md:py-14">
         <div className="container-page">
-          <SectionHeader eyebrow="Our Journey" title="Milestones That Shaped Us" />
-          <div className="mt-10 relative max-w-2xl mx-auto">
-            <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
-            <div className="space-y-8">
-              {MILESTONES.map(({ year, title, description }) => (
-                <div key={year} className="pl-14 relative">
-                  <div className="absolute left-0 h-10 w-10 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">
-                    {year.slice(2)}
-                  </div>
-                  <p className="text-xs text-brand-600 font-semibold mb-0.5">{year}</p>
-                  <h4 className="font-bold text-sm mb-1">{title}</h4>
-                  <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-eyebrow mb-2 hidden text-center sm:block">Our Journey</p>
+          <h2 className={`${SECTION_TITLE} text-center`}>Milestones That Shaped Us</h2>
+          <ol className="reveal-stagger relative mx-auto mt-4 max-w-2xl space-y-4 before:absolute before:bottom-2 before:left-4 before:top-2 before:w-px before:bg-border sm:mt-10 sm:space-y-8 sm:before:left-5">
+            {MILESTONES.map(({ year, title, description }) => (
+              <li key={year} className="relative pl-12 sm:pl-14">
+                <span className="absolute left-0 top-0 flex size-8 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white sm:size-10">
+                  {year.slice(2)}
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xs font-semibold text-brand-700">{year}</span>
+                  <h3 className="text-[0.9375rem] font-bold text-ink-900">{title}</h3>
                 </div>
-              ))}
-            </div>
-          </div>
+                <p className="mt-0.5 text-sm leading-snug text-ink-600">{description}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
       {/* Trust highlights */}
-      <section className="section-y-sm bg-ink-50">
+      <section className="bg-ink-50 py-5 sm:py-10 md:py-14">
         <div className="container-page">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            {[
-              { icon: ShieldCheck, label: "RAJUK Registered",  sub: "Fully compliant" },
-              { icon: Building2,   label: "14+ Years",          sub: "In real estate" },
-              { icon: Users,       label: "1,800+ Families",    sub: "Served with pride" },
-              { icon: Clock,       label: "12 Apartments",        sub: "Delivered on time" },
-            ].map(({ icon: Icon, label, sub }) => (
-              <div key={label} className="space-y-2">
-                <div className="h-10 w-10 rounded-xl bg-brand-50 flex items-center justify-center mx-auto">
-                  <Icon className="h-5 w-5 text-brand-600" />
-                </div>
-                <p className="font-bold text-sm">{label}</p>
-                <p className="text-xs text-muted-foreground">{sub}</p>
-              </div>
+          <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-6">
+            {TRUST.map(({ icon: Icon, label, sub }) => (
+              <li
+                key={label}
+                className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-(--shadow-card) md:flex-col md:bg-transparent md:p-0 md:text-center md:shadow-none"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 md:size-10">
+                  <Icon aria-hidden="true" className="size-5 text-brand-600" />
+                </span>
+                <span className="min-w-0 md:space-y-1">
+                  <span className="block text-sm font-bold text-ink-900">{label}</span>
+                  <span className="block text-xs text-ink-600">{sub}</span>
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
     </>

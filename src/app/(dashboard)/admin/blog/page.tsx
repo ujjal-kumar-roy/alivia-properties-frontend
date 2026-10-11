@@ -5,7 +5,6 @@ import Link from "next/link"
 import { auth } from "@/auth"
 import { blogService } from "@/services/blog.service"
 import { DASHBOARD_PAGE_SIZE } from "@/lib/constants"
-import { Button } from "@/components/ui/button"
 import { DashboardPageHeader } from "@/components/dashboard/dashboard-page-header"
 import { TablePagination } from "@/components/dashboard/table-pagination"
 import { AdminBlogTable } from "@/pages-sections/admin/admin-views"
@@ -36,8 +35,8 @@ export default async function AdminBlogPage({
         title="Blog"
         description="Create drafts, publish articles, and manage the public market journal."
         actions={
-          <Link href={ROUTES.ADMIN_BLOG_CREATE}>
-            <Button className="rounded-full">New article</Button>
+          <Link href={ROUTES.ADMIN_BLOG_CREATE} className="btn-tactile btn-tactile--sm">
+            New article
           </Link>
         }
       />

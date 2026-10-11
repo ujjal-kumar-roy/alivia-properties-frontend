@@ -10,11 +10,11 @@ import {
   User,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { celebrate } from "@/lib/celebrate";
 import { ApiError } from "@/services/http-client";
 import { inquiriesService } from "@/services/inquiries.service";
 
@@ -37,6 +37,8 @@ export function SellerInquiryForm({
   sellerName,
 }: SellerInquiryFormProps) {
   const { data: session } = useSession();
+  // The form can be on the page and in the phone sheet at once, so ids are per instance.
+  const uid = useId();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export function SellerInquiryForm({
       form.reset();
       setMessage("");
       setSubmitted(true);
+      celebrate();
     } catch (err) {
       setError(
         err instanceof ApiError
@@ -94,7 +97,7 @@ export function SellerInquiryForm({
   if (submitted) {
     return (
       <div className="rounded-[1.25rem] border border-emerald-200 bg-emerald-50/80 p-5 text-center">
-        <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+        <div className="anim-pop-in mx-auto flex size-11 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
           <CheckCircle2 className="size-6" />
         </div>
         <p className="mt-3 text-sm font-semibold text-emerald-900">
@@ -104,29 +107,29 @@ export function SellerInquiryForm({
           They&apos;ve received your message about {propertyTitle} and will get
           back to you soon.
         </p>
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={() => setSubmitted(false)}
-          className="mt-4 h-9 rounded-full border-emerald-300 bg-white/70 text-emerald-800 hover:bg-white"
+          className="btn-glass mt-4"
         >
           Send another inquiry
-        </Button>
+        </button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} className="space-y-3 sm:space-y-4">
       <div className="space-y-2">
         <p className="text-xs font-medium text-ink-500">Quick start</p>
-        <div className="flex flex-wrap gap-1.5">
+        {/* One scrolling row on phones, wrapping from sm. */}
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 scrollbar-none sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           {QUICK_PROMPTS.map((prompt) => (
             <button
               key={prompt}
               type="button"
               onClick={() => applyPrompt(prompt)}
-              className="rounded-full border border-brand-200 bg-brand-50/70 px-2.5 py-1 text-xs font-medium text-brand-800 transition-colors hover:border-brand-300 hover:bg-brand-100"
+              className="min-h-8 shrink-0 rounded-full border border-brand-200 bg-brand-50/70 px-3 py-1 text-xs font-medium text-brand-800 transition-colors hover:border-brand-300 hover:bg-brand-100 active:bg-brand-100"
             >
               {prompt}
             </button>
@@ -137,7 +140,7 @@ export function SellerInquiryForm({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
         <div className="space-y-1.5">
           <label
-            htmlFor="inq-name"
+            htmlFor={`${uid}-name`}
             className="text-xs font-medium text-ink-600"
           >
             Your name
@@ -145,7 +148,7 @@ export function SellerInquiryForm({
           <div className="relative">
             <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" />
             <Input
-              id="inq-name"
+              id={`${uid}-name`}
               name="name"
               required
               autoComplete="name"
@@ -158,7 +161,7 @@ export function SellerInquiryForm({
 
         <div className="space-y-1.5">
           <label
-            htmlFor="inq-phone"
+            htmlFor={`${uid}-phone`}
             className="text-xs font-medium text-ink-600"
           >
             Phone number
@@ -166,7 +169,7 @@ export function SellerInquiryForm({
           <div className="relative">
             <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" />
             <Input
-              id="inq-phone"
+              id={`${uid}-phone`}
               name="phone"
               required
               type="tel"
@@ -180,13 +183,13 @@ export function SellerInquiryForm({
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="inq-email" className="text-xs font-medium text-ink-600">
+        <label htmlFor={`${uid}-email`} className="text-xs font-medium text-ink-600">
           Email address
         </label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" />
           <Input
-            id="inq-email"
+            id={`${uid}-email`}
             name="email"
             required
             type="email"
@@ -201,16 +204,16 @@ export function SellerInquiryForm({
 
       <div className="space-y-1.5">
         <label
-          htmlFor="inq-message"
+          htmlFor={`${uid}-message`}
           className="text-xs font-medium text-ink-600"
         >
           Message
         </label>
         <Textarea
-          id="inq-message"
+          id={`${uid}-message`}
           name="message"
           required
-          rows={4}
+          rows={3}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Share your budget, visit timing, or any question about this listing..."
@@ -227,10 +230,10 @@ export function SellerInquiryForm({
         </p>
       ) : null}
 
-      <Button
+      <button
         type="submit"
         disabled={submitting}
-        className="h-11 w-full rounded-full bg-brand-700 text-white shadow-sm transition-colors hover:bg-brand-800"
+        className="btn-tactile btn-tactile--block"
       >
         {submitting ? (
           <>
@@ -243,9 +246,9 @@ export function SellerInquiryForm({
             Send inquiry
           </>
         )}
-      </Button>
+      </button>
 
-      <p className="flex items-center justify-center gap-1.5 text-[0.7rem] text-ink-400">
+      <p className="flex items-center justify-center gap-1.5 text-[0.7rem] text-ink-500">
         <ShieldCheck className="size-3.5 text-brand-500" />
         Your details are shared only with {sellerName}.
       </p>

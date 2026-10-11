@@ -13,7 +13,7 @@ export function AdminFormNotice({ manageHref }: { manageHref?: string }) {
       </div>
       <h3 className="text-base font-bold text-ink-900">You&apos;re signed in as an administrator</h3>
       <p className="mt-1 text-sm text-ink-600">
-        Submissions from this form are managed from your dashboard — there&apos;s no need to send one yourself.
+        Submissions from this form are managed from your dashboard, so there&apos;s no need to send one yourself.
       </p>
       {manageHref && (
         <a

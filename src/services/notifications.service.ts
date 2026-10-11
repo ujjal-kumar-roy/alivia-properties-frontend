@@ -1,4 +1,3 @@
-import { auth } from "@/auth";
 import { httpClient } from "./http-client";
 
 export type NotificationItem = {
@@ -78,7 +77,7 @@ export const notificationsService = {
 export async function getNotifications(
   params: { limit?: number; unread?: boolean } = {},
 ): Promise<{ data: NotificationsResult }> {
-  const session = await auth();
+  const session = await (await import("@/auth")).auth();
   try {
     return {
       data: await notificationsService.list(params, session?.accessToken),

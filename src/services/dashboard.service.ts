@@ -1,4 +1,3 @@
-import { auth } from "@/auth"
 import type {
   ActivityItem,
   BuyerStats,
@@ -56,7 +55,7 @@ type AdminDashboardResponse = Partial<DashboardStats> & {
 }
 
 export async function getDashboardStats(): Promise<{ data: AdminDashboardData }> {
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   const token = session?.accessToken
   try {
     const {
@@ -88,7 +87,7 @@ export async function getDashboardStats(): Promise<{ data: AdminDashboardData }>
 
 export async function getSellerStats(_sellerId: string): Promise<SellerStats> {
   void _sellerId
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   const token = session?.accessToken
   try {
     const stats = await httpClient.get<Partial<SellerStats>>("/dashboard/seller", {
@@ -121,7 +120,7 @@ export async function getSellerStats(_sellerId: string): Promise<SellerStats> {
 
 export async function getBuyerStats(_buyerId: string): Promise<BuyerStats> {
   void _buyerId
-  const session = await auth()
+  const session = await (await import("@/auth")).auth()
   const token = session?.accessToken
   try {
     const stats = await httpClient.get<{

@@ -20,7 +20,7 @@ export default async function AdminEditProductPage({ params }: { params: Promise
   if (!product) notFound()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       <DashboardPageHeader title="Edit product" description={product.name} />
       <AdminProductEditorHost token={token} mode="edit" categories={categories} suppliers={suppliersRes} product={product} />
     </div>

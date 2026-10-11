@@ -22,8 +22,9 @@ export default async function AdminMarketplaceQuoteDetailPage({
   if (!session?.user || !quote) notFound()
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 sm:space-y-5">
       <DashboardPageHeader
+        className="max-sm:hidden"
         title="Marketplace quote"
         description="Review buyer requirements, supplier routing, and response status."
       />

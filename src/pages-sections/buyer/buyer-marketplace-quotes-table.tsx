@@ -4,13 +4,16 @@ import Link from "next/link"
 import { Eye } from "lucide-react"
 
 import { DataTable, type DataTableColumn } from "@/components/dashboard/data-table"
+import { FilterBar } from "@/components/dashboard/filter-bar"
 import { QuoteStatusBadge } from "@/components/dashboard/quote-status-badge"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/config/routes.config"
 import { useUrlFilter } from "@/hooks/use-url-filter"
-import { cn } from "@/lib/utils"
 import type { QuoteRequest, QuoteStatus } from "@/types/quote.types"
 import { formatDate } from "@/utils/format-date"
+
+/** Low-priority table columns: shown from xl, where the sidebar layout has room for them. */
+const FROM_XL = "hidden xl:table-cell"
 
 const STATUS_FILTERS: { value: QuoteStatus | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -48,7 +51,7 @@ export function BuyerMarketplaceQuotesTable({
           <p className="truncate font-semibold text-ink-900">
             {quote.product?.name ?? quote.supplier?.name ?? quote.categorySlug ?? "General quote"}
           </p>
-          <p className="mt-0.5 line-clamp-2 max-w-[26rem] text-xs text-ink-500">
+          <p className="mt-0.5 line-clamp-2 max-w-[26rem] text-xs text-ink-500 max-sm:max-w-none">
             {quote.message}
           </p>
         </div>
@@ -57,6 +60,7 @@ export function BuyerMarketplaceQuotesTable({
     {
       key: "supplier",
       header: "Supplier",
+      mobileLabel: false,
       render: (quote) =>
         quote.supplier ? (
           <Link
@@ -72,6 +76,7 @@ export function BuyerMarketplaceQuotesTable({
     {
       key: "quantity",
       header: "Quantity",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (quote) => (
         <div className="text-xs text-ink-700">
@@ -87,13 +92,16 @@ export function BuyerMarketplaceQuotesTable({
     {
       key: "status",
       header: "Status",
+      badgeOnMobile: true,
       render: (quote) => <QuoteStatusBadge status={quote.status} />,
     },
     {
       key: "reply",
       header: "Latest reply",
+      mobileLabel: "Reply",
+      wideOnMobile: true,
       render: (quote) => (
-        <span className="line-clamp-2 max-w-[18rem] text-xs text-ink-600">
+        <span className="line-clamp-2 max-w-[18rem] text-xs text-ink-600 max-sm:max-w-none">
           {quote.reply ?? "No reply yet"}
         </span>
       ),
@@ -101,6 +109,7 @@ export function BuyerMarketplaceQuotesTable({
     {
       key: "created",
       header: "Submitted",
+      className: FROM_XL,
       hideOnMobile: true,
       render: (quote) => (
         <span className="text-xs text-ink-500">{formatDate(quote.createdAt)}</span>
@@ -110,35 +119,25 @@ export function BuyerMarketplaceQuotesTable({
       key: "actions",
       header: "Actions",
       render: (quote) => (
-        <Link href={ROUTES.BUYER_MARKETPLACE_QUOTE_DETAIL(quote.id)}>
-          <Button size="sm" variant="outline" className="rounded-full">
-            <Eye className="size-3.5" />
-            View
-          </Button>
-        </Link>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full max-sm:h-9 max-sm:px-4"
+          render={<Link href={ROUTES.BUYER_MARKETPLACE_QUOTE_DETAIL(quote.id)} />}
+        >
+          <Eye className="size-3.5" />
+          View
+        </Button>
       ),
     },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {STATUS_FILTERS.map((filter) => (
-          <button
-            key={filter.value}
-            type="button"
-            onClick={() => setFilter("status", filter.value)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-              status === filter.value
-                ? "border-brand-700 bg-brand-700 text-white"
-                : "border-border/70 bg-white text-ink-700 hover:bg-brand-50",
-            )}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 sm:space-y-4">
+      <FilterBar
+        groups={[{ name: "status", label: "Status", value: status, options: STATUS_FILTERS }]}
+        onChange={setFilter}
+      />
       <DataTable
         columns={columns}
         data={quotes}

@@ -1,88 +1,99 @@
-import Image from "next/image";
-import Link from "next/link";
-import { CheckCircle2, MapPin, MessageCircle, Phone } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { StarRating } from "@/components/common/star-rating";
-import { ROUTES } from "@/config/routes.config";
-import type { Agent } from "@/types/agent.types";
+import Image from "next/image"
+import Link from "next/link"
+import { BadgeCheck, Briefcase, Clock, Handshake, MapPin, MessageCircle } from "lucide-react"
+import { CardFact } from "@/components/common/card-fact"
+import { StarRating } from "@/components/common/star-rating"
+import { ROUTES } from "@/config/routes.config"
+import type { Agent } from "@/types/agent.types"
 
 interface AgentCardProps {
-  agent: Agent;
-  compact?: boolean;
+  agent: Agent
 }
 
-export function AgentCard({ agent, compact }: AgentCardProps) {
+/**
+ * Agent row: square photo on the left, name, company, areas, rating and the
+ * numbers that matter (live listings, closed deals, reply time) on the right.
+ * About 116px tall on phones so a screen shows five or six agents. Every value
+ * is the agent's own data; nothing is invented.
+ */
+export function AgentCard({ agent }: AgentCardProps) {
+  const areas =
+    agent.serviceAreas.slice(0, 2).join(", ") +
+    (agent.serviceAreas.length > 2 ? ` +${agent.serviceAreas.length - 2}` : "")
+  const photo = agent.avatar
+
   return (
-    <Link
-      href={ROUTES.AGENT_DETAIL(agent.slug)}
-      className="surface-card group flex overflow-hidden transition-shadow hover:shadow-(--shadow-elevated) cursor-pointer"
+    <article
+      data-card
+      className="group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) transition-[translate,scale,box-shadow] duration-200 active:scale-[0.99] sm:hover:-translate-y-0.5 sm:hover:shadow-(--shadow-elevated) motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
     >
-      {!compact && agent.coverImage && (
-        <div className="relative hidden h-28 w-32 flex-none overflow-hidden sm:block">
-          <Image
-            src={agent.coverImage}
-            alt=""
-            fill
-            sizes="128px"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            unoptimized
-          />
+      <Link
+        href={ROUTES.AGENT_DETAIL(agent.slug)}
+        className="flex gap-2.5 rounded-[inherit] p-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 sm:gap-3 sm:p-3"
+      >
+        <div className="relative aspect-square w-25 shrink-0 self-start overflow-hidden rounded-xl bg-ink-100 sm:w-28">
+          {photo ? (
+            <Image
+              src={photo}
+              alt=""
+              fill
+              sizes="112px"
+              unoptimized
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <div className="grid size-full place-items-center bg-linear-to-br from-brand-500 to-brand-800 font-heading text-3xl font-bold text-white">
+              {agent.name.charAt(0)}
+            </div>
+          )}
+          {agent.isFeatured && (
+            <span className="absolute inset-x-0 bottom-0 bg-gold-400 py-[3px] text-center text-[0.6875rem] font-bold uppercase tracking-wide text-brand-950">
+              Featured
+            </span>
+          )}
         </div>
-      )}
-      <div className="flex min-w-0 flex-1 items-start gap-3 p-3">
-        <Avatar className="h-12 w-12">
-          {agent.avatar && <AvatarImage src={agent.avatar} />}
-          <AvatarFallback>{agent.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="truncate text-sm font-semibold text-ink-900">
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <h3 className="flex items-center gap-1 leading-tight">
+            <span className="truncate font-heading text-[0.95rem] font-semibold text-ink-900 transition-colors group-hover:text-brand-700 sm:text-base">
               {agent.name}
             </span>
             {agent.isVerified && (
-              <CheckCircle2 className="h-3.5 w-3.5 flex-none text-brand-700" />
+              <BadgeCheck aria-label="Verified agent" className="size-4 shrink-0 text-brand-600" />
             )}
-            {agent.isFeatured && (
-              <span className="rounded bg-gold-50 px-1.5 py-0.5 text-[10px] font-medium text-gold-700">
-                Featured
-              </span>
-            )}
-          </div>
-          <p className="text-[11px] text-ink-500">
-            {agent.companyName ?? agent.licenseNumber} · {agent.yearsExperience}
-            y exp
+          </h3>
+          <p className="mt-0.5 truncate text-xs text-ink-600">
+            {agent.companyName ?? agent.licenseNumber} · {agent.yearsExperience} yrs experience
           </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <StarRating
-              value={agent.rating}
-              count={agent.reviewCount}
-              size="xs"
-              showValue
-            />
+          {agent.serviceAreas.length > 0 && (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-600">
+              <MapPin aria-hidden="true" className="size-3 shrink-0" />
+              <span className="truncate">{areas}</span>
+            </p>
+          )}
+
+          <div className="mt-1 flex">
+            <StarRating value={agent.rating} count={agent.reviewCount} size="sm" showValue />
           </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-700">
-            <span className="inline-flex items-center gap-1">
-              <MapPin className="h-3 w-3" />{" "}
-              {agent.serviceAreas.slice(0, 2).join(", ")}
-              {agent.serviceAreas.length > 2 &&
-                ` +${agent.serviceAreas.length - 2}`}
-            </span>
-            <span>
-              {agent.activeListings} live · {agent.closedDeals} closed
-            </span>
-          </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full bg-ink-50 px-2 py-0.5 text-[10px] text-ink-700">
-              <Phone className="h-3 w-3" /> ~{agent.responseTimeHours}h reply
-            </span>
+
+          <ul className="mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5 text-xs">
+            <li>
+              <CardFact icon={Briefcase}>{agent.activeListings} live</CardFact>
+            </li>
+            <li>
+              <CardFact icon={Handshake}>{agent.closedDeals} closed</CardFact>
+            </li>
+            <li>
+              <CardFact icon={Clock}>~{agent.responseTimeHours}h reply</CardFact>
+            </li>
             {agent.whatsApp && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] text-success">
-                <MessageCircle className="h-3 w-3" /> WhatsApp
-              </span>
+              <li className="hidden sm:block">
+                <CardFact icon={MessageCircle}>WhatsApp</CardFact>
+              </li>
             )}
-          </div>
+          </ul>
         </div>
-      </div>
-    </Link>
-  );
+      </Link>
+    </article>
+  )
 }

@@ -12,15 +12,22 @@ export type Reel = {
   duration: string
 }
 
-export function VideoReel({ reels }: { reels: Reel[] }) {
+export function VideoReel({
+  reels,
+  embedded = false,
+}: {
+  reels: Reel[]
+  /** Inside an accordion: no card or heading of its own (the section supplies them). */
+  embedded?: boolean
+}) {
   const [muted, setMuted] = useState(true)
 
   if (!reels.length) return null
 
   return (
-    <div className="surface-card p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="text-h3">Video reels</h3>
+    <div className={embedded ? undefined : "surface-card p-5"}>
+      <div className={embedded ? "mb-2 flex items-center justify-end gap-3" : "mb-4 flex items-center justify-between gap-3"}>
+        {!embedded && <h3 className="text-h3">Video reels</h3>}
         <button
           type="button"
           onClick={() => setMuted((m) => !m)}

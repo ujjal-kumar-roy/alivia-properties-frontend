@@ -1,16 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { useFieldArray, useForm, useWatch } from "react-hook-form"
+import { useFieldArray, useForm, useWatch, type FieldErrors } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2, Plus, Trash2 } from "lucide-react"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { FileUploader } from "@/components/common/file-uploader"
+import { TouchFileUploader } from "@/components/dashboard/touch-file-uploader"
+import { FormSection } from "@/components/dashboard/form-section"
+import { FormActionBar } from "@/components/dashboard/form-action-bar"
 import { PanoramaBuilder } from "@/components/forms/panorama-builder"
 import { PropertyImagesUploader } from "@/components/forms/property-images-uploader"
 import { projectSchema, type ProjectInput, type ProjectSubmit } from "@/schemas/project.schema"
@@ -94,6 +96,7 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
   const router = useRouter()
   const { data: session } = useSession()
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
 
   const form = useForm<ProjectInput, undefined, ProjectSubmit>({
     resolver: zodResolver(projectSchema),
@@ -117,6 +120,30 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
   const panoramaValues = useWatch({ control: form.control, name: "panorama" }) ?? []
   const selectedAmenities = useWatch({ control: form.control, name: "amenities" }) ?? []
 
+  // Phones fold the form into sections; one with a validation error opens itself.
+  const errs = form.formState.errors
+  const hasError = (...names: (keyof ProjectInput)[]) => names.some((name) => Boolean(errs[name]))
+
+  // A save error is shown at the top of the form; bring it into view from the sticky Save bar.
+  useEffect(() => {
+    if (submitError) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+  }, [submitError])
+
+  function onInvalid(errors: FieldErrors<ProjectInput>) {
+    const first = Object.keys(errors)[0] as keyof ProjectInput | undefined
+    if (!first) return
+    // Sections open on the next render; focus the first bad field once they have.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        try {
+          form.setFocus(first)
+        } catch {
+          // Not a focusable field: its error message is already visible.
+        }
+      }),
+    )
+  }
+
   async function onSubmit(values: ProjectSubmit) {
     setSubmitError(null)
     if (!session?.accessToken) {
@@ -137,17 +164,27 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {submitError && (
-        <div className="rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div
+          ref={errorRef}
+          role="alert"
+          className="rounded-[1rem] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
           {submitError}
         </div>
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-3 sm:space-y-6">
           {/* Basics */}
-          <div className="surface-card grid gap-4 p-5 md:grid-cols-2">
+          <FormSection
+            id="section-basics"
+            title="Basics"
+            hint="Name, description, status"
+            invalid={hasError("name", "tagline", "description", "status", "developerName")}
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
+          >
             <div className="md:col-span-2">
               <FormField
                 control={form.control}
@@ -227,10 +264,17 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                 </FormItem>
               )}
             />
-          </div>
+          </FormSection>
 
           {/* Location */}
-          <div className="surface-card grid gap-4 p-5 md:grid-cols-2">
+          <FormSection
+            id="section-location"
+            title="Location"
+            hint="Area and address"
+            defaultOpen={mode === "create"}
+            invalid={hasError("location", "address")}
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
+          >
             <FormField
               control={form.control}
               name="location"
@@ -265,10 +309,17 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                 </FormItem>
               )}
             />
-          </div>
+          </FormSection>
 
           {/* Timeline, size & pricing */}
-          <div className="surface-card grid gap-4 p-5 md:grid-cols-2 lg:grid-cols-4">
+          <FormSection
+            id="section-timeline"
+            title="Timeline, size and pricing"
+            hint="Handover, land, units, price range"
+            defaultOpen={mode === "create"}
+            invalid={hasError("handoverDate", "landSize", "landSizeUnit", "totalFloors", "totalUnits", "availableUnits", "soldUnits", "priceFrom", "priceTo")}
+            className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
+          >
             <FormField
               control={form.control}
               name="handoverDate"
@@ -354,14 +405,21 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                 </FormItem>
               )}
             />
-          </div>
+          </FormSection>
 
           {/* Media */}
-          <div className="surface-card space-y-6 p-5">
-            <h2 className="text-lg font-semibold text-ink-900">Media</h2>
+          <FormSection
+            id="section-media"
+            title="Media"
+            hint="Cover, gallery, videos, 360 tour"
+            defaultOpen={mode === "create"}
+            invalid={hasError("coverImageUrl", "galleryImages", "videos", "videoUrl", "panorama")}
+            className="space-y-6"
+          >
+            <h2 className="hidden text-lg font-semibold text-ink-900 md:block">Media</h2>
             <div className="space-y-2">
               <p className="text-sm font-medium text-ink-800">Cover image</p>
-              <FileUploader
+              <TouchFileUploader
                 kind="project-image"
                 label=""
                 value={coverValue ? [coverValue] : []}
@@ -388,9 +446,9 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
             </div>
 
             {/* Video — upload a walkthrough clip and/or paste an external link */}
-            <div className="grid gap-5 border-t border-border pt-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 border-t border-border pt-6 md:grid-cols-2">
               <div className="space-y-2">
-                <FileUploader
+                <TouchFileUploader
                   kind="project-video"
                   multiple
                   maxFiles={3}
@@ -426,7 +484,7 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
             </div>
 
             <div className="space-y-2 border-t border-border pt-6">
-              <FileUploader
+              <TouchFileUploader
                 kind="project-image"
                 label="360° Panorama (optional)"
                 hint="One equirectangular (2:1) photo powers the interactive virtual tour · max 10 MB"
@@ -448,18 +506,24 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                 <span>from your apartment photos. Leave empty for the sample tour.</span>
               </div>
             </div>
-          </div>
+          </FormSection>
 
           {/* Amenities */}
-          <div className="surface-card p-5">
-            <h2 className="text-lg font-semibold text-ink-900">Amenities</h2>
-            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <FormSection
+            id="section-amenities"
+            title="Amenities"
+            hint={selectedAmenities.length > 0 ? `${selectedAmenities.length} selected` : "Pick what the building offers"}
+            defaultOpen={false}
+            invalid={hasError("amenities")}
+          >
+            <h2 className="hidden text-lg font-semibold text-ink-900 md:block">Amenities</h2>
+            <div className="mt-2 grid gap-2 md:mt-4 md:grid-cols-2 xl:grid-cols-3">
               {AMENITIES.map((category) => (
-                <div key={category.category} className="rounded-[1.25rem] border border-border bg-ink-50 p-4">
+                <div key={category.category} className="rounded-[1.25rem] border border-border bg-ink-50 p-3 sm:p-4">
                   <p className="text-sm font-semibold text-ink-900">{category.category}</p>
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 sm:mt-3 sm:block sm:space-y-2">
                     {category.items.map((amenity) => (
-                      <label key={amenity} className="flex items-center gap-2 text-sm text-ink-700">
+                      <label key={amenity} className="flex min-h-10 items-center gap-2 text-sm text-ink-700 lg:min-h-0">
                         <input
                           type="checkbox"
                           checked={selectedAmenities.includes(amenity)}
@@ -473,7 +537,7 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                               { shouldDirty: true },
                             )
                           }}
-                          className="h-4 w-4 accent-brand-600"
+                          className="size-6 shrink-0 accent-brand-600 lg:size-4"
                         />
                         {amenity}
                       </label>
@@ -482,14 +546,20 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                 </div>
               ))}
             </div>
-          </div>
+          </FormSection>
 
           {/* Unit types */}
-          <div className="surface-card p-5">
-            <div className="flex items-center justify-between">
+          <FormSection
+            id="section-units"
+            title="Unit types"
+            hint={fields.length > 0 ? `${fields.length} added` : "Optional: layouts and pricing"}
+            defaultOpen={false}
+            invalid={hasError("units")}
+          >
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-ink-900">Unit types</h2>
-                <p className="text-sm text-ink-500">Optional — list the available layouts and pricing.</p>
+                <h2 className="hidden text-lg font-semibold text-ink-900 md:block">Unit types</h2>
+                <p className="text-sm text-ink-500">Optional: list the available layouts and pricing.</p>
               </div>
               <Button
                 type="button"
@@ -552,13 +622,19 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                 ))}
               </div>
             )}
-          </div>
+          </FormSection>
 
           {/* Views & pricing — a premium view (golf, corner, lake…) lifts the price */}
-          <div className="surface-card p-5">
-            <div className="flex items-center justify-between">
+          <FormSection
+            id="section-views"
+            title="Views and pricing"
+            hint={viewFields.length > 0 ? `${viewFields.length} added` : "Optional: premium views"}
+            defaultOpen={false}
+            invalid={hasError("views")}
+          >
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-ink-900">Views &amp; Pricing</h2>
+                <h2 className="hidden text-lg font-semibold text-ink-900 md:block">Views &amp; Pricing</h2>
                 <p className="text-sm text-ink-500">
                   Highlight sellable views like golf, corner, or lake. Add the extra price each view carries — buyers see this on the apartment page.
                 </p>
@@ -622,13 +698,19 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                 ))}
               </div>
             )}
-          </div>
+          </FormSection>
 
           {/* Nearby landmarks */}
-          <div className="surface-card p-5">
-            <div className="flex items-center justify-between">
+          <FormSection
+            id="section-landmarks"
+            title="Nearby landmarks"
+            hint={landmarkFields.length > 0 ? `${landmarkFields.length} added` : "Optional: group by drive time"}
+            defaultOpen={false}
+            invalid={hasError("nearbyLandmarks")}
+          >
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-ink-900">Nearby Landmarks</h2>
+                <h2 className="hidden text-lg font-semibold text-ink-900 md:block">Nearby Landmarks</h2>
                 <p className="text-sm text-ink-500">
                   Group landmarks by drive time — e.g. “5–10 min Drive”.
                 </p>
@@ -691,21 +773,27 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                 ))}
               </div>
             )}
-          </div>
+          </FormSection>
 
           {/* Featured + submit */}
-          <div className="surface-card p-5">
+          <FormSection
+            id="section-featured"
+            title="Visibility"
+            hint="Feature on the homepage"
+            defaultOpen={false}
+            invalid={hasError("isFeatured")}
+          >
             <FormField
               control={form.control}
               name="isFeatured"
               render={({ field }) => (
                 <FormItem>
-                  <label className="flex items-center gap-3 rounded-[1rem] border border-border px-3 py-2">
+                  <label className="flex min-h-11 items-center gap-3 rounded-[1rem] border border-border px-3 py-2">
                     <input
                       type="checkbox"
                       checked={field.value ?? false}
                       onChange={(e) => field.onChange(e.target.checked)}
-                      className="h-4 w-4 accent-brand-600"
+                      className="size-6 shrink-0 accent-brand-600 lg:size-4"
                     />
                     <span className="text-sm text-ink-700">Feature this apartment on the homepage and listings</span>
                   </label>
@@ -713,9 +801,10 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
                 </FormItem>
               )}
             />
-          </div>
+          </FormSection>
 
-          <div className="flex flex-wrap items-center gap-3">
+          {/* md and up: inline buttons. Phones: the floating bar below. */}
+          <div className="hidden flex-wrap items-center gap-3 md:flex">
             <Button type="submit" className="rounded-full bg-brand-700 px-6 text-white hover:bg-brand-800" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? (
                 <>
@@ -729,6 +818,13 @@ export function ProjectForm({ mode, initialProject }: ProjectFormProps) {
               Cancel
             </Button>
           </div>
+
+          <FormActionBar
+            label="Apartment form actions"
+            submitLabel={mode === "edit" ? "Update apartment" : "Create apartment"}
+            submitting={form.formState.isSubmitting}
+            onCancel={() => router.push(ROUTES.ADMIN_PROJECTS)}
+          />
         </form>
       </Form>
     </div>
