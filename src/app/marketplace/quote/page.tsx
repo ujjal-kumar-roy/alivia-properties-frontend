@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { ShieldCheck, Sparkles, Timer } from "lucide-react"
+import { ChevronRight, ShieldCheck, Sparkles, Timer } from "lucide-react"
 
 import { GetQuoteForm } from "@/components/marketplace/GetQuoteForm"
 import { marketplaceService } from "@/services/marketplace.service"
@@ -23,11 +23,20 @@ type Props = {
     productSlug?: string
     variantId?: string
     categorySlug?: string
+    /** Prefill from the product page's quantity stepper. */
+    qty?: string
+    unit?: string
   }>
 }
 
 export default async function MarketplaceQuotePage({ searchParams }: Props) {
   const params = await searchParams
+
+  // Quantity/unit prefill: only a positive number and a short unit (the form's
+  // own limit is 32 characters); anything else leaves the fields empty.
+  const qtyParam = Number(params.qty)
+  const quantity = Number.isFinite(qtyParam) && qtyParam > 0 ? qtyParam : undefined
+  const unit = params.unit?.trim().slice(0, 32) || undefined
 
   // Best-effort resolution of names from slugs (so the form shows context).
   // Failures (e.g. backend not reachable) are silently ignored: the form
@@ -127,7 +136,7 @@ export default async function MarketplaceQuotePage({ searchParams }: Props) {
           >
             Marketplace
           </Link>
-          <span aria-hidden="true">›</span>
+          <ChevronRight aria-hidden="true" className="size-3.5 text-ink-400" />
           <span className="text-ink-900">Get a Quote</span>
         </nav>
 
@@ -136,7 +145,6 @@ export default async function MarketplaceQuotePage({ searchParams }: Props) {
               From md: the classic card with the whole form. */}
           <section className="md:rounded-[2rem] md:border md:border-border/70 md:bg-white md:p-7 md:shadow-(--shadow-card)">
             <header className="mb-5 hidden border-b border-border/60 pb-5 md:block">
-              <p className="text-eyebrow mb-2">Marketplace</p>
               <h1 className="font-heading text-2xl font-semibold text-balance text-ink-900 sm:text-3xl">
                 {heading}
               </h1>
@@ -162,6 +170,8 @@ export default async function MarketplaceQuotePage({ searchParams }: Props) {
                 categoryName,
                 categoryVariants,
                 categoryAttributes,
+                quantity,
+                unit,
               }}
               redirectOnSuccess
             />
@@ -169,7 +179,6 @@ export default async function MarketplaceQuotePage({ searchParams }: Props) {
 
           <aside className="hidden space-y-4 md:block lg:sticky lg:top-24">
             <div className="mobile-liquid-glass rounded-[2rem] border border-border/70 bg-white p-5 shadow-(--shadow-card)">
-              <p className="text-eyebrow mb-2">Why use the marketplace</p>
               <h2 className="font-heading text-lg font-semibold text-ink-900">
                 Verified suppliers. Trackable conversations.
               </h2>
@@ -205,7 +214,6 @@ export default async function MarketplaceQuotePage({ searchParams }: Props) {
             </div>
 
             <div className="mobile-liquid-glass rounded-[2rem] border border-border/70 bg-brand-50/60 p-5">
-              <p className="text-eyebrow mb-2">Need help?</p>
               <h3 className="font-heading text-base font-semibold text-ink-900">
                 Talk to our marketplace team
               </h3>

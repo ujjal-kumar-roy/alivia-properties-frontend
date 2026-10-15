@@ -45,5 +45,15 @@ export const quoteSchema = z.object({
     .max(2000, "Message is too long"),
 })
 
+/**
+ * The quote list (several products, one request per product): each item's
+ * name and quantity already say what is needed, so the buyer's note is
+ * optional. Capped below 2000 because it is appended to a per-item line.
+ * Same input/output shape as quoteSchema (message stays a string, "" allowed).
+ */
+export const quoteItemsSchema = quoteSchema.extend({
+  message: z.string().trim().max(1500, "Note is too long"),
+})
+
 export type QuoteFormValues = z.input<typeof quoteSchema>
 export type QuoteSubmitValues = z.output<typeof quoteSchema>

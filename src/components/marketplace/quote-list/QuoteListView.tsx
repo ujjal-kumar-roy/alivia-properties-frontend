@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils"
 
 const FORM_ID = "quote-list-form"
 const MAX_QTY = 999_999
-const UNDO_MS = 6000
+const UNDO_MS = 8000
 /** Exponential ease-out (globals.css --ease-out) for motion props. */
 const EASE_OUT = [0.23, 1, 0.32, 1] as const
 
@@ -253,7 +253,7 @@ export function QuoteListView() {
                     <h2
                       ref={detailsHeadingRef}
                       tabIndex={-1}
-                      className="text-lg font-bold text-ink-900 outline-none"
+                      className="font-sans text-lg font-bold text-ink-900 outline-none"
                     >
                       Your details
                     </h2>
@@ -526,7 +526,7 @@ function QtyStepper({
             onChange(value + (event.key === "ArrowUp" ? 1 : -1), "keyboard")
           }
         }}
-        className="h-11 w-12 bg-transparent text-center text-base font-bold tabular-nums text-ink-900 outline-none disabled:text-ink-400 sm:text-sm"
+        className="h-11 w-16 bg-transparent text-center text-base font-bold tabular-nums text-ink-900 outline-none disabled:text-ink-400 sm:w-14 sm:text-sm"
       />
       <button
         type="button"
@@ -669,7 +669,7 @@ function EmptyQuoteList() {
       <span className="flex size-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
         <ClipboardList aria-hidden="true" className="size-7" />
       </span>
-      <h2 className="mt-4 text-xl font-bold text-ink-900">Your quote list is empty</h2>
+      <h2 className="mt-4 font-sans text-xl font-bold text-ink-900">Your quote list is empty</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-ink-600">
         Collect products from any seller here, then ask for all their prices in one go.
       </p>

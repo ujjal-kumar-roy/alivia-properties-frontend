@@ -4,7 +4,14 @@ import * as React from "react"
 import { useSession } from "next-auth/react"
 import { useForm, useWatch, type FieldErrors } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { AlertCircle, ArrowRight, Loader2, SendHorizontal } from "lucide-react"
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Circle,
+  Loader2,
+  SendHorizontal,
+} from "lucide-react"
 import { motion } from "motion/react"
 
 import { GuideAvatar } from "@/components/common/guide-avatar"
@@ -21,10 +28,11 @@ import { Textarea } from "@/components/ui/textarea"
 
 import { AttachmentUploader } from "@/components/marketplace/AttachmentUploader"
 import { GuidedShell } from "@/components/marketplace/wizard/GuidedShell"
-import { celebrate, haptic } from "@/lib/celebrate"
+import { ROUTES } from "@/config/routes.config"
+import { celebrate, haptic, prefersReducedMotion } from "@/lib/celebrate"
 import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
-import { quoteSchema, type QuoteFormValues } from "@/schemas/quote.schema"
+import { quoteItemsSchema, quoteSchema, type QuoteFormValues } from "@/schemas/quote.schema"
 import { quotesService } from "@/services/quotes.service"
 import { ApiError } from "@/services/http-client"
 import type {
@@ -33,7 +41,7 @@ import type {
   ProductVariant,
   SpecValue,
 } from "@/types/marketplace.types"
-import type { QuoteAttachment, QuoteSpec } from "@/types/quote.types"
+import type { CreateQuoteInput, QuoteAttachment, QuoteSpec } from "@/types/quote.types"
 
 export type QuoteContext = {
   supplierId?: string
@@ -50,7 +58,22 @@ export type QuoteContext = {
   categoryVariants?: CategoryVariant[]
   /** Admin-configured spec fields buyers fill in for the sub-category. */
   categoryAttributes?: CategoryAttribute[]
+  /** Prefill for the quantity / unit fields (e.g. the product page's qty stepper). */
+  quantity?: number
+  unit?: string
 }
+
+/** One product in an "items" request (the quote list): sent as its own quote. */
+export type QuoteItemRequest = {
+  productId: string
+  name: string
+  quantity: number
+  unit?: string
+  supplierId?: string
+}
+
+type ItemRunStatus = "waiting" | "sending" | "sent" | "failed"
+type ItemRun = QuoteItemRequest & { status: ItemRunStatus; error?: string }
 
 type Props = {
   context?: QuoteContext
@@ -65,7 +88,19 @@ type Props = {
    * submits to the batch endpoint (one quote per supplier; empty = match me).
    */
   supplierIds?: string[]
-  mode?: "single" | "batch"
+  /**
+   * "items" (the quote list): the contact and delivery fields once, then one
+   * request per product in `items`, sent one after another with progress.
+   */
+  mode?: "single" | "batch" | "items"
+  /** Items mode: the products to request (each carries its own qty, unit, seller). */
+  items?: QuoteItemRequest[]
+  /**
+   * Items mode: called after a run with the products whose request went
+   * through, so the host can drop them from its list. `complete` = all sent
+   * (with redirectOnSuccess the page is already navigating away).
+   */
+  onItemsSent?: (productIds: string[], outcome: { complete: boolean }) => void
   /** Offer the file-attachment field (logged-in buyers only). Default true. */
   enableAttachments?: boolean
   className?: string
@@ -82,8 +117,11 @@ type Props = {
   exitHref?: string
   /** id for the <form>, so a sheet footer can submit it with `form={id}`. */
   formId?: string
-  /** Hide the inline submit row (the host renders its own button). */
-  hideSubmit?: boolean
+  /**
+   * Hide the inline submit row (the host renders its own button). "phones"
+   * hides it below md only (the host's MobileActionBar submits there).
+   */
+  hideSubmit?: boolean | "phones"
   onSubmittingChange?: (submitting: boolean) => void
   /** Called when the visitor chooses "Submit another request" on the success view. */
   onReset?: () => void
@@ -106,7 +144,7 @@ function specDetail(specs?: SpecValue[] | null) {
 
 type VariantOption = { id: string; name: string; unit?: string | null; detail?: string }
 
-type ScreenId = "options" | "need" | "qty" | "where" | "when" | "who"
+type ScreenId = "options" | "need" | "qty" | "where" | "when" | "who" | "note"
 
 type ScreenMeta = {
   id: ScreenId
@@ -155,6 +193,27 @@ const SCREEN_META: Record<ScreenId, ScreenMeta> = {
     bubble: "Last step. Sellers will contact you on these details.",
     fields: ["name", "phone", "email", "company"],
   },
+  // Items mode only: what each product needs is already in the list, so the
+  // free-text requirement becomes an optional note sent with every item.
+  note: {
+    id: "note",
+    title: "Anything sellers should know?",
+    bubble: "Add a note if it helps. Sizes, colours or site access help sellers price it right.",
+    fields: ["message"],
+  },
+}
+
+/** The ask each seller reads for one product, plus the buyer's shared note. */
+function itemMessage(item: QuoteItemRequest, note: string) {
+  const amount = `${item.quantity}${item.unit ? ` ${item.unit}` : ""}`
+  const ask = `Please quote ${amount} of ${item.name}.`
+  return note ? `${ask}\n\n${note}` : ask
+}
+
+function errorText(err: unknown) {
+  return err instanceof ApiError || err instanceof Error
+    ? err.message
+    : "Could not submit your request. Please try again."
 }
 
 function subscribePhone(onChange: () => void) {
@@ -172,6 +231,38 @@ export const QUOTE_FORM_SCREEN_COUNT = 5
 /** Guided fields are 48px; in "phones" mode they return to the default size from md. */
 const GUIDED_FIELD_PHONES = "h-12 text-base md:h-10 lg:h-8 lg:text-sm"
 const GUIDED_FIELD_ALWAYS = "h-12 text-base"
+/** Items mode is a classic form on phones too (the quote list page): 44px fields there. */
+const ITEMS_FIELD = "h-11 md:h-10"
+
+/** Exponential ease-out (globals.css --ease-out) for motion props. */
+const EASE_OUT = [0.23, 1, 0.32, 1] as const
+
+function RunIcon({ status }: { status: ItemRunStatus }) {
+  switch (status) {
+    case "waiting":
+      return <Circle aria-hidden="true" className="size-4 text-ink-300" />
+    case "sending":
+      return <Loader2 aria-hidden="true" className="size-4 text-brand-600 motion-safe:animate-spin" />
+    case "sent":
+      return <CheckCircle2 aria-hidden="true" className="size-4 text-green-600" />
+    case "failed":
+      return <AlertCircle aria-hidden="true" className="size-4 text-destructive" />
+  }
+}
+
+const RUN_LABEL: Record<ItemRunStatus, string> = {
+  waiting: "Waiting",
+  sending: "Sending...",
+  sent: "Sent to the seller",
+  failed: "Not sent",
+}
+
+function runHeadline(run: ItemRun[]) {
+  const sent = run.filter((entry) => entry.status === "sent").length
+  const settled = run.filter((entry) => entry.status === "sent" || entry.status === "failed").length
+  if (settled < run.length) return `Sending ${settled + 1} of ${run.length}...`
+  return sent === run.length ? "All requests sent" : `${sent} of ${run.length} sent`
+}
 
 export function GetQuoteForm({
   context,
@@ -180,6 +271,8 @@ export function GetQuoteForm({
   redirectOnSuccess = false,
   supplierIds,
   mode = "single",
+  items,
+  onItemsSent,
   enableAttachments = true,
   className,
   guided,
@@ -206,6 +299,13 @@ export function GetQuoteForm({
   const [specValues, setSpecValues] = React.useState<Record<string, string>>({})
   const [specErrors, setSpecErrors] = React.useState<Record<string, boolean>>({})
   const [attachments, setAttachments] = React.useState<QuoteAttachment[]>([])
+  // Items mode: per-product progress of the last run (null before the first send).
+  const [itemRun, setItemRun] = React.useState<ItemRun[] | null>(null)
+  // Items mode sends real requests to sellers one by one: a second submit while
+  // a run is in flight (double tap before "Sending..." renders) must not start another.
+  const itemsInFlight = React.useRef(false)
+  const runRef = React.useRef<HTMLDivElement>(null)
+  const itemsMode = mode === "items"
 
   // Spec fields + variant choices: disabled via ENABLE_VARIANTS_SPECS (see top).
   // When off, both arrays stay empty so nothing renders and nothing is sent.
@@ -225,19 +325,23 @@ export function GetQuoteForm({
           .filter((v) => v.isActive !== false)
           .map((v) => ({ id: v.id, name: v.name, unit: v.unit, detail: v.description ?? "" }))
 
-  const screens: ScreenMeta[] = [
-    ...(variantOptions.length > 0 || attributes.length > 0 ? [SCREEN_META.options] : []),
-    SCREEN_META.need,
-    SCREEN_META.qty,
-    SCREEN_META.where,
-    SCREEN_META.when,
-    SCREEN_META.who,
-  ]
+  const screens: ScreenMeta[] = itemsMode
+    ? // Quantity and unit come from each item; the requirement is an optional note.
+      [SCREEN_META.where, SCREEN_META.when, SCREEN_META.who, SCREEN_META.note]
+    : [
+        ...(variantOptions.length > 0 || attributes.length > 0 ? [SCREEN_META.options] : []),
+        SCREEN_META.need,
+        SCREEN_META.qty,
+        SCREEN_META.where,
+        SCREEN_META.when,
+        SCREEN_META.who,
+      ]
   const lastScreen = screens.length - 1
   const current = screens[Math.min(screenIndex, lastScreen)]
 
   const form = useForm<QuoteFormValues>({
-    resolver: zodResolver(quoteSchema),
+    // Items mode: the note is optional (each item already says what is needed).
+    resolver: itemsMode ? zodResolver(quoteItemsSchema) : zodResolver(quoteSchema),
     defaultValues: {
       supplierId: context?.supplierId,
       productId: context?.productId,
@@ -249,8 +353,8 @@ export function GetQuoteForm({
       company: "",
       city: "",
       deliveryLocation: "",
-      quantity: undefined,
-      unit: "",
+      quantity: context?.quantity,
+      unit: context?.unit ?? "",
       deliveryDate: "",
       message: "",
     },
@@ -286,11 +390,24 @@ export function GetQuoteForm({
     onSubmittingChange?.(submitting)
   }, [submitting, onSubmittingChange])
 
+  // Items mode: bring the progress list into view when a run starts (the send
+  // button may be the phone's bottom bar, far from the list).
+  const runShown = itemRun !== null
+  React.useEffect(() => {
+    if (!runShown) return
+    runRef.current?.scrollIntoView({
+      block: "nearest",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    })
+  }, [runShown])
+
   // Coming back to this page from the thank-you page (back/forward cache)
   // restores it mid-"Sending...": put the form back to a usable state.
   React.useEffect(() => {
     function onPageShow(event: PageTransitionEvent) {
-      if (event.persisted) setSubmitState({ status: "idle" })
+      if (!event.persisted) return
+      setSubmitState({ status: "idle" })
+      itemsInFlight.current = false
     }
     window.addEventListener("pageshow", onPageShow)
     return () => window.removeEventListener("pageshow", onPageShow)
@@ -320,6 +437,108 @@ export function GetQuoteForm({
     return true
   }
 
+  function resetForm() {
+    form.reset({ ...form.getValues(), name: "", email: "", phone: "", company: "", city: "", deliveryLocation: "", quantity: undefined, unit: "", deliveryDate: "", message: "" })
+    setSpecValues({})
+    setAttachments([])
+    setScreenIndex(0)
+  }
+
+  /**
+   * Items mode: one POST /marketplace/quotes per product (the API has no
+   * multi-product quote), sent one after another so progress reads in order.
+   * Sent products are reported to the host; failed ones stay for a retry.
+   */
+  async function sendItems(values: QuoteFormValues, specs: QuoteSpec[]) {
+    const queue = items ?? []
+    if (itemsInFlight.current) return
+    if (!queue.length) {
+      setSubmitState({ status: "error", message: "Your quote list is empty. Add a product first." })
+      return
+    }
+    itemsInFlight.current = true
+    setSubmitState({ status: "submitting" })
+
+    // What every item shares; product, seller, quantity, unit and message are per item.
+    const shared: Omit<CreateQuoteInput, "productId" | "supplierId" | "quantity" | "unit" | "message"> = {
+      name: values.name,
+      email: values.email,
+      phone: values.phone,
+      company: values.company || undefined,
+      city: values.city || undefined,
+      deliveryLocation: values.deliveryLocation,
+      deliveryDate: values.deliveryDate || undefined,
+      specs: specs.length ? specs : undefined,
+      attachments: attachments.length ? attachments : undefined,
+    }
+    const note = (values.message ?? "").trim()
+
+    let run: ItemRun[] = queue.map((item) => ({ ...item, status: "waiting" }))
+    const mark = (index: number, patch: Partial<ItemRun>) => {
+      run = run.map((entry, i) => (i === index ? { ...entry, ...patch } : entry))
+      setItemRun(run)
+    }
+    setItemRun(run)
+
+    const sent: { productId: string; quoteId: string; seller: string }[] = []
+    for (const [index, item] of queue.entries()) {
+      mark(index, { status: "sending" })
+      try {
+        const quote = await quotesService.create(
+          {
+            ...shared,
+            productId: item.productId,
+            supplierId: item.supplierId,
+            quantity: item.quantity,
+            unit: item.unit || undefined,
+            message: itemMessage(item, note),
+          },
+          session?.accessToken,
+        )
+        sent.push({
+          productId: item.productId,
+          quoteId: quote.id,
+          seller: item.supplierId ?? item.productId,
+        })
+        mark(index, { status: "sent" })
+      } catch (err) {
+        mark(index, { status: "failed", error: errorText(err) })
+      }
+    }
+
+    const sentIds = sent.map((entry) => entry.productId)
+    const complete = sent.length === queue.length
+    if (complete && redirectOnSuccess) {
+      // `count` = sellers reached (the thank-you copy reads it as suppliers),
+      // `items` = requests sent. Like batch, stay in "Sending..." until the
+      // thank-you page replaces this one.
+      const sellers = new Set(sent.map((entry) => entry.seller)).size
+      window.location.assign(
+        `${ROUTES.MARKETPLACE_QUOTE_THANK_YOU}?count=${sellers}&items=${sent.length}`,
+      )
+      onItemsSent?.(sentIds, { complete: true })
+      return
+    }
+
+    itemsInFlight.current = false
+    onItemsSent?.(sentIds, { complete })
+    if (complete) {
+      setItemRun(null)
+      setSubmitState({ status: "success", quoteId: sent[0].quoteId, email: values.email })
+      resetForm()
+      celebrate()
+      onSuccess?.(sent[0].quoteId)
+      return
+    }
+    const failed = queue.length - sent.length
+    setSubmitState({
+      status: "error",
+      message: sent.length
+        ? `${failed} of ${queue.length} requests could not be sent. They are still in your list, so you can send them again.`
+        : "Your requests could not be sent. Check your connection and try again.",
+    })
+  }
+
   async function onSubmit(values: QuoteFormValues) {
     if (!optionsAreValid()) return
 
@@ -331,6 +550,11 @@ export function GetQuoteForm({
         unit: attribute.unit ?? undefined,
       }))
       .filter((spec) => spec.value !== "")
+
+    if (itemsMode) {
+      await sendItems(values, specs)
+      return
+    }
 
     setSubmitState({ status: "submitting" })
     try {
@@ -347,13 +571,6 @@ export function GetQuoteForm({
             : Number(values.quantity),
         specs: specs.length ? specs : undefined,
         attachments: attachments.length ? attachments : undefined,
-      }
-
-      const resetForm = () => {
-        form.reset({ ...form.getValues(), name: "", email: "", phone: "", company: "", city: "", deliveryLocation: "", quantity: undefined, unit: "", deliveryDate: "", message: "" })
-        setSpecValues({})
-        setAttachments([])
-        setScreenIndex(0)
       }
 
       if (mode === "batch") {
@@ -423,6 +640,8 @@ export function GetQuoteForm({
         return filled(values.deliveryDate)
       case "who":
         return filled(values.name) && filled(values.phone) && filled(values.email)
+      case "note":
+        return filled(values.message)
     }
   }
   const currentRequired = current.id === "need" || current.id === "where" || current.id === "who" || current.id === "options"
@@ -522,7 +741,9 @@ export function GetQuoteForm({
     .join(" · ")
 
   const fieldClass = !guidedOn
-    ? undefined
+    ? itemsMode
+      ? ITEMS_FIELD
+      : undefined
     : guided === "phones"
       ? GUIDED_FIELD_PHONES
       : GUIDED_FIELD_ALWAYS
@@ -802,6 +1023,37 @@ export function GetQuoteForm({
             />
           </>
         )
+
+      case "note":
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="message"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Note for sellers (optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="Brand or size preferences, site access, best time to call"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {enableAttachments && (
+              <div className="grid gap-1.5">
+                <label className="text-sm font-medium text-ink-800">
+                  Photo <span className="font-normal text-ink-500">(optional)</span>
+                </label>
+                <AttachmentUploader value={attachments} onChange={setAttachments} />
+              </div>
+            )}
+          </>
+        )
     }
   }
 
@@ -809,7 +1061,6 @@ export function GetQuoteForm({
     <div className={guidedOn ? undefined : className}>
       {showHeader && !guidedOn && (
         <div className="mb-4 border-b border-border/60 pb-4">
-          <p className="text-eyebrow mb-1 hidden sm:block">Book For Consultations</p>
           <h2 className="font-heading text-xl font-semibold text-ink-900">
             {context?.productName
               ? `Get a quote for ${context.productName}`
@@ -857,6 +1108,49 @@ export function GetQuoteForm({
             </motion.div>
           ))}
 
+          {/* Items mode: one line per product so the buyer sees each request land. */}
+          {itemsMode && itemRun ? (
+            <div
+              ref={runRef}
+              className="grid scroll-mb-28 gap-2 border-t border-border/60 pt-4 md:scroll-mb-6"
+            >
+              <p role="status" className="text-sm font-bold text-ink-900">
+                {runHeadline(itemRun)}
+              </p>
+              <ol className="grid gap-1">
+                {itemRun.map((entry) => (
+                  <li key={entry.productId} className="flex items-start gap-2.5 py-1">
+                    {/* Keyed by status: each change swaps the icon with a short fade + settle. */}
+                    <motion.span
+                      key={entry.status}
+                      className="mt-0.5 flex size-5 shrink-0 items-center justify-center"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.18, ease: EASE_OUT }}
+                    >
+                      <RunIcon status={entry.status} />
+                    </motion.span>
+                    <span className="min-w-0 flex-1">
+                      <span className="line-clamp-1 text-sm font-semibold text-ink-800">
+                        {entry.name}
+                      </span>
+                      <span
+                        className={cn(
+                          "line-clamp-2 text-xs",
+                          entry.status === "failed" ? "text-destructive" : "text-ink-500",
+                        )}
+                      >
+                        {entry.quantity}
+                        {entry.unit ? ` ${entry.unit}` : ""} · {RUN_LABEL[entry.status]}
+                        {entry.status === "failed" && entry.error ? `: ${entry.error}` : ""}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+
           {submitState.status === "error" && (
             <div
               role="alert"
@@ -867,14 +1161,22 @@ export function GetQuoteForm({
             </div>
           )}
 
-          {!hideSubmit && (
+          {hideSubmit !== true && (
             <div
               className={cn(
                 "items-center justify-end gap-2 border-t border-border/60 pt-4",
-                guided === "always" ? "hidden" : guided === "phones" ? "hidden md:flex" : "flex",
+                guided === "always"
+                  ? "hidden"
+                  : guided === "phones" || hideSubmit === "phones"
+                    ? "hidden md:flex"
+                    : "flex",
               )}
             >
-              <button type="submit" disabled={submitting} className="btn-tactile">
+              <button
+                type="submit"
+                disabled={submitting}
+                className={cn("btn-tactile", itemsMode && "btn-tactile--block")}
+              >
                 {submitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
@@ -883,7 +1185,9 @@ export function GetQuoteForm({
                 ) : (
                   <>
                     <SendHorizontal className="size-4" />
-                    Submit Quote Request
+                    {itemsMode
+                      ? `Send request for ${items?.length ?? 0} item${items?.length === 1 ? "" : "s"}`
+                      : "Submit Quote Request"}
                   </>
                 )}
               </button>
