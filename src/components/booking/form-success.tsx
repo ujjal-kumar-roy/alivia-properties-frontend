@@ -39,7 +39,7 @@ export function FormSuccess({ title, children, actions, confetti = true, classNa
     <div
       ref={ref}
       role="status"
-      className={cn("rounded-2xl border border-brand-100 bg-brand-50/70 p-3.5 sm:p-5", className)}
+      className={cn("anim-slide-up rounded-2xl border border-brand-100 bg-brand-50/70 p-3.5 sm:p-5", className)}
     >
       <div className="flex items-start gap-3">
         <GuideAvatar mood="cheer" size={44} className="mt-0.5" />

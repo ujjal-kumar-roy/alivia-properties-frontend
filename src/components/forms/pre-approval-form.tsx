@@ -24,6 +24,7 @@ import {
   Store,
   type LucideIcon,
 } from "lucide-react"
+import { motion } from "motion/react"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { CountUp } from "@/components/common/count-up"
@@ -32,6 +33,7 @@ import { MobileActionBar } from "@/components/common/mobile-action-bar"
 import { ProgressBar } from "@/components/common/progress-bar"
 import { ROUTES } from "@/config/routes.config"
 import { celebrate, haptic, prefersReducedMotion } from "@/lib/celebrate"
+import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { formatPrice } from "@/utils/format-price"
 import { banksService } from "@/services/banks.service"
@@ -337,7 +339,7 @@ export function PreApprovalForm() {
             )}
 
             <StepGroup index={0} active={step === 0} moved={moved}>
-              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+              <div className="enter-cascade grid grid-cols-1 gap-3.5 md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="fullName"
@@ -660,11 +662,14 @@ export function PreApprovalForm() {
       </Form>
 
       {result && (
-        <div
+        <motion.div
           ref={resultRef}
           role="status"
+          initial={{ opacity: 0, y: 18, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={springs.sheet}
           className={cn(
-            "anim-slide-up scroll-mt-20 rounded-2xl border p-3.5 sm:p-5",
+            "scroll-mt-20 rounded-2xl border p-3.5 sm:p-5",
             result.approved ? "border-brand-200 bg-brand-50" : "border-red-200 bg-red-50",
           )}
         >
@@ -683,18 +688,28 @@ export function PreApprovalForm() {
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-xl bg-white p-3 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springs.move, delay: 0.12 }}
+              className="rounded-xl bg-white p-3 shadow-sm"
+            >
               <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-500">Approved amount</p>
               <p className="mt-1 text-lg font-extrabold tabular-nums text-brand-700">
                 <CountUp value={result.approvedAmount ?? 0} format={fmtShort} />
               </p>
-            </div>
-            <div className="rounded-xl bg-white p-3 shadow-sm">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springs.move, delay: 0.2 }}
+              className="rounded-xl bg-white p-3 shadow-sm"
+            >
               <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-500">Estimated EMI</p>
               <p className="mt-1 text-lg font-extrabold tabular-nums text-ink-900">
                 <CountUp value={result.emi ?? 0} format={fmtShort} />
               </p>
-            </div>
+            </motion.div>
           </div>
 
           <div className="mt-2.5 rounded-xl bg-white/80 px-3 py-2.5 text-sm text-ink-700">
@@ -723,7 +738,7 @@ export function PreApprovalForm() {
           >
             Adjust my details
           </button>
-        </div>
+        </motion.div>
       )}
     </div>
   )

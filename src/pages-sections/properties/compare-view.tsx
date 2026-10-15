@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Check, House, Plus, X } from "lucide-react"
 import { useCompareProperties } from "@/hooks/use-compare-properties"
 import { MAX_COMPARE_ITEMS } from "@/lib/constants"
+import { prefersReducedMotion } from "@/lib/celebrate"
+import { cn } from "@/lib/utils"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
 import { ROUTES } from "@/config/routes.config"
 import {
@@ -32,6 +34,30 @@ const dash = "-"
 export function CompareView() {
   const { list, snapshots, ready, remove, clear, refreshSnapshots } = useCompareProperties()
   const refreshed = useRef(false)
+  // The column being removed: it fades and shrinks first, then the list drops it.
+  const [leaving, setLeaving] = useState<string | null>(null)
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (leaveTimer.current) clearTimeout(leaveTimer.current)
+  }, [])
+
+  function removeAnimated(id: string) {
+    if (prefersReducedMotion() || leaving) {
+      remove(id)
+      return
+    }
+    setLeaving(id)
+    leaveTimer.current = setTimeout(() => {
+      remove(id)
+      setLeaving(null)
+    }, 220)
+  }
+  const colFx = (id: string) =>
+    cn(
+      "origin-center transition-[opacity,scale] duration-200 ease-out motion-reduce:transition-none",
+      leaving === id && "scale-90 opacity-0",
+    )
 
   // The list holds ids, but the public lookup is by slug: show the saved copy at
   // once, then refresh every listing from the API so prices are current.
@@ -150,7 +176,7 @@ export function CompareView() {
                 <span className="sr-only">Attribute</span>
               </th>
               {columns.map(({ id, property: p }) => (
-                <th key={id} scope="col" className="p-1.5 align-top font-normal sm:p-2">
+                <th key={id} scope="col" className={cn("p-1.5 align-top font-normal sm:p-2", colFx(id))}>
                   <div className="relative aspect-4/3 overflow-hidden rounded-xl bg-ink-100 sm:aspect-16/10">
                     {p?.images[0] ? (
                       <Image
@@ -169,7 +195,7 @@ export function CompareView() {
                     )}
                     <button
                       type="button"
-                      onClick={() => remove(id)}
+                      onClick={() => removeAnimated(id)}
                       aria-label={`Remove ${p?.title ?? "listing"} from compare`}
                       className="btn-glass absolute right-1 top-1 size-9 min-h-9 min-w-9 !p-0"
                     >
@@ -211,7 +237,7 @@ export function CompareView() {
                       <td
                         key={id}
                         className={
-                          "border-b border-border/50 p-2 text-xs text-ink-800 sm:text-sm " +
+                          colFx(id) + " border-b border-border/50 p-2 text-xs text-ink-800 sm:text-sm " +
                           (zebra ? "bg-ink-50/60 " : "bg-white ") +
                           (row.bold ? "font-extrabold tabular-nums text-gold-700 " : "") +
                           (isBest ? "!text-brand-700 font-bold" : "")
@@ -234,7 +260,7 @@ export function CompareView() {
                 <span className="sr-only">Open listing</span>
               </th>
               {columns.map(({ id, property: p }) => (
-                <td key={id} className="p-2">
+                <td key={id} className={cn("p-2", colFx(id))}>
                   {p ? (
                     <Link href={ROUTES.PROPERTY_DETAIL(p.slug)} className="btn-glass min-h-10 w-full text-xs">
                       View

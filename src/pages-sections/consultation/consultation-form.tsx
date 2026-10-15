@@ -88,7 +88,7 @@ export function ConsultationForm() {
       onSubmit={handleSubmit}
       onInput={(e) => clear((e.target as HTMLInputElement).name)}
       noValidate
-      className="space-y-3.5"
+      className="enter-cascade space-y-3.5"
     >
       {submitError && (
         <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">

@@ -10,7 +10,7 @@ export default function ConsultationPage() {
       <div className="container-page">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-x-12 lg:gap-y-8">
           {/* Intro */}
-          <header className="lg:col-span-2 lg:row-start-1">
+          <header className="enter-cascade lg:col-span-2 lg:row-start-1">
             <p className="text-eyebrow mb-3 hidden sm:block">Book a Session</p>
             <h1 className="font-heading text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl lg:text-4xl">
               Free Real Estate Consultation

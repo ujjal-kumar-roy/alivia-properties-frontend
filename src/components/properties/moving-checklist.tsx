@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Check } from "lucide-react"
+import { motion } from "motion/react"
 import { GuideAvatar } from "@/components/common/guide-avatar"
 import { ProgressBar } from "@/components/common/progress-bar"
-import { celebrate, haptic, prefersReducedMotion } from "@/lib/celebrate"
+import { haptic, prefersReducedMotion } from "@/lib/celebrate"
+import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 const LS_KEY = "alivia_moving_checklist"
@@ -78,7 +80,7 @@ export function MovingChecklist() {
 
     if (nowChecked && !celebrated.current && TASKS.every((t) => next.has(t.id))) {
       celebrated.current = true
-      celebrate()
+      haptic("success")
       panelRef.current?.scrollIntoView({
         block: "center",
         behavior: prefersReducedMotion() ? "auto" : "smooth",
@@ -93,8 +95,12 @@ export function MovingChecklist() {
 
   return (
     <div className="space-y-2.5 sm:space-y-4">
-      <div
+      {/* initial={false}: the swell plays when the last task is ticked, not on load. */}
+      <motion.div
         ref={panelRef}
+        initial={false}
+        animate={{ scale: complete ? [1, 1.025, 1] : 1 }}
+        transition={complete ? { duration: 0.5, ease: "easeOut" } : springs.move}
         className="scroll-mt-20 rounded-2xl border border-brand-100 bg-brand-50/70 p-3.5"
       >
         <div className="flex items-center gap-3">
@@ -115,7 +121,7 @@ export function MovingChecklist() {
           tone={complete ? "gold" : "brand"}
           className="mt-1.5 h-3"
         />
-      </div>
+      </motion.div>
 
       {WEEKS.map((week) => {
         const tasks = TASKS.filter((t) => t.week === week)
@@ -167,12 +173,31 @@ export function MovingChecklist() {
                           popId === task.id && "anim-pop-in",
                         )}
                       >
-                        {isChecked && <Check className="size-4" strokeWidth={3} />}
+                        {isChecked && (
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="size-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={3}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            {/* The tick draws itself when just checked; saved ones appear drawn. */}
+                            <motion.path
+                              d="M20 6 9 17l-5-5"
+                              initial={{ pathLength: popId === task.id ? 0 : 1 }}
+                              animate={{ pathLength: 1 }}
+                              transition={{ duration: 0.28, ease: "easeOut", delay: 0.05 }}
+                            />
+                          </svg>
+                        )}
                       </span>
+                      {/* The strike is a background line that grows across the text (wraps with it). */}
                       <span
                         className={cn(
-                          "text-[0.9375rem] leading-snug",
-                          isChecked ? "text-ink-500 line-through" : "text-ink-800",
+                          "box-decoration-clone bg-linear-to-r from-current to-current bg-no-repeat bg-position-[0_55%] text-[0.9375rem] leading-snug transition-[background-size,color] duration-300 ease-out motion-reduce:transition-none",
+                          isChecked ? "bg-size-[100%_1.5px] text-ink-500" : "bg-size-[0%_1.5px] text-ink-800",
                         )}
                       >
                         {task.label}

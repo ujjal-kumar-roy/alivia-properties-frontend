@@ -17,7 +17,7 @@ export default function PreApprovalPage() {
     <div className="py-4 sm:py-8 lg:py-12">
       <div className="container-page grid gap-3.5 lg:grid-cols-5 lg:gap-10">
         <aside className="space-y-3 lg:col-span-2 lg:space-y-6">
-          <div>
+          <div className="enter-cascade">
             <p className="text-eyebrow mb-2 hidden sm:block">Financing</p>
             <h1 className="font-heading text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl lg:text-4xl">
               Mortgage pre-approval

@@ -9,7 +9,7 @@ export default function MovingChecklistPage() {
   return (
     <div className="py-4 sm:py-8 lg:py-12">
       <div className="container-page max-w-3xl">
-        <div className="mb-3 sm:mb-6">
+        <div className="enter-cascade mb-3 sm:mb-6">
           <p className="text-eyebrow mb-2 hidden sm:block">Plan ahead</p>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl lg:text-4xl">
             Moving checklist
