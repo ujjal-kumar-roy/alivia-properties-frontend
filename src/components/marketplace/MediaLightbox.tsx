@@ -14,17 +14,23 @@ import {
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
-import {
-  DISMISS_OFFSET_THRESHOLD,
-  DISMISS_VELOCITY_THRESHOLD,
-  rubberband,
-} from "@/lib/motion"
+import { DISMISS_OFFSET_THRESHOLD, rubberband } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 const DISMISS_DRAG_HYSTERESIS = 10
 const DISMISS_RUBBER_RADIUS = 220
 /** Horizontal travel (px) that counts as a swipe to the next/previous photo. */
 const SWIPE_NAV_DISTANCE = 48
+/** A short, fast flick also browses (px/s), once it has travelled a little. */
+const SWIPE_NAV_VELOCITY = 300
+const SWIPE_NAV_MIN_TRAVEL = 16
+/**
+ * Release speed (px/s) that dismisses on a vertical drag. The shared 500 px/s
+ * needs a hard throw; a deliberate flick sits nearer 300.
+ */
+const DISMISS_FLICK_VELOCITY = 300
+/** Mirrors the `--ease-out` token for the WAAPI release animations. */
+const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)"
 
 type DismissDragState = {
   pointerId: number
@@ -34,7 +40,7 @@ type DismissDragState = {
   committed: boolean
   /** The gesture read as horizontal: it is a browse swipe on release. */
   horizontal: boolean
-  samples: { t: number; y: number }[]
+  samples: { t: number; x: number; y: number }[]
 }
 
 const MIN_SCALE = 1
@@ -88,12 +94,15 @@ export function MediaLightbox({
   const count = images.length
   const src = images[index] ?? null
   const isZoomed = scale > 1
+  // Rotation only ever grows (90, 180, 270, 360...), so the transform
+  // transition always turns forward instead of unwinding 270deg on the wrap.
   const isTransformed =
-    isZoomed || rotation !== 0 || offset.x !== 0 || offset.y !== 0
+    isZoomed || rotation % 360 !== 0 || offset.x !== 0 || offset.y !== 0
 
   const resetView = useCallback(() => {
     setScale(1)
-    setRotation(0)
+    // Settle on the nearest upright turn: 90 unwinds, 270 finishes the circle.
+    setRotation((d) => Math.round(d / 360) * 360)
     setOffset({ x: 0, y: 0 })
   }, [])
 
@@ -153,7 +162,7 @@ export function MediaLightbox({
         case "r":
         case "R":
           e.preventDefault()
-          setRotation((d) => (d + 90) % 360)
+          setRotation((d) => d + 90)
           break
         case "0":
           e.preventDefault()
@@ -191,7 +200,7 @@ export function MediaLightbox({
       startY: e.clientY,
       committed: false,
       horizontal: false,
-      samples: [{ t: e.timeStamp, y: e.clientY }],
+      samples: [{ t: e.timeStamp, x: e.clientX, y: e.clientY }],
     }
   }
 
@@ -206,8 +215,13 @@ export function MediaLightbox({
 
     const state = dismissStateRef.current
     const el = lightboxRef.current
-    if (!state || !el || e.pointerId !== state.pointerId || state.horizontal)
+    if (!state || !el || e.pointerId !== state.pointerId) return
+    if (state.horizontal) {
+      // Keep sampling so the release can read the flick's speed.
+      state.samples.push({ t: e.timeStamp, x: e.clientX, y: e.clientY })
+      if (state.samples.length > 5) state.samples.shift()
       return
+    }
     const dx = e.clientX - state.startX
     const dy = e.clientY - state.startY
 
@@ -232,7 +246,7 @@ export function MediaLightbox({
       }
     }
 
-    state.samples.push({ t: e.timeStamp, y: e.clientY })
+    state.samples.push({ t: e.timeStamp, x: e.clientX, y: e.clientY })
     if (state.samples.length > 5) state.samples.shift()
     const resisted = rubberband(dy, DISMISS_RUBBER_RADIUS)
     el.style.transform = `translateY(${resisted}px)`
@@ -253,10 +267,19 @@ export function MediaLightbox({
     const el = lightboxRef.current
     if (!state || !el) return
 
-    // A horizontal flick browses to the neighbouring photo.
+    // A horizontal swipe browses to the neighbouring photo: far enough, or a
+    // short but quick flick.
     if (state.horizontal) {
       const dx = e.clientX - state.startX
-      if (Math.abs(dx) > SWIPE_NAV_DISTANCE) go(dx < 0 ? 1 : -1)
+      const first = state.samples[0]
+      const last = state.samples[state.samples.length - 1] ?? first
+      const vx = ((last.x - first.x) / Math.max(1, last.t - first.t)) * 1000 // px/s
+      if (
+        Math.abs(dx) > SWIPE_NAV_DISTANCE ||
+        (Math.abs(dx) > SWIPE_NAV_MIN_TRAVEL && Math.abs(vx) > SWIPE_NAV_VELOCITY && Math.sign(vx) === Math.sign(dx))
+      ) {
+        go(dx < 0 ? 1 : -1)
+      }
       return
     }
     if (!state.committed) return
@@ -269,7 +292,7 @@ export function MediaLightbox({
 
     const dismiss =
       Math.abs(dy) > DISMISS_OFFSET_THRESHOLD ||
-      Math.abs(velocity) > DISMISS_VELOCITY_THRESHOLD
+      Math.abs(velocity) > DISMISS_FLICK_VELOCITY
 
     if (dismiss) {
       const direction = dy < 0 ? -1 : 1
@@ -283,7 +306,7 @@ export function MediaLightbox({
         ],
         {
           duration: 220,
-          easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+          easing: EASE_OUT,
           fill: "forwards",
         },
       )
@@ -301,7 +324,7 @@ export function MediaLightbox({
         ],
         {
           duration: 280,
-          easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+          easing: EASE_OUT,
           fill: "forwards",
         },
       )
@@ -353,7 +376,10 @@ export function MediaLightbox({
           >
             {src && (
               <div
-                className="relative size-full motion-safe:transition-transform motion-safe:duration-200"
+                // Keyed per slide/open: a new photo starts upright instead of
+                // animating the previous photo's zoom and turn back to rest.
+                key={viewKey}
+                className="relative size-full motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-(--ease-out)"
                 style={{
                   transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale}) rotate(${rotation}deg)`,
                   transition: dragging ? "none" : undefined,
@@ -405,7 +431,7 @@ export function MediaLightbox({
               aria-label="Close viewer"
               title="Close viewer"
               onClick={() => onOpenChange(false)}
-              className="glass-clear pointer-events-auto flex size-11 items-center justify-center rounded-full text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="glass-clear pointer-events-auto flex size-11 items-center justify-center rounded-full text-white transition-[scale] duration-140 ease-(--ease-out) active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none motion-reduce:active:scale-100"
             >
               <X aria-hidden="true" className="size-5" />
             </button>
@@ -440,7 +466,7 @@ export function MediaLightbox({
               </ToolButton>
               <ToolButton
                 label="Rotate right"
-                onClick={() => setRotation((d) => (d + 90) % 360)}
+                onClick={() => setRotation((d) => d + 90)}
               >
                 <RotateCw className="size-5" />
               </ToolButton>
@@ -484,7 +510,7 @@ function ToolButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex size-11 items-center justify-center rounded-full text-white transition-colors",
+        "flex size-11 items-center justify-center rounded-full text-white transition-[background-color,scale] duration-140 ease-(--ease-out) active:scale-[0.97] motion-reduce:active:scale-100",
         "hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
         "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent",
       )}
@@ -514,7 +540,7 @@ function ArrowButton({
       // Stop the stage from reading a tap on the arrow as the start of a swipe.
       onPointerDown={(e) => e.stopPropagation()}
       className={cn(
-        "glass-clear absolute top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-white sm:size-12",
+        "glass-clear absolute top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-white transition-[scale] duration-140 ease-(--ease-out) active:scale-[0.97] sm:size-12 motion-reduce:transition-none motion-reduce:active:scale-100",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
         side === "left" ? "left-2 sm:left-5" : "right-2 sm:right-5",
       )}
