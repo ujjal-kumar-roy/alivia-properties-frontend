@@ -8,7 +8,7 @@ import { ROUTES } from "@/config/routes.config"
 import { useRecentProducts } from "@/hooks/use-recent-products"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
 import { MAX_RECENT_PRODUCTS, type RecentProduct } from "@/lib/recent-products"
-import { formatPrice } from "@/utils/format-price"
+import { formatTaka } from "@/utils/format-price"
 
 import { RailScroller } from "./RailScroller"
 
@@ -67,13 +67,13 @@ function RecentCard({ item }: { item: RecentProduct }) {
           />
         </div>
         <div className="flex flex-col gap-1 px-2.5 pb-3 pt-2.5">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink-900">{item.name}</h3>
+          <h3 className="line-clamp-2 font-sans text-sm font-semibold leading-snug text-ink-900">{item.name}</h3>
           {item.supplierName ? (
             <p className="truncate text-xs text-ink-500">{item.supplierName}</p>
           ) : null}
           {item.price > 0 ? (
             <p className="truncate text-base font-extrabold tabular-nums text-ink-900">
-              {formatPrice(item.price, true)}
+              {formatTaka(item.price)}
               {item.unit ? <span className="ml-1 text-xs font-medium text-ink-500">/ {item.unit}</span> : null}
             </p>
           ) : (

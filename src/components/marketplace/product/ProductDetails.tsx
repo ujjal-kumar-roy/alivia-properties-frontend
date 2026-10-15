@@ -18,7 +18,7 @@ import { ROUTES } from "@/config/routes.config"
 import { cn } from "@/lib/utils"
 import type { ProductWithSupplier } from "@/services/marketplace.service"
 import type { ProductVariant } from "@/types/marketplace.types"
-import { formatPrice } from "@/utils/format-price"
+import { formatTaka } from "@/utils/format-price"
 
 import { ReadMore } from "./ReadMore"
 import type { DetailSupplier } from "./types"
@@ -33,8 +33,8 @@ type ProductDetailsProps = {
 const LONG_TEXT_CHARS = 600
 const MAX_AREA_CHIPS = 8
 
-const h2 = "text-lg font-extrabold text-ink-900 md:text-xl"
-const h3 = "text-sm font-extrabold text-ink-900"
+const h2 = "font-sans text-lg font-extrabold text-ink-900 md:text-xl"
+const h3 = "font-sans text-sm font-extrabold text-ink-900"
 const section = "border-t border-ink-200 pt-6"
 const pressable =
   "transition-[scale,background-color,border-color] duration-140 ease-(--ease-out) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 active:scale-[0.97] motion-reduce:transition-colors motion-reduce:active:scale-100"
@@ -144,7 +144,7 @@ export function ProductDetails({ product, supplier, serviceMode }: ProductDetail
               {serviceMode ? "About this service" : "About this product"}
             </h2>
             <div className="mt-3">
-              {lead.length + body.length > LONG_TEXT_CHARS ? <ReadMore>{aboutText}</ReadMore> : aboutText}
+              {lead.length + (showBody ? body.length : 0) > LONG_TEXT_CHARS ? <ReadMore>{aboutText}</ReadMore> : aboutText}
             </div>
           </section>
         ) : null}
@@ -186,7 +186,7 @@ export function ProductDetails({ product, supplier, serviceMode }: ProductDetail
                         {tier.note ? <span className="block text-xs text-ink-500">{tier.note}</span> : null}
                       </td>
                       <td className="py-2.5 text-right font-bold tabular-nums text-ink-900">
-                        {tier.price > 0 ? formatPrice(tier.price, true) : "Ask for price"}
+                        {tier.price > 0 ? formatTaka(tier.price) : "Ask for price"}
                       </td>
                     </tr>
                   ))}
@@ -205,7 +205,7 @@ export function ProductDetails({ product, supplier, serviceMode }: ProductDetail
                       href={doc.href}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex min-h-11 items-center gap-2.5 rounded-lg px-1 py-2 text-sm font-medium text-ink-900 transition-colors duration-140 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 [@media(hover:hover)_and_(pointer:fine)]:hover:text-brand-700"
+                      className="flex min-h-11 items-center gap-2.5 rounded-lg px-1 py-2 text-sm font-medium text-ink-900 transition-colors duration-140 ease-(--ease-out) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 [@media(hover:hover)_and_(pointer:fine)]:hover:text-brand-700"
                     >
                       <FileText aria-hidden="true" className="size-4 shrink-0 text-brand-600" />
                       <span className="min-w-0 flex-1 truncate">{doc.label}</span>
@@ -231,7 +231,7 @@ export function ProductDetails({ product, supplier, serviceMode }: ProductDetail
                         {meta ? <p className="mt-0.5 text-xs text-ink-500">{meta}</p> : null}
                         {variant.price && variant.price > 0 ? (
                           <p className="mt-0.5 text-xs font-semibold tabular-nums text-ink-700">
-                            {formatPrice(variant.price, true)}
+                            {formatTaka(variant.price)}
                             {variant.unit ? ` / ${variant.unit}` : ""}
                           </p>
                         ) : null}
@@ -255,12 +255,23 @@ export function ProductDetails({ product, supplier, serviceMode }: ProductDetail
         </section>
       </div>
 
-      {supplier ? <SoldBy supplier={supplier} serviceMode={serviceMode} /> : null}
+      {supplier ? <SoldBy supplier={supplier} serviceMode={serviceMode} lead={lead} /> : null}
     </div>
   )
 }
 
-function SoldBy({ supplier, serviceMode }: { supplier: DetailSupplier; serviceMode: boolean }) {
+function SoldBy({
+  supplier,
+  serviceMode,
+  lead,
+}: {
+  supplier: DetailSupplier
+  serviceMode: boolean
+  /** The About lead: some sellers reuse one line as both tagline and short description. */
+  lead: string
+}) {
+  const tagline = supplier.tagline?.trim()
+  const showTagline = Boolean(tagline) && tagline!.toLowerCase() !== lead.toLowerCase()
   const areas = (supplier.serviceAreas ?? []).filter(Boolean)
   const hiddenAreas = Math.max(0, areas.length - MAX_AREA_CHIPS)
 
@@ -296,7 +307,7 @@ function SoldBy({ supplier, serviceMode }: { supplier: DetailSupplier; serviceMo
             {supplier.logo ? (
               <MediaImage
                 src={supplier.logo}
-                alt={`${supplier.name} logo`}
+                alt=""
                 fill
                 sizes="56px"
                 className="bg-white object-contain p-1"
@@ -325,8 +336,8 @@ function SoldBy({ supplier, serviceMode }: { supplier: DetailSupplier; serviceMo
           </div>
         </div>
 
-        {supplier.tagline ? (
-          <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-600">{supplier.tagline}</p>
+        {showTagline ? (
+          <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-600">{tagline}</p>
         ) : null}
 
         {facts.length > 0 ? (

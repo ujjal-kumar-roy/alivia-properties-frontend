@@ -76,7 +76,7 @@ export function RailScroller({ title, href, children, className }: RailScrollerP
   return (
     <section aria-labelledby={headingId} className={cn("min-w-0", className)}>
       <div className="flex items-center justify-between gap-3">
-        <h2 id={headingId} className="text-lg font-extrabold text-ink-900 md:text-xl">
+        <h2 id={headingId} className="font-sans text-lg font-extrabold text-ink-900 md:text-xl">
           {title}
         </h2>
         <div className="flex items-center gap-1">
