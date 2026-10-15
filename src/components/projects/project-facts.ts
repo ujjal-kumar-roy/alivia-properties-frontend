@@ -16,6 +16,8 @@ export type ProjectFact = {
   key: ProjectFactKey
   label: string
   value: string
+  /** Set on plain unit counts so the desktop card can count the number up. */
+  count?: number
 }
 
 type ProjectFactsInput = {
@@ -68,13 +70,13 @@ export function buildProjectFacts(input: ProjectFactsInput): ProjectFact[] {
     facts.push({ key: "floors", label: "Floors", value: `${input.totalFloors} Floors` })
   }
   if (input.totalUnits != null) {
-    facts.push({ key: "totalUnits", label: "Total units", value: `${input.totalUnits} Units` })
+    facts.push({ key: "totalUnits", label: "Total units", value: `${input.totalUnits} Units`, count: input.totalUnits })
   }
   if (input.availableUnits != null) {
-    facts.push({ key: "availableUnits", label: "Available apartments", value: `${input.availableUnits} Units` })
+    facts.push({ key: "availableUnits", label: "Available apartments", value: `${input.availableUnits} Units`, count: input.availableUnits })
   }
   if (input.soldUnits != null) {
-    facts.push({ key: "soldUnits", label: "Sold apartments", value: `${input.soldUnits} Units` })
+    facts.push({ key: "soldUnits", label: "Sold apartments", value: `${input.soldUnits} Units`, count: input.soldUnits })
   }
   if (sizeRange) {
     facts.push({ key: "unitSize", label: "Unit size", value: `${sizeRange} ${sizeUnit}` })

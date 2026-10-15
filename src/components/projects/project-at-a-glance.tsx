@@ -11,6 +11,7 @@ import {
   Tag,
   type LucideIcon,
 } from "lucide-react"
+import { CountUp } from "@/components/common/count-up"
 import { cn } from "@/lib/utils"
 import type { ProjectFact, ProjectFactKey } from "./project-facts"
 
@@ -104,7 +105,13 @@ export function ProjectAtAGlance({ facts, variant = "card" }: ProjectAtAGlancePr
                     </span>
                   </th>
                   <td className="px-4 py-3 align-top font-semibold leading-5 text-ink-900">
-                    {fact.value}
+                    {fact.count != null ? (
+                      <>
+                        <CountUp value={fact.count} duration={1} /> Units
+                      </>
+                    ) : (
+                      fact.value
+                    )}
                   </td>
                 </tr>
               )

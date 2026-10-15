@@ -38,7 +38,7 @@ export function ProjectSection({
       id={id}
       open={defaultOpen}
       className={cn(
-        "reveal group/sec scroll-mt-20 rounded-2xl border border-black/5 bg-white shadow-(--shadow-card)",
+        "reveal [animation-range:entry_0px_entry_48px] group/sec scroll-mt-20 rounded-2xl border border-black/5 bg-white shadow-(--shadow-card)",
         "lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none lg:details-content:[content-visibility:visible]",
         className,
       )}
