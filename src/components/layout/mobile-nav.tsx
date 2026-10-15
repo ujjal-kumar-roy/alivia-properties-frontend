@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { startTransition, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -348,12 +348,23 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
   // Navigate programmatically instead of relying on the <Link>'s default
   // action. Inside a modal dialog on touch devices, dismissing the sheet can
   // swallow the anchor's navigation, so taps appeared to do nothing. Pushing
-  // via the router is independent of the dialog's dismissal, then we close on
-  // the next frame so the navigation isn't interrupted.
+  // via the router is independent of the dialog's dismissal. The close rides
+  // in the same Transition as the route change, so both commit together: the
+  // page view transition captures the open sheet as "old" and fades it out
+  // over the incoming page (globals.css, sheet-content), instead of the sheet
+  // being cut mid-close by the page snapshots and popping back afterwards.
+  // Same-page links (no view transition) close right away as before.
   const navigate = (href: string) => (e: React.MouseEvent) => {
     e.preventDefault()
-    router.push(href)
-    requestAnimationFrame(() => onClose())
+    if (new URL(href, window.location.href).pathname === pathname) {
+      router.push(href)
+      requestAnimationFrame(() => onClose())
+      return
+    }
+    startTransition(() => {
+      router.push(href)
+      onClose()
+    })
   }
 
   // External / protocol links (tel:, wa.me) keep their native action; just

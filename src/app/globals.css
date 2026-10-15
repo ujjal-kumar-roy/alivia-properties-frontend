@@ -1795,27 +1795,39 @@ html[data-action-bar="true"] body {
 
 /* ── Page navigation (View Transitions) ──────────────────────────────────────
    Customer-facing routes are wrapped in <PageTransition>
-   (src/components/layout/page-transition.tsx): on a route change the old page
-   exits and the new one enters with the `page-nav` class. Direction comes from
+   (src/components/layout/page-transition.tsx). Direction comes from
    <html data-nav-dir="forward|back|none">, set by the same component from the
-   click / popstate that started the navigation. Forward: the new page slides
-   in 24px from the right while fading in, the old page fades. Back: the new
-   page comes from the left. "none" (into a dashboard/auth route, or after the
-   browser's own swipe-back animation) swaps instantly. */
-::view-transition-old(.page-nav) {
+   click / history traversal that started the navigation. Forward: the new page
+   slides in 24px from the right while fading in, the old page fades. Back: the
+   new page comes from the left. "none" (into a dashboard/auth route, or after
+   the browser's own swipe-back animation) swaps instantly.
+   Two ways in: link/router navigations are React view transitions (old and new
+   page get the `page-nav` class); history traversals run a view transition
+   started by PageTransition itself (html[data-nav-traverse]), where the page
+   wrapper is captured under the name `page-traverse`. */
+::view-transition-old(.page-nav),
+::view-transition-old(page-traverse) {
   animation: 220ms cubic-bezier(0.25, 1, 0.5, 1) both page-nav-out;
 }
-::view-transition-new(.page-nav) {
+::view-transition-new(.page-nav),
+::view-transition-new(page-traverse) {
   --page-nav-shift: 24px;
   animation: 300ms cubic-bezier(0.25, 1, 0.5, 1) both page-nav-in;
 }
-html[data-nav-dir="back"]::view-transition-new(.page-nav) {
+html[data-nav-dir="back"]::view-transition-new(.page-nav),
+html[data-nav-dir="back"]::view-transition-new(page-traverse) {
   --page-nav-shift: -24px;
 }
 html:not([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-old(.page-nav) {
   display: none;
 }
 html:not([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-new(.page-nav) {
+  animation: none;
+}
+html[data-nav-traverse]:active-view-transition .vt-page {
+  view-transition-name: page-traverse;
+}
+::view-transition-group(page-traverse) {
   animation: none;
 }
 @keyframes page-nav-in {
@@ -1826,37 +1838,66 @@ html:not([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-new(.
   to { opacity: 0; }
 }
 
-/* Chrome outside the page boundary holds still. It only gets a
-   view-transition-name while a transition runs: a permanent name would make it
-   a backdrop root and flatten the glass blur of its children. Its group never
-   animates and sits above the sliding pages; old + new is an instant swap, and
-   chrome that exists on one side only fades with the page. */
+/* Persistent chrome and fixed overlays hold still above the sliding pages.
+   They only get a view-transition-name while a transition runs: a permanent
+   name would make them backdrop roots and flatten their glass blur. Their
+   groups never animate; old + new is an instant swap. Something present on one
+   side only fades with the page on a forward/back move and swaps instantly
+   otherwise. An open sheet (the mobile menu) is named only while open, so one
+   that closes in the same commit as the navigation is an old-only group: it
+   fades out over the incoming page instead of being cut by the snapshots. */
 html:active-view-transition .vt-site-header {
   view-transition-name: site-header;
 }
 html:active-view-transition .vt-chat-launcher {
   view-transition-name: chat-launcher;
 }
+html:active-view-transition .vt-cookie-banner {
+  view-transition-name: cookie-banner;
+}
+html:active-view-transition [data-slot="sheet-overlay"][data-open]:not([data-ending-style]) {
+  view-transition-name: sheet-overlay;
+}
+html:active-view-transition [data-slot="sheet-content"][data-open]:not([data-ending-style]) {
+  view-transition-name: sheet-content;
+}
 ::view-transition-group(site-header),
-::view-transition-group(chat-launcher) {
+::view-transition-group(chat-launcher),
+::view-transition-group(cookie-banner) {
   animation: none;
   z-index: 100;
 }
+::view-transition-group(sheet-overlay) {
+  animation: none;
+  z-index: 110;
+}
+::view-transition-group(sheet-content) {
+  animation: none;
+  z-index: 111;
+}
 ::view-transition-old(site-header),
-::view-transition-old(chat-launcher) {
+::view-transition-old(chat-launcher),
+::view-transition-old(cookie-banner),
+::view-transition-old(sheet-overlay),
+::view-transition-old(sheet-content) {
   display: none;
 }
 ::view-transition-new(site-header),
-::view-transition-new(chat-launcher) {
+::view-transition-new(chat-launcher),
+::view-transition-new(cookie-banner),
+::view-transition-new(sheet-overlay),
+::view-transition-new(sheet-content) {
   animation: none;
 }
-::view-transition-old(site-header):only-child,
-::view-transition-old(chat-launcher):only-child {
+html:is([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-old(site-header):only-child,
+html:is([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-old(chat-launcher):only-child,
+html:is([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-old(sheet-overlay):only-child,
+html:is([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-old(sheet-content):only-child {
   display: block;
   animation: 220ms cubic-bezier(0.25, 1, 0.5, 1) both page-nav-out;
 }
-::view-transition-new(site-header):only-child,
-::view-transition-new(chat-launcher):only-child {
+html:is([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-new(site-header):only-child,
+html:is([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-new(chat-launcher):only-child {
   animation: 300ms cubic-bezier(0.25, 1, 0.5, 1) both page-nav-out reverse;
 }
 
