@@ -43,8 +43,9 @@ function days(count: number) {
  * ::after covers the card), not an <a> around everything: the round add-to-quote
  * button floats over the photo's corner as a sibling, never nested inside the
  * link, and screen readers hear one link named after the product. The link is a
- * MorphLink, so a tap hands the photo to the product page's loading skeleton
- * (see src/lib/morph-handoff.ts); that finds the photo as the card's first <img>.
+ * MorphLink: the product page has no loading skeleton today (the card morphs
+ * straight into the hero), but a tap still records its photo (the card's largest
+ * loaded <img>, see src/lib/morph-handoff.ts) for one if it ever gets one.
  *
  * Press: the card squeezes while the link is held down, not while the add button
  * is. Hover (mouse and trackpad only): the photo zooms to 1.03 and the shadow lifts.

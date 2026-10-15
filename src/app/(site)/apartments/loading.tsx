@@ -1,3 +1,5 @@
+import { ApartmentDetailLoading } from "@/components/common/detail-loading"
+import { MorphLoading } from "@/components/common/morph-placeholder"
 import { Sk } from "@/components/common/skeletons"
 
 /**
@@ -23,39 +25,46 @@ function ApartmentCardSkeleton() {
   )
 }
 
+/**
+ * The listings skeleton. Next can commit it first on the way to an apartment
+ * page too (it is the boundary around the detail segment), so right after an
+ * apartment card was tapped it shows the detail skeleton instead.
+ */
 export default function Loading() {
   return (
-    <div className="py-3 md:py-12">
-      <div className="container-page">
-        {/* Title and intro */}
-        <div className="space-y-2 sm:space-y-4">
-          <Sk className="h-7 w-52 sm:h-10 sm:w-80" />
-          <Sk className="h-4 w-full max-w-lg" />
-        </div>
-
-        {/* Status chips: one row of 36px pills */}
-        <div className="-mx-4 mt-3 mb-3 flex gap-1.5 overflow-hidden px-4 sm:mx-0 sm:mt-8 sm:mb-6 sm:gap-2 sm:px-0">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Sk key={index} className="h-9 w-20 shrink-0 rounded-full sm:h-11 sm:w-28" />
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-3 lg:flex-row lg:gap-8">
-          {/* Filters bar on phones, the sidebar panel on desktop */}
-          <div className="w-full shrink-0 lg:w-80">
-            <Sk className="h-10 w-full rounded-full lg:h-[26rem] lg:rounded-[1.75rem]" />
+    <MorphLoading detail={{ apartment: <ApartmentDetailLoading /> }}>
+      <div className="py-3 md:py-12">
+        <div className="container-page">
+          {/* Title and intro */}
+          <div className="space-y-2 sm:space-y-4">
+            <Sk className="h-7 w-52 sm:h-10 sm:w-80" />
+            <Sk className="h-4 w-full max-w-lg" />
           </div>
 
-          <div className="min-w-0 flex-1">
-            <Sk className="mb-2 h-3 w-24 sm:hidden" />
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-6">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <ApartmentCardSkeleton key={index} />
-              ))}
+          {/* Status chips: one row of 36px pills */}
+          <div className="-mx-4 mt-3 mb-3 flex gap-1.5 overflow-hidden px-4 sm:mx-0 sm:mt-8 sm:mb-6 sm:gap-2 sm:px-0">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Sk key={index} className="h-9 w-20 shrink-0 rounded-full sm:h-11 sm:w-28" />
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:gap-8">
+            {/* Filters bar on phones, the sidebar panel on desktop */}
+            <div className="w-full shrink-0 lg:w-80">
+              <Sk className="h-10 w-full rounded-full lg:h-[26rem] lg:rounded-[1.75rem]" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <Sk className="mb-2 h-3 w-24 sm:hidden" />
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-6">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <ApartmentCardSkeleton key={index} />
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </MorphLoading>
   )
 }

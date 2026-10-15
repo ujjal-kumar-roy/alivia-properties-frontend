@@ -925,6 +925,11 @@
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
 
 /* ── Eye-catching CTA pills (Be a Supplier / Be an Investor) ───────────────── */
 /* A diagonal light band that sweeps across the pill periodically. */
@@ -1905,6 +1910,26 @@ html[data-nav-traverse]:active-view-transition .vt-page {
 ::view-transition-new(.morph) {
   height: 100%;
   object-fit: cover;
+}
+/* The flight from the card (the placeholder adds `morph-in`). Snapshots are
+   unclipped rectangles, so the pair is clipped to corners that go from the
+   card photo's to the hero's: a rounded phone thumbnail into the square
+   full-bleed hero, the rounded top of a tablet card into the rounded stage. */
+::view-transition-image-pair(.morph-in) {
+  --morph-from-radius: 0.75rem;
+  --morph-to-radius: 0;
+  overflow: clip;
+  animation: morph-corners 360ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+@media (width >= 40rem) {
+  ::view-transition-image-pair(.morph-in) {
+    --morph-from-radius: 1.5rem 1.5rem 0 0;
+    --morph-to-radius: 1.5rem;
+  }
+}
+@keyframes morph-corners {
+  from { border-radius: var(--morph-from-radius); }
+  to { border-radius: var(--morph-to-radius); }
 }
 
 /* Persistent chrome and fixed overlays hold still above the sliding pages.
