@@ -256,13 +256,20 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
 
         <div className="mt-8 grid gap-10 sm:mt-10 lg:mt-14 lg:gap-14">
           <ProductDetails product={product} supplier={supplier} serviceMode={serviceMode} />
+          {/* Only the hero morphs: rail cards whose slugs were on the previous page would pair with old photos. */}
           <ProductRail
             title={serviceMode ? "Similar services" : "Similar products"}
             href={ROUTES.MARKETPLACE_CATEGORY(product.categorySlug)}
             products={similar}
+            morph={false}
           />
           {supplier && supplierHref ? (
-            <ProductRail title={`More from ${supplier.name}`} href={supplierHref} products={fromSeller} />
+            <ProductRail
+              title={`More from ${supplier.name}`}
+              href={supplierHref}
+              products={fromSeller}
+              morph={false}
+            />
           ) : null}
           <RecentlyViewedRail excludeSlug={product.slug} />
         </div>
