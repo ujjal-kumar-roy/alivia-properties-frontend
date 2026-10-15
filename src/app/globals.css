@@ -1789,3 +1789,89 @@ html[data-action-bar="true"] body {
   from { opacity: 0; transform: translateY(0.9rem); filter: blur(6px); }
   to { opacity: 1; transform: none; filter: none; }
 }
+
+/* ── Page navigation (View Transitions) ──────────────────────────────────────
+   Customer-facing routes are wrapped in <PageTransition>
+   (src/components/layout/page-transition.tsx): on a route change the old page
+   exits and the new one enters with the `page-nav` class. Direction comes from
+   <html data-nav-dir="forward|back|none">, set by the same component from the
+   click / popstate that started the navigation. Forward: the new page slides
+   in 24px from the right while fading in, the old page fades. Back: the new
+   page comes from the left. "none" (into a dashboard/auth route, or after the
+   browser's own swipe-back animation) swaps instantly. */
+::view-transition-old(.page-nav) {
+  animation: 220ms cubic-bezier(0.25, 1, 0.5, 1) both page-nav-out;
+}
+::view-transition-new(.page-nav) {
+  --page-nav-shift: 24px;
+  animation: 300ms cubic-bezier(0.25, 1, 0.5, 1) both page-nav-in;
+}
+html[data-nav-dir="back"]::view-transition-new(.page-nav) {
+  --page-nav-shift: -24px;
+}
+html:not([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-old(.page-nav) {
+  display: none;
+}
+html:not([data-nav-dir="forward"], [data-nav-dir="back"])::view-transition-new(.page-nav) {
+  animation: none;
+}
+@keyframes page-nav-in {
+  from { opacity: 0; translate: var(--page-nav-shift) 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes page-nav-out {
+  to { opacity: 0; }
+}
+
+/* Chrome outside the page boundary holds still. It only gets a
+   view-transition-name while a transition runs: a permanent name would make it
+   a backdrop root and flatten the glass blur of its children. Its group never
+   animates and sits above the sliding pages; old + new is an instant swap, and
+   chrome that exists on one side only fades with the page. */
+html:active-view-transition .vt-site-header {
+  view-transition-name: site-header;
+}
+html:active-view-transition .vt-chat-launcher {
+  view-transition-name: chat-launcher;
+}
+::view-transition-group(site-header),
+::view-transition-group(chat-launcher) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header),
+::view-transition-old(chat-launcher) {
+  display: none;
+}
+::view-transition-new(site-header),
+::view-transition-new(chat-launcher) {
+  animation: none;
+}
+::view-transition-old(site-header):only-child,
+::view-transition-old(chat-launcher):only-child {
+  display: block;
+  animation: 220ms cubic-bezier(0.25, 1, 0.5, 1) both page-nav-out;
+}
+::view-transition-new(site-header):only-child,
+::view-transition-new(chat-launcher):only-child {
+  animation: 300ms cubic-bezier(0.25, 1, 0.5, 1) both page-nav-out reverse;
+}
+
+/* Everything else (footer, page background) is not part of a page snapshot:
+   swap it instantly instead of the browser's default whole-page crossfade. */
+html[data-nav-dir]::view-transition-old(root) {
+  display: none;
+}
+html[data-nav-dir]::view-transition-new(root) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-image-pair(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

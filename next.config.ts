@@ -1,6 +1,11 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // React <ViewTransition> on route navigations: app-like page transitions on
+    // customer-facing routes (see src/components/layout/page-transition.tsx).
+    viewTransition: true,
+  },
   images: {
     // Next.js 16 blocks the image optimizer from fetching local IPs (localhost →
     // 127.0.0.1) by default. The MinIO object store runs on localhost:9000 in dev,

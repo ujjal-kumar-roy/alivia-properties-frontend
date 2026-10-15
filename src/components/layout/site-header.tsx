@@ -106,7 +106,7 @@ export function SiteHeader() {
           main bar stays, with no height changes and so no layout shift. */}
       <AutoHideHeader
         as="header"
-        className="sticky top-0 z-50 w-full md:-top-11 [overflow-anchor:none]"
+        className="vt-site-header sticky top-0 z-50 w-full md:-top-11 [overflow-anchor:none]"
       >
         {/* Top info strip */}
         <div className="hidden bg-linear-to-r from-brand-900 to-brand-800 md:block">

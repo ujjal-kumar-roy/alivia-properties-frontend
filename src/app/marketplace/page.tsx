@@ -486,7 +486,7 @@ export default async function MarketplacePage({
       <AutoHideHeader
         as="section"
         aria-label="Marketplace search and account"
-        className="sticky top-0 z-30 pb-2 pt-1 xl:border-b xl:border-border/60 xl:bg-white/95 xl:p-0 xl:backdrop-blur xl:supports-backdrop-filter:bg-white/88"
+        className="vt-site-header sticky top-0 z-30 pb-2 pt-1 xl:border-b xl:border-border/60 xl:bg-white/95 xl:p-0 xl:backdrop-blur xl:supports-backdrop-filter:bg-white/88"
       >
         <div className="container-page max-w-373! xl:grid xl:grid-cols-[auto_11.5rem_minmax(0,1fr)_auto] xl:items-center xl:gap-4 xl:py-2.5">
           <Link

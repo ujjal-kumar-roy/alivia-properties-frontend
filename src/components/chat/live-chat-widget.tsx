@@ -63,7 +63,7 @@ export function LiveChatWidget() {
       edge="bottom"
       disabled={open}
       className={cn(
-        "fixed z-50",
+        "vt-chat-launcher fixed z-50",
         // Lifts above the mobile action bar (--bottom-bar-h is 0 when none is mounted).
         open
           ? "inset-x-4 bottom-[calc(1.25rem+var(--bottom-bar-h))] sm:inset-x-auto sm:right-5"
