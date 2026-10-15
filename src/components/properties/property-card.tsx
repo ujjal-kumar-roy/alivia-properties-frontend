@@ -1,3 +1,4 @@
+import { ViewTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowUpRight, Eye, House, MapPin, ShieldCheck, Star } from "lucide-react"
@@ -22,6 +23,12 @@ interface PropertyCardProps {
   layout?: "grid" | "list"
   /** Load the photo right away (first cards on a listing page). */
   eager?: boolean
+  /**
+   * Name the photo for the shared-element morph into the detail hero. A name must be
+   * unique on a page, so pass `false` where the same listing can appear twice
+   * (e.g. the similar-properties rail on its own detail page).
+   */
+  morphName?: boolean
 }
 
 // The card icon buttons keep the glass look (tint, rim, highlight) but skip the
@@ -38,7 +45,7 @@ const CARD_ICON_BUTTON =
  * The whole card is one link. Save and Compare are siblings of that link,
  * positioned over the thumbnail corner, so no button ever sits inside the anchor.
  */
-export function PropertyCard({ property: p, layout = "grid", eager = false }: PropertyCardProps) {
+export function PropertyCard({ property: p, layout = "grid", eager = false, morphName = true }: PropertyCardProps) {
   const isRent = p.purpose === "rent"
   const isList = layout === "list"
   const href = ROUTES.PROPERTY_DETAIL(p.slug)
@@ -52,12 +59,29 @@ export function PropertyCard({ property: p, layout = "grid", eager = false }: Pr
   const views = p.viewCount ?? 0
   const hasBadge = Boolean(p.isFeatured || p.isVerified)
 
+  const photo = cover ? (
+    <Image
+      src={cover}
+      alt=""
+      fill
+      sizes={
+        isList
+          ? "(min-width: 768px) 320px, (min-width: 640px) 208px, 100px"
+          : "(min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 640px) 46vw, 100px"
+      }
+      loading={eager ? "eager" : undefined}
+      placeholder="blur"
+      blurDataURL={CARD_BLUR_DATA_URL}
+      className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+    />
+  ) : null
+
   return (
     <article
       data-card
       className={cn(
         "group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) transition-[translate,scale,box-shadow] duration-200",
-        "has-[a:active]:scale-[0.99] sm:rounded-3xl sm:hover:-translate-y-1 sm:hover:shadow-(--shadow-elevated)",
+        "has-[a:active]:scale-[0.98] sm:rounded-3xl sm:hover:-translate-y-1 sm:hover:shadow-(--shadow-elevated)",
         "motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:has-[a:active]:scale-100",
       )}
     >
@@ -78,20 +102,11 @@ export function PropertyCard({ property: p, layout = "grid", eager = false }: Pr
           )}
         >
           {cover ? (
-            <Image
-              src={cover}
-              alt=""
-              fill
-              sizes={
-                isList
-                  ? "(min-width: 768px) 320px, (min-width: 640px) 208px, 100px"
-                  : "(min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 640px) 46vw, 100px"
-              }
-              loading={eager ? "eager" : undefined}
-              placeholder="blur"
-              blurDataURL={CARD_BLUR_DATA_URL}
-              className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-            />
+            morphName ? (
+              <ViewTransition name={`property-${p.slug}`}>{photo}</ViewTransition>
+            ) : (
+              photo
+            )
           ) : (
             <div className="flex h-full w-full items-center justify-center text-brand-200">
               <House aria-hidden="true" className="size-8 sm:size-10" />

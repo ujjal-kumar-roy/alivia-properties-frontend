@@ -38,7 +38,7 @@ export function CompareButton({ property, className, variant = "plain" }: Compar
               added ? "!border-brand-700 !bg-brand-700 text-white" : "text-ink-700",
             )
           : cn(
-              "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-colors",
+              "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-[color,background-color,scale] active:scale-90 motion-reduce:active:scale-100",
               added
                 ? "bg-brand-50 text-brand-600 hover:bg-brand-100"
                 : "bg-muted text-muted-foreground hover:text-brand-600",

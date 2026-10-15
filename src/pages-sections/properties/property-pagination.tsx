@@ -2,7 +2,10 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
+import { haptic } from "@/lib/celebrate"
+import { springs } from "@/lib/motion"
 import { useCallback } from "react"
 
 interface PropertyPaginationProps {
@@ -19,6 +22,7 @@ export function PropertyPagination({ page, totalPages }: PropertyPaginationProps
     (p: number) => {
       const params = new URLSearchParams(searchParams.toString())
       params.set("page", String(p))
+      haptic("tap")
       router.push(`${pathname}?${params.toString()}`)
     },
     [router, pathname, searchParams],
@@ -63,7 +67,7 @@ export function PropertyPagination({ page, totalPages }: PropertyPaginationProps
           type="button"
           onClick={() => goTo(page - 1)}
           disabled={page <= 1}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ink-500 hover:bg-ink-50 disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ink-500 transition-[background-color,scale] hover:bg-ink-50 active:scale-90 disabled:opacity-40 motion-reduce:active:scale-100"
           aria-label="Previous page"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -77,13 +81,20 @@ export function PropertyPagination({ page, totalPages }: PropertyPaginationProps
             aria-label={`Page ${p}`}
             aria-current={p === page ? "page" : undefined}
             className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-lg border text-xs font-medium transition-colors",
+              "relative flex h-9 w-9 items-center justify-center rounded-lg border text-xs font-medium transition-[color,background-color,scale] active:scale-90 motion-reduce:active:scale-100",
               p === page
-                ? "border-brand-600 bg-brand-600 text-white"
+                ? "border-brand-600 text-white"
                 : "border-border text-ink-700 hover:bg-ink-50",
             )}
           >
-            {p}
+            {p === page && (
+              <motion.span
+                layoutId="properties-page-pill"
+                transition={springs.move}
+                className="absolute -inset-px rounded-lg bg-brand-600"
+              />
+            )}
+            <span className="relative z-10">{p}</span>
           </button>
         ))}
 
@@ -91,7 +102,7 @@ export function PropertyPagination({ page, totalPages }: PropertyPaginationProps
           type="button"
           onClick={() => goTo(page + 1)}
           disabled={page >= totalPages}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ink-500 hover:bg-ink-50 disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ink-500 transition-[background-color,scale] hover:bg-ink-50 active:scale-90 disabled:opacity-40 motion-reduce:active:scale-100"
           aria-label="Next page"
         >
           <ChevronRight className="h-4 w-4" />

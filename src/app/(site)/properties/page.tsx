@@ -7,7 +7,7 @@ import { PropertyCard } from "@/components/properties/property-card"
 import { FilterSidebar } from "@/components/properties/filter-sidebar"
 import { EmptyState } from "@/components/common/empty-state"
 import { Home, X } from "lucide-react"
-import { PropertiesToolbar } from "@/pages-sections/properties/properties-toolbar"
+import { PropertiesToolbar, PropertyResultsItem } from "@/pages-sections/properties/properties-toolbar"
 import { CompareFloatBar } from "@/components/properties/compare-float-bar"
 import { PropertyPagination } from "@/pages-sections/properties/property-pagination"
 import { RecentSearchRecorder } from "@/components/properties/recent-search-recorder"
@@ -113,7 +113,7 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
       <div className="section-y pt-2 sm:pt-10">
         <div className="container-page">
           {/* Phones: title and count on one row, then the quick filters. */}
-          <div className="mb-3 sm:hidden">
+          <div className="enter-cascade mb-3 sm:hidden">
             <div className="flex items-baseline justify-between gap-3">
               <h1 className="font-heading text-xl font-bold leading-tight tracking-tight text-brand-950">
                 Properties
@@ -158,7 +158,7 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
           </div>
 
           {/* Tablet and up: the original directory header. */}
-          <div className="mb-8 hidden gap-5 sm:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+          <div className="enter-cascade mb-8 hidden gap-5 sm:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div>
               <p className="eyebrow-pill">Property Directory</p>
               <h1 className="mt-4 text-h1 text-balance max-w-4xl">Scan Dhaka-area listings faster, without losing trust cues.</h1>
@@ -223,11 +223,17 @@ export default async function PropertiesPage({ searchParams }: PropertiesPagePro
               ) : (
                 <>
                   <h2 className="sr-only">Property listings</h2>
-                  <div className={`mt-3 sm:mt-5 ${activeView === "list" ? "grid grid-cols-1 gap-2.5 sm:gap-5" : "grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3"}`}>
+                  {/* Items are a client wrapper so a view toggle or a filter change glides cards to their new spot. */}
+                  <div
+                    className={`mt-3 sm:mt-5 ${activeView === "list" ? "grid grid-cols-1 gap-2.5 sm:gap-5" : "grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3"}`}
+                  >
                     {properties.map((p, i) => (
-                      <div key={p.id} className="reveal min-w-0">
-                        <PropertyCard property={p} layout={activeView} eager={i < 3} />
-                      </div>
+                      <PropertyResultsItem key={p.id}>
+                        {/* .reveal sets its own transform, so it sits inside the layout item. */}
+                        <div className="reveal">
+                          <PropertyCard property={p} layout={activeView} eager={i < 3} />
+                        </div>
+                      </PropertyResultsItem>
                     ))}
                   </div>
                 </>

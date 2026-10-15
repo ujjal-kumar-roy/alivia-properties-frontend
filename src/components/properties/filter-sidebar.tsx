@@ -258,9 +258,9 @@ export function FilterFields({
         />
         <span
           aria-hidden="true"
-          className="flex size-5 shrink-0 items-center justify-center rounded-md border border-ink-300 bg-white transition-colors peer-checked:border-brand-700 peer-checked:bg-brand-700 peer-checked:[&_span]:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-300"
+          className="flex size-5 shrink-0 items-center justify-center rounded-md border border-ink-300 bg-white transition-colors peer-checked:border-brand-700 peer-checked:bg-brand-700 peer-checked:[&_span]:scale-100 peer-checked:[&_span]:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-300"
         >
-          <span className="size-2 rounded-sm bg-white opacity-0 transition-opacity" />
+          <span className="size-2 scale-50 rounded-sm bg-white opacity-0 transition-[opacity,scale] duration-200 motion-reduce:transition-none" />
         </span>
         <BadgeCheck aria-hidden="true" className="size-4 text-brand-600" />
         <span className="text-sm font-medium">Verified listings only</span>

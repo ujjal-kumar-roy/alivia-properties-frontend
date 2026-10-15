@@ -1,11 +1,13 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useState, type ReactNode } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
+import { motion } from "motion/react"
 import { ArrowUpDown, Check, LayoutGrid, List, RotateCcw, SlidersHorizontal } from "lucide-react"
 import { GlassSheet } from "@/components/common/glass-sheet"
 import { FilterFields, countActiveFilters, useAreaDraft } from "@/components/properties/filter-sidebar"
 import { haptic } from "@/lib/celebrate"
+import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 const SORT_OPTIONS = [
@@ -14,6 +16,20 @@ const SORT_OPTIONS = [
   { value: "price-desc", label: "Price: high to low", short: "Price high" },
   { value: "size-desc", label: "Largest first", short: "Largest" },
 ]
+
+/**
+ * One result slot. The server page owns the data and the cards; this thin
+ * client wrapper only exists so each slot can animate its layout. `layout="position"` glides it to its new spot when the grid
+ * switches to the list view or the filters reorder the results, without
+ * stretching the card's photo mid-flight. Entry is left to the `.reveal` inside.
+ */
+export function PropertyResultsItem({ children }: { children: ReactNode }) {
+  return (
+    <motion.div layout="position" transition={springs.move} className="min-w-0">
+      {children}
+    </motion.div>
+  )
+}
 
 export function PropertiesToolbar({ total }: { total: number }) {
   const router = useRouter()
@@ -85,30 +101,37 @@ export function PropertiesToolbar({ total }: { total: number }) {
         <div className="flex items-center gap-2">
           {filtersButton("lg:hidden")}
           <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-            <button
-              type="button"
-              onClick={() => push({ view: "grid" })}
-              aria-label="Grid view"
-              aria-pressed={view === "grid"}
-              className={cn(
-                "flex size-8 items-center justify-center rounded-md transition-colors",
-                view === "grid" ? "bg-brand-600 text-white" : "text-ink-500 hover:text-ink-800",
-              )}
-            >
-              <LayoutGrid aria-hidden="true" className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => push({ view: "list" })}
-              aria-label="List view"
-              aria-pressed={view === "list"}
-              className={cn(
-                "flex size-8 items-center justify-center rounded-md transition-colors",
-                view === "list" ? "bg-brand-600 text-white" : "text-ink-500 hover:text-ink-800",
-              )}
-            >
-              <List aria-hidden="true" className="h-3.5 w-3.5" />
-            </button>
+            {(
+              [
+                { id: "grid", label: "Grid view", Icon: LayoutGrid },
+                { id: "list", label: "List view", Icon: List },
+              ] as const
+            ).map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  if (view === id) return
+                  haptic("tap")
+                  push({ view: id })
+                }}
+                aria-label={label}
+                aria-pressed={view === id}
+                className={cn(
+                  "relative flex size-8 items-center justify-center rounded-md transition-colors active:scale-90 motion-reduce:active:scale-100",
+                  view === id ? "text-white" : "text-ink-500 hover:text-ink-800",
+                )}
+              >
+                {view === id && (
+                  <motion.span
+                    layoutId="properties-view-pill"
+                    transition={springs.move}
+                    className="absolute inset-0 rounded-md bg-brand-600"
+                  />
+                )}
+                <Icon aria-hidden="true" className="relative z-10 h-3.5 w-3.5" />
+              </button>
+            ))}
           </div>
 
           <div className="relative flex items-center gap-1.5 rounded-lg border border-border pl-2.5 pr-1 text-xs text-ink-700">

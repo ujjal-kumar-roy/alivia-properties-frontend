@@ -25,7 +25,7 @@ export function SaveButton({ propertyId, className, variant = "plain" }: SaveBut
   function onClick(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault()
     if (!saved) setPopKey((k) => k + 1)
-    haptic("tap")
+    haptic(saved ? "tap" : "success")
     void toggle()
   }
 
@@ -39,7 +39,7 @@ export function SaveButton({ propertyId, className, variant = "plain" }: SaveBut
         variant === "glass"
           ? "btn-glass size-9 min-h-9 min-w-9 shrink-0 !p-0 text-ink-700"
           : cn(
-              "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-colors",
+              "flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-[color,background-color,scale] active:scale-90 motion-reduce:active:scale-100",
               saved
                 ? "bg-red-50 text-red-500 hover:bg-red-100"
                 : "bg-muted text-muted-foreground hover:text-red-400",
