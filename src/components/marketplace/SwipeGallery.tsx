@@ -1,8 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react"
-import { ViewTransition } from "react"
-import { motion } from "motion/react"
+import { useCallback, useEffect, useId, useRef, useState, ViewTransition, type ReactNode } from "react"
+import { AnimatePresence, motion } from "motion/react"
 import { ChevronLeft, ChevronRight, ExternalLink, ImageIcon, Play } from "lucide-react"
 
 import { MediaImage } from "@/components/marketplace/MediaImage"
@@ -221,15 +220,18 @@ export function SwipeGallery({
         {count > 1 ? (
           <>
             <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold tabular-nums text-white backdrop-blur-sm sm:right-3 sm:top-3">
-              <motion.span
-                key={active}
-                className="inline-block"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={springs.snappy}
-              >
-                {active + 1}
-              </motion.span>{" "}
+              {/* initial={false}: the first number is plain server markup; only changes animate. */}
+              <AnimatePresence initial={false}>
+                <motion.span
+                  key={active}
+                  className="inline-block"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={springs.snappy}
+                >
+                  {active + 1}
+                </motion.span>
+              </AnimatePresence>{" "}
               / {count}
             </span>
             <div
@@ -291,32 +293,39 @@ export function SwipeGallery({
                 aria-current={index === active ? "true" : undefined}
                 onClick={() => goTo(index)}
                 className={cn(
-                  "relative size-14 shrink-0 overflow-hidden rounded-lg border-2 border-transparent transition-[opacity,scale] duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 motion-reduce:transition-none motion-reduce:active:scale-100",
-                  thumbTone === "dark" ? "bg-ink-900" : "bg-ink-50",
+                  "relative size-14 shrink-0 rounded-lg transition-[opacity,scale] duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 motion-reduce:transition-none motion-reduce:active:scale-100",
                   index !== active && "opacity-70 hover:opacity-100",
                 )}
               >
-                <MediaImage
-                  src={thumbSrc}
-                  alt=""
-                  fill
-                  unoptimized={unoptimized}
-                  sizes="56px"
-                  className="object-cover"
-                  fallback={<span className="absolute inset-0 bg-brand-100" />}
-                />
-                {slide.kind === "video" ? (
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/35">
-                    <Play aria-hidden="true" className="size-4 fill-white text-white" />
-                  </span>
-                ) : null}
+                {/* Clipping lives on this inner box so the sliding ring below can travel between thumbs. */}
+                <span
+                  className={cn(
+                    "absolute inset-0 overflow-hidden rounded-lg",
+                    thumbTone === "dark" ? "bg-ink-900" : "bg-ink-50",
+                  )}
+                >
+                  <MediaImage
+                    src={thumbSrc}
+                    alt=""
+                    fill
+                    unoptimized={unoptimized}
+                    sizes="56px"
+                    className="object-cover"
+                    fallback={<span className="absolute inset-0 bg-brand-100" />}
+                  />
+                  {slide.kind === "video" ? (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+                      <Play aria-hidden="true" className="size-4 fill-white text-white" />
+                    </span>
+                  ) : null}
+                </span>
                 {index === active ? (
                   <motion.span
                     layoutId={`${ringId}-thumb-ring`}
                     transition={springs.move}
                     aria-hidden="true"
                     className={cn(
-                      "pointer-events-none absolute inset-0 rounded-[0.4rem] border-2",
+                      "pointer-events-none absolute inset-0 rounded-lg border-2",
                       thumbTone === "dark" ? "border-gold-300" : "border-brand-600",
                     )}
                   />
