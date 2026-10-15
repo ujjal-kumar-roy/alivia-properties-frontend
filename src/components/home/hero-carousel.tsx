@@ -15,6 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { HeroScene } from "@/components/home/hero-scene";
 import { ROUTES } from "@/config/routes.config";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { resolveHeroIcon } from "@/lib/hero-icons";
@@ -323,11 +324,20 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
                 className="object-cover"
               />
             ) : null}
-            {/* Brand teal scrim: bottom-up for the copy, plus a left wash for legibility */}
-            <div className="absolute inset-0 bg-linear-to-t from-brand-950/92 via-brand-950/55 to-brand-950/25" />
-            <div className="absolute inset-0 bg-linear-to-r from-brand-950/70 via-brand-950/10 to-transparent" />
           </div>
         ))}
+        {/* WebGL layer over the photos (same images, with depth + transitions).
+            Never mounted under reduced motion; fades out whenever it can't show. */}
+        {!reduced && (
+          <HeroScene
+            images={SLIDES.map((s) => s.image)}
+            index={index}
+            still={userPaused}
+          />
+        )}
+        {/* Brand teal scrim: bottom-up for the copy, plus a left wash for legibility */}
+        <div className="absolute inset-0 bg-linear-to-t from-brand-950/92 via-brand-950/55 to-brand-950/25" />
+        <div className="absolute inset-0 bg-linear-to-r from-brand-950/70 via-brand-950/10 to-transparent" />
       </div>
 
       <div className="container-page max-w-373! relative z-10 pb-16 pt-8 sm:py-20 md:py-28">
@@ -341,7 +351,7 @@ export function HeroCarousel({ slides }: { slides?: HeroSlide[] } = {}) {
             role="group"
             aria-roledescription="slide"
             aria-label={`Slide ${index + 1} of ${count}`}
-            className="animate-in fade-in-0 slide-in-from-bottom-3 duration-500 ease-out motion-reduce:animate-none"
+            className="hero-copy"
           >
             {active.eyebrow ? (
               <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] text-white backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-xs sm:tracking-[0.16em]">
