@@ -4,6 +4,7 @@ import Link from "next/link"
 import { AnimatePresence, motion } from "motion/react"
 import { ArrowUp, CircleAlert } from "lucide-react"
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -22,8 +23,7 @@ import {
   ProductRowSkeleton,
 } from "@/components/marketplace/category/ResultSkeletons"
 import { MarketplaceProductCard } from "@/components/marketplace/MarketplaceProductCard"
-import { useListingLayout } from "@/hooks/use-listing-layout"
-import { cn } from "@/lib/utils"
+import { useListingLayout, type ListingLayout } from "@/hooks/use-listing-layout"
 import type { Paginated } from "@/services/http-client"
 import type { ProductWithSupplier } from "@/services/marketplace.service"
 
@@ -41,7 +41,7 @@ type ProductResultsProps = {
 }
 
 /**
- * Category product results: grid (MarketplaceProductCard, 2 to 5 columns) or
+ * Category product results: grid (MarketplaceProductCard, 2/3/4/6 columns) or
  * dense list (ProductRow), following the toolbar's layout toggle, with
  * infinite loading. The first page arrives from the server and renders exactly
  * as the server markup, so hydration matches; later pages come from a Server
@@ -101,10 +101,11 @@ function ProductFeed({
   }, [])
 
   const remaining = Math.max(0, feed.total - feed.items.length)
+  // 12 grid tiles are whole rows at 2, 3, 4 and 6 columns (pages are 24).
   const skeletonCount = feed.status === "loading" ? Math.min(remaining || 1, layout === "grid" ? 12 : 4) : 0
 
   return (
-    <div id="category-results" className={RESULTS_WRAPPER_CLASS}>
+    <div id={RESULTS_ID} className={RESULTS_WRAPPER_CLASS}>
       {/* Grid <-> list is a plain crossfade (90ms out, 90ms in), never a
           per-card layout animation: lists here run to hundreds of items. */}
       <AnimatePresence mode="wait" initial={false}>
@@ -118,21 +119,10 @@ function ProductFeed({
           className={layout === "grid" ? PRODUCT_GRID_CLASS : PRODUCT_LIST_CLASS}
         >
           {feed.items.map((product) => (
-            <li key={product.id} data-id={product.id} className="min-w-0">
-              {layout === "grid" ? (
-                <MarketplaceProductCard product={product} className="h-full" />
-              ) : (
-                <ProductRow product={product} />
-              )}
-            </li>
+            <ProductItem key={product.id} product={product} layout={layout} />
           ))}
           {Array.from({ length: skeletonCount }, (_, index) => (
-            <li
-              key={`skeleton-${index}`}
-              aria-hidden="true"
-              // 12 tiles fill whole rows at 2, 3 and 4 columns; 10 at 5.
-              className={cn("min-w-0", index >= 10 && "xl:hidden")}
-            >
+            <li key={`skeleton-${index}`} aria-hidden="true" className="min-w-0">
               {layout === "grid" ? <ProductCardSkeleton className="h-full" /> : <ProductRowSkeleton />}
             </li>
           ))}
@@ -143,6 +133,29 @@ function ProductFeed({
     </div>
   )
 }
+
+/**
+ * One result. Memoised: appending a page (and its loading/idle renders) must
+ * not re-render the hundred-odd cards already on screen. Loaded items keep
+ * their object identity across appends, so the shallow compare holds.
+ */
+const ProductItem = memo(function ProductItem({
+  product,
+  layout,
+}: {
+  product: ProductWithSupplier
+  layout: ListingLayout
+}) {
+  return (
+    <li data-id={product.id} className="min-w-0">
+      {layout === "grid" ? (
+        <MarketplaceProductCard product={product} className="h-full" />
+      ) : (
+        <ProductRow product={product} />
+      )}
+    </li>
+  )
+})
 
 function findAnchor(list: HTMLElement | null): { id: string; top: number } | null {
   if (!list) return null
@@ -160,7 +173,8 @@ function findAnchor(list: HTMLElement | null): { id: string; top: number } | nul
 
 // ─── Shared infinite-results machinery (also used by SupplierResults) ────────
 
-/** The wrapper the toolbar flags with aria-busy while new results render. */
+/** The results wrapper; the toolbar sets aria-busy on it while new results render. */
+export const RESULTS_ID = "category-results"
 export const RESULTS_WRAPPER_CLASS =
   "transition-opacity duration-150 ease-(--ease-out) aria-busy:opacity-55"
 
@@ -265,6 +279,8 @@ export type ResultsFeed<T> = {
   hasMore: boolean
   /** Pages shown, counting the server's. Above 1 the end of the list gets a note. */
   pagesLoaded: number
+  /** The list began at `?page=n` (no-JS fallback), so earlier pages are not in it. */
+  startedMidway: boolean
   moreHref: string | null
   softRetry: boolean
   announcement: string
@@ -351,19 +367,37 @@ export function useResultsFeed<T extends { id: string }>({
 
   // Preload: watch a sentinel below the list. Re-created after every page, so
   // a short page that leaves the sentinel in range triggers the next load too.
-  // Paused while loading and after an error (no silent retry loops).
+  // Paused while loading and after an error (no silent retry loops), and while
+  // the toolbar has the list aria-busy: a page fetched for the outgoing query
+  // would be thrown away. When the flag clears (a cancelled navigation), the
+  // sentinel is re-observed, which reports its position straight away.
   const canAutoLoad = status === "idle" && hasMore
   useEffect(() => {
     const sentinel = sentinelRef.current
     if (!sentinel || !canAutoLoad || typeof IntersectionObserver === "undefined") return
+    const host = document.getElementById(RESULTS_ID)
+    const busy = () => host?.getAttribute("aria-busy") === "true"
     const observer = new IntersectionObserver(
       (entries) => {
+        if (busy()) return
         if (entries.some((entry) => entry.isIntersecting)) void loadMore("auto")
       },
       { rootMargin: PRELOAD_MARGIN },
     )
     observer.observe(sentinel)
-    return () => observer.disconnect()
+    let watcher: MutationObserver | null = null
+    if (host && typeof MutationObserver !== "undefined") {
+      watcher = new MutationObserver(() => {
+        if (busy()) return
+        observer.unobserve(sentinel)
+        observer.observe(sentinel)
+      })
+      watcher.observe(host, { attributes: true, attributeFilter: ["aria-busy"] })
+    }
+    return () => {
+      observer.disconnect()
+      watcher?.disconnect()
+    }
   }, [canAutoLoad, loadMore, sentinelRef])
 
   // Entrance for each appended batch, before paint: fade + 8px rise, 220ms,
@@ -433,6 +467,7 @@ export function useResultsFeed<T extends { id: string }>({
     status,
     hasMore,
     pagesLoaded: page - initialPage + 1,
+    startedMidway: initialPage > 1,
     moreHref: nextHref && hasMore ? (page === initialPage ? nextHref : hrefForPage(nextHref, page + 1)) : null,
     softRetry: state.failures < MAX_SOFT_RETRIES,
     announcement,
@@ -442,6 +477,18 @@ export function useResultsFeed<T extends { id: string }>({
 
 const FOOTER_BUTTON =
   "inline-flex min-h-11 min-w-44 items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-5 text-sm font-semibold text-ink-800 [-webkit-tap-highlight-color:transparent] transition-[background-color,border-color,scale,opacity] duration-140 ease-(--ease-out) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 active:scale-[0.97] aria-disabled:pointer-events-none aria-disabled:opacity-60 motion-reduce:active:scale-100 [@media(hover:hover)_and_(pointer:fine)]:hover:border-ink-300 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-ink-50"
+
+/** New-tab / new-window gestures stay with the browser (the link opens `?page=n`). */
+function isPlainClick(event: MouseEvent) {
+  return !(
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  )
+}
 
 /** A click from Enter/Space reports no pointer presses. */
 function trigger(event: MouseEvent): LoadTrigger {
@@ -479,7 +526,7 @@ export function ResultsFooter<T>({
   const onMore = (event: MouseEvent<HTMLAnchorElement>) => {
     // Retries that keep failing fall through to the link: a full page load
     // of `?page=n` still works when the Server Function does not.
-    if (status === "error" && !feed.softRetry) return
+    if (!isPlainClick(event) || (status === "error" && !feed.softRetry)) return
     event.preventDefault()
     feed.loadMore(trigger(event))
   }
@@ -536,7 +583,8 @@ export function ResultsFooter<T>({
     body = (
       <div className="flex flex-col items-center gap-3">
         <p className="text-sm font-semibold text-ink-700">
-          You&apos;ve seen all {count(items.length)}
+          {/* Started at ?page=n: the earlier pages were never shown, so no total. */}
+          {feed.startedMidway ? "You’ve reached the end" : `You’ve seen all ${count(items.length)}`}
         </p>
         <button type="button" onClick={backToTop} className={FOOTER_BUTTON}>
           <ArrowUp aria-hidden="true" className="size-4" />

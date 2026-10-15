@@ -1,10 +1,11 @@
 "use client"
 
-import { useCallback, useRef } from "react"
+import { memo, useCallback, useRef } from "react"
 
 import { loadCategorySuppliers } from "@/app/marketplace/category/[slug]/actions"
 import {
   feedKey,
+  RESULTS_ID,
   RESULTS_WRAPPER_CLASS,
   ResultsFooter,
   useResultsFeed,
@@ -67,15 +68,14 @@ function SupplierFeed({
   const skeletonCount = feed.status === "loading" ? Math.min(remaining || 1, 3) : 0
 
   return (
-    <div id="category-results" className={RESULTS_WRAPPER_CLASS}>
+    <div id={RESULTS_ID} className={RESULTS_WRAPPER_CLASS}>
       <ul ref={listRef} className={SUPPLIER_LIST_CLASS}>
         {feed.items.map((supplier) => (
-          <li key={supplier.id} data-id={supplier.id} className="min-w-0">
-            <MarketplaceSupplierSummaryCard
-              supplier={supplier}
-              categorySlug={categorySlug ?? query.category}
-            />
-          </li>
+          <SupplierItem
+            key={supplier.id}
+            supplier={supplier}
+            categorySlug={categorySlug ?? query.category}
+          />
         ))}
         {Array.from({ length: skeletonCount }, (_, index) => (
           <li key={`skeleton-${index}`} aria-hidden="true" className="min-w-0">
@@ -88,3 +88,18 @@ function SupplierFeed({
     </div>
   )
 }
+
+/** One seller. Memoised so appending a page does not re-render the cards above. */
+const SupplierItem = memo(function SupplierItem({
+  supplier,
+  categorySlug,
+}: {
+  supplier: Supplier
+  categorySlug: string
+}) {
+  return (
+    <li data-id={supplier.id} className="min-w-0">
+      <MarketplaceSupplierSummaryCard supplier={supplier} categorySlug={categorySlug} />
+    </li>
+  )
+})

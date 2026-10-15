@@ -3,12 +3,15 @@ import { cn } from "@/lib/utils"
 /*
  * Placeholders for category results, shaped like the real grid card, list row
  * and seller card so nothing jumps when the content lands. Plain markup (no
- * client code), so a loading.tsx can use them too.
+ * client code), so a server loading.tsx could use them too.
  */
 
-/** Product grid: 2 columns on phones up to 5 on wide screens. */
+/**
+ * Product grid: 2 / 3 / 4 / 6 columns. Every step divides the 24-item page,
+ * so a paused or finished page never ends on a ragged row.
+ */
 export const PRODUCT_GRID_CLASS =
-  "grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-5"
+  "grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-6 lg:grid-cols-4 xl:grid-cols-6"
 /** Product list: dense rows split by hairlines. */
 export const PRODUCT_LIST_CLASS = "divide-y divide-ink-100"
 /** Sellers: one card per row (compact row on phones, wide card from md). */
@@ -85,49 +88,5 @@ export function SupplierCardSkeleton({ className }: { className?: string }) {
         <Bone className="h-10 rounded-xl" />
       </div>
     </div>
-  )
-}
-
-/**
- * A whole first-load placeholder for a results list (for a loading.tsx). The
- * infinite list renders its own tiles inline while it fetches the next page.
- */
-export function ResultsSkeleton({
-  kind = "grid",
-  count,
-}: {
-  kind?: "grid" | "list" | "suppliers"
-  count?: number
-}) {
-  if (kind === "suppliers") {
-    return (
-      <ul aria-hidden="true" className={SUPPLIER_LIST_CLASS}>
-        {Array.from({ length: count ?? 3 }, (_, index) => (
-          <li key={index}>
-            <SupplierCardSkeleton />
-          </li>
-        ))}
-      </ul>
-    )
-  }
-  if (kind === "list") {
-    return (
-      <ul aria-hidden="true" className={PRODUCT_LIST_CLASS}>
-        {Array.from({ length: count ?? 6 }, (_, index) => (
-          <li key={index}>
-            <ProductRowSkeleton />
-          </li>
-        ))}
-      </ul>
-    )
-  }
-  return (
-    <ul aria-hidden="true" className={PRODUCT_GRID_CLASS}>
-      {Array.from({ length: count ?? 10 }, (_, index) => (
-        <li key={index} className="min-w-0">
-          <ProductCardSkeleton />
-        </li>
-      ))}
-    </ul>
   )
 }

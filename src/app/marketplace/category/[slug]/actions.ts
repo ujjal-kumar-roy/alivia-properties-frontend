@@ -1,5 +1,10 @@
 "use server";
 
+import {
+  SEARCH_MAX_LENGTH,
+  sortOptionsFor,
+  type ListingView,
+} from "@/components/marketplace/category-filters";
 import type { Paginated } from "@/services/http-client";
 import {
   marketplaceService,
@@ -12,20 +17,18 @@ import type { Supplier } from "@/types/marketplace.types";
  * the server, so the browser never calls the API directly (no CORS) and the
  * request matches the one the page made for page 1.
  *
- * Server Functions are public POST endpoints, so every field is checked here.
- * The values are passed through, never "corrected": page 2 must use exactly
- * the sort, filter and search page 1 used, or the list would skip or repeat
- * items. A value of the wrong shape is rejected instead.
+ * Server Functions are public POST endpoints, so every field is checked here
+ * against what the page itself can send: the listing's sort whitelist, the two
+ * seller types, the page's search cap. Values are passed through, never
+ * "corrected": page 2 must use exactly the sort, filter and search page 1
+ * used, or the list would skip or repeat items. Anything else is rejected.
  */
 
 /** Must match the page's first-page size, or pages would overlap or skip. */
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 48;
 const MAX_PAGE = 10_000;
-const MAX_SEARCH_LENGTH = 200;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/i;
-/** `field:asc|desc`, as `sortToApi()` produces. The backend rejects unknown fields. */
-const SORT_PATTERN = /^[A-Za-z][A-Za-z0-9]{0,39}:(asc|desc)$/;
 
 type LoadInput = {
   category: string;
@@ -37,7 +40,7 @@ type LoadInput = {
   limit?: number;
 };
 
-function listParams(input: LoadInput) {
+function listParams(input: LoadInput, view: ListingView) {
   if (!input || typeof input !== "object") throw new Error("Invalid request");
   const { category, page, sort, kind, search, limit } = input;
 
@@ -47,35 +50,48 @@ function listParams(input: LoadInput) {
   if (!Number.isInteger(page) || page < 1 || page > MAX_PAGE) {
     throw new Error("Invalid page");
   }
-  if (sort !== undefined && (typeof sort !== "string" || !SORT_PATTERN.test(sort))) {
+  // Only the API orders this view's sort menu offers (what sortToApi() returns),
+  // so a public endpoint never asks the backend to order by an arbitrary field.
+  if (
+    sort !== undefined &&
+    !sortOptionsFor(view).some((option) => option.api === sort)
+  ) {
     throw new Error("Invalid sort");
   }
-  if (search !== undefined && typeof search !== "string") {
+  if (kind !== undefined && kind !== "SUPPLIER" && kind !== "SERVICE") {
+    throw new Error("Invalid kind");
+  }
+  if (
+    search !== undefined &&
+    (typeof search !== "string" || search.length > SEARCH_MAX_LENGTH)
+  ) {
     throw new Error("Invalid search");
   }
-  const size =
-    typeof limit === "number" && Number.isInteger(limit) && limit > 0
-      ? Math.min(limit, MAX_PAGE_SIZE)
-      : DEFAULT_PAGE_SIZE;
+  if (
+    limit !== undefined &&
+    (!Number.isInteger(limit) || limit < 1 || limit > MAX_PAGE_SIZE)
+  ) {
+    throw new Error("Invalid limit");
+  }
 
   return {
     category,
     page,
-    limit: size,
-    sort: sort || undefined,
-    kind: kind === "SUPPLIER" || kind === "SERVICE" ? kind : undefined,
-    search: search ? search.slice(0, MAX_SEARCH_LENGTH) : undefined,
+    limit: limit ?? DEFAULT_PAGE_SIZE,
+    sort,
+    kind,
+    search: search || undefined,
   };
 }
 
 export async function loadCategoryProducts(
   input: LoadInput,
 ): Promise<Paginated<ProductWithSupplier>> {
-  return marketplaceService.listProducts(listParams(input));
+  return marketplaceService.listProducts(listParams(input, "products"));
 }
 
 export async function loadCategorySuppliers(
   input: LoadInput,
 ): Promise<Paginated<Supplier>> {
-  return marketplaceService.listSuppliers(listParams(input));
+  return marketplaceService.listSuppliers(listParams(input, "suppliers"));
 }
