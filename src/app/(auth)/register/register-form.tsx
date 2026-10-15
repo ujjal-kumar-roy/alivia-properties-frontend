@@ -7,14 +7,14 @@ import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { FormSuccess } from "@/components/booking/form-success"
 import { ROUTES } from "@/config/routes.config"
 import { haptic } from "@/lib/celebrate"
 import { authService } from "@/services/auth.service"
 import { ApiError } from "@/services/http-client"
-import { ENTER_RISE, FIELD_MESSAGE, Reveal, SubmitLabel } from "../_components/auth-motion"
+import { FieldMessage, Reveal, SubmitLabel } from "../_components/auth-motion"
 
 const ROLES = ["seller", "buyer"] as const
 
@@ -84,11 +84,9 @@ export function RegisterForm() {
 
   if (success) {
     return (
-      <div className={ENTER_RISE}>
-        <FormSuccess title="Account created" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
-          Check your email to verify the account, then sign in.
-        </FormSuccess>
-      </div>
+      <FormSuccess title="Account created" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
+        Check your email to verify the account, then sign in.
+      </FormSuccess>
     )
   }
 
@@ -114,7 +112,7 @@ export function RegisterForm() {
               <FormControl>
                 <Input autoComplete="name" placeholder="Md. Rafiqul Islam" {...field} value={field.value ?? ""} />
               </FormControl>
-              <FormMessage className={FIELD_MESSAGE} />
+              <FieldMessage />
             </FormItem>
           )}
         />
@@ -128,7 +126,7 @@ export function RegisterForm() {
               <FormControl>
                 <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} value={field.value ?? ""} />
               </FormControl>
-              <FormMessage className={FIELD_MESSAGE} />
+              <FieldMessage />
             </FormItem>
           )}
         />
@@ -142,7 +140,7 @@ export function RegisterForm() {
               <FormControl>
                 <Input type="tel" autoComplete="tel" placeholder="01700-000000" {...field} value={field.value ?? ""} />
               </FormControl>
-              <FormMessage className={FIELD_MESSAGE} />
+              <FieldMessage />
             </FormItem>
           )}
         />
@@ -177,7 +175,7 @@ export function RegisterForm() {
                   ))}
                 </div>
               </FormControl>
-              <FormMessage className={FIELD_MESSAGE} />
+              <FieldMessage />
             </FormItem>
           )}
         />
@@ -192,7 +190,7 @@ export function RegisterForm() {
                 <FormControl>
                   <Input type="password" autoComplete="new-password" placeholder="Min 8 chars" {...field} value={field.value ?? ""} />
                 </FormControl>
-                <FormMessage className={FIELD_MESSAGE} />
+                <FieldMessage />
               </FormItem>
             )}
           />
@@ -205,7 +203,7 @@ export function RegisterForm() {
                 <FormControl>
                   <Input type="password" autoComplete="new-password" placeholder="Repeat password" {...field} value={field.value ?? ""} />
                 </FormControl>
-                <FormMessage className={FIELD_MESSAGE} />
+                <FieldMessage />
               </FormItem>
             )}
           />
@@ -227,7 +225,7 @@ export function RegisterForm() {
                   className="size-6 shrink-0 cursor-pointer rounded-md accent-brand-600"
                 />
               </FormControl>
-              <div className="min-w-0 space-y-1">
+              <div className="min-w-0">
                 <FormLabel className="block cursor-pointer text-[0.8125rem] font-normal leading-snug text-ink-700">
                   I agree to the{" "}
                   <Link href={ROUTES.TERMS} target="_blank" rel="noopener noreferrer" className={INLINE_LINK}>
@@ -238,7 +236,7 @@ export function RegisterForm() {
                     Privacy Policy
                   </Link>
                 </FormLabel>
-                <FormMessage className={FIELD_MESSAGE} />
+                <FieldMessage inGrid={false} />
               </div>
             </FormItem>
           )}

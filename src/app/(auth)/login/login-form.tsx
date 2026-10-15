@@ -7,7 +7,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/config/routes.config";
@@ -23,7 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { FIELD_MESSAGE, Reveal, SubmitLabel } from "../_components/auth-motion";
+import { FieldMessage, Reveal, SubmitLabel } from "../_components/auth-motion";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -137,7 +136,7 @@ export function LoginForm() {
                     value={field.value ?? ""}
                   />
                 </FormControl>
-                <FormMessage className={FIELD_MESSAGE} />
+                <FieldMessage />
               </FormItem>
             )}
           />
@@ -177,7 +176,7 @@ export function LoginForm() {
                     )}
                   </button>
                 </div>
-                <FormMessage className={FIELD_MESSAGE} />
+                <FieldMessage />
               </FormItem>
             )}
           />

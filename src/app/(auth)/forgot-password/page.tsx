@@ -7,13 +7,13 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { ArrowLeft } from "lucide-react"
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { FormSuccess } from "@/components/booking/form-success"
 import { ROUTES } from "@/config/routes.config"
 import { authService } from "@/services/auth.service"
 import { ApiError } from "@/services/http-client"
-import { ENTER_RISE, FIELD_MESSAGE, Reveal, SubmitLabel } from "../_components/auth-motion"
+import { FieldMessage, Reveal, SubmitLabel } from "../_components/auth-motion"
 
 const schema = z.object({ email: z.string().email("Invalid email address") })
 type Input = z.infer<typeof schema>
@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       {sent ? (
-        <div className={`space-y-3 ${ENTER_RISE}`}>
+        <div className="space-y-3">
           <FormSuccess title="Check your inbox" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
             If an account exists for that email, a reset link has been sent.
           </FormSuccess>
@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
                   <FormControl>
                     <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} value={field.value ?? ""} />
                   </FormControl>
-                  <FormMessage className={FIELD_MESSAGE} />
+                  <FieldMessage />
                 </FormItem>
               )}
             />

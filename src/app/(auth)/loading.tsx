@@ -3,7 +3,7 @@ import { Sk } from "@/components/common/skeletons"
 // Renders inside the auth layout's glass card, so it is only the card's content.
 export default function Loading() {
   return (
-    <div className="space-y-3.5" aria-busy="true">
+    <div className="animate-none! space-y-3.5" aria-busy="true">
       <div className="space-y-2 text-center">
         <Sk className="mx-auto h-6 w-40" />
         <Sk className="mx-auto h-4 w-56" />

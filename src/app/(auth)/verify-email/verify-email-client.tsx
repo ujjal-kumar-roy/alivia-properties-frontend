@@ -69,7 +69,7 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
 
   if (status === "verifying") {
     return (
-      <div className="flex flex-col items-center gap-2 py-4 text-center">
+      <div key="verifying" className="flex flex-col items-center gap-2 py-4 text-center">
         <Loader2 aria-hidden="true" className="size-9 animate-spin text-brand-600" />
         <h1 className="font-heading text-xl font-bold text-ink-900">Verifying your email…</h1>
         <p className="text-sm text-ink-600">This will only take a moment.</p>
@@ -79,7 +79,7 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
 
   if (status === "success") {
     return (
-      <div className={`space-y-3 ${ENTER_RISE}`}>
+      <div key="success" className="space-y-3">
         <h1 className="sr-only">Email verified</h1>
         <FormSuccess title="Email verified!" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
           Your Alivia Properties account is now active. You can sign in and start exploring.
@@ -93,7 +93,7 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
 
   // error or missing token → show explanation + resend form
   return (
-    <div className={`space-y-4 ${token ? ENTER_RISE : ""}`}>
+    <div key="error" className="space-y-4">
       <div className="flex flex-col items-center gap-1.5 text-center">
         <MailWarning aria-hidden="true" className="size-9 text-amber-500" />
         <h1 className="font-heading text-xl font-bold text-ink-900">
@@ -130,7 +130,7 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
             />
             <AnimatePresence initial={false}>
               {resendError && (
-                <Reveal key="resend-error">
+                <Reveal key="resend-error" wrapperClassName="-mt-1.5" className="pt-1.5">
                   <p id="resend-email-error" role="alert" className="text-[0.8125rem] font-medium text-destructive">
                     {resendError}
                   </p>
