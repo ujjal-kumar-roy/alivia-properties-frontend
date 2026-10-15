@@ -38,8 +38,13 @@ export function Disclosure({
       open={defaultOpen}
       className={cn(
         "group rounded-2xl border border-border/70 bg-white shadow-(--shadow-card)",
-        expandedFrom === "lg" && "lg:[&::details-content]:[content-visibility:visible]",
-        expandedFrom === "xl" && "xl:[&::details-content]:[content-visibility:visible]",
+        // Open/close slides the height (::details-content + interpolate-size).
+        // Browsers without them ignore these rules and the panel just toggles.
+        "[interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-clip [&::details-content]:transition-[height,content-visibility] [&::details-content]:duration-300 [&::details-content]:ease-[cubic-bezier(0.32,0.72,0,1)] [&::details-content]:transition-discrete open:[&::details-content]:h-auto motion-reduce:[&::details-content]:transition-none",
+        expandedFrom === "lg" &&
+          "lg:[&::details-content]:h-auto lg:[&::details-content]:[content-visibility:visible]",
+        expandedFrom === "xl" &&
+          "xl:[&::details-content]:h-auto xl:[&::details-content]:[content-visibility:visible]",
         className,
       )}
     >

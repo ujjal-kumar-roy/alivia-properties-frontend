@@ -1,13 +1,31 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useRef, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { ArrowLeft } from "lucide-react"
+import { AnimatePresence, motion, type Variants } from "motion/react"
 
 import { GuideAvatar } from "@/components/common/guide-avatar"
 import { MobileActionBar } from "@/components/common/mobile-action-bar"
 import { ProgressBar } from "@/components/common/progress-bar"
+import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
+
+/**
+ * Last screen shown by any shell, so a shell that mounts fresh (the wizard hands
+ * over from the picks to the form, and back) still knows which way to slide.
+ */
+let lastNav: { step: number; at: number } | null = null
+
+const screenVariants: Variants = {
+  enter: (dir: number) => ({ x: dir * 40, opacity: 0 }),
+  center: { x: 0, opacity: 1, transition: springs.move },
+  exit: (dir: number) => ({
+    x: dir * -24,
+    opacity: 0,
+    transition: { duration: 0.15, ease: "easeIn" },
+  }),
+}
 
 /** Handed to the action so it can ignore taps that land right after a screen change. */
 export type GuidedActionContext = {
@@ -42,6 +60,13 @@ type GuidedShellProps = {
    * submit button, so no inline action is added.
    */
   phonesOnly?: boolean
+  /**
+   * Slide the children in and out when `step` changes (next from the right, back
+   * from the left). Turn off when the children keep state in the DOM across
+   * steps (a form that shows one screen at a time), since a step change swaps
+   * the children for a fresh copy.
+   */
+  animateContent?: boolean
   children: ReactNode
   className?: string
 }
@@ -63,12 +88,25 @@ export function GuidedShell({
   backLabel = "Back",
   action,
   phonesOnly = false,
+  animateContent = true,
   children,
   className,
 }: GuidedShellProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const firstRender = useRef(true)
   const arrivedAt = useRef(0)
+
+  // Which way this screen slides in: forward when the step grew, back otherwise.
+  const [nav, setNav] = useState(() => {
+    const recent = lastNav && Date.now() - lastNav.at < 1500 && lastNav.step !== step ? lastNav : null
+    return { step, dir: recent && step < recent.step ? -1 : 1, fresh: Boolean(recent) }
+  })
+  if (nav.step !== step) setNav({ step, dir: step > nav.step ? 1 : -1, fresh: true })
+  const dir = nav.dir
+
+  useEffect(() => {
+    lastNav = { step, at: Date.now() }
+  }, [step])
 
   const guard = useCallback(
     (handler: () => void, ms = 300) =>
@@ -132,7 +170,26 @@ export function GuidedShell({
         </p>
       </div>
 
-      <div className="mt-4">{children}</div>
+      {animateContent ? (
+        // Clipped sideways so the sliding screen never widens the page; the small
+        // negative margin keeps card shadows from being cut at the edges.
+        <div className="relative mt-4 -mx-1 overflow-x-clip px-1">
+          <AnimatePresence mode="popLayout" custom={dir} initial={nav.fresh}>
+            <motion.div
+              key={step}
+              custom={dir}
+              variants={screenVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="mt-4">{children}</div>
+      )}
 
       <MobileActionBar label="Next step">{action("bar", { guard })}</MobileActionBar>
       {!phonesOnly ? (

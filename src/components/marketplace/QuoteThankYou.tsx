@@ -2,11 +2,13 @@
 
 import Link from "next/link"
 import { useEffect, useRef } from "react"
-import { Check, Phone } from "lucide-react"
+import { Phone } from "lucide-react"
+import { motion } from "motion/react"
 
 import { GuideAvatar } from "@/components/common/guide-avatar"
 import { ROUTES } from "@/config/routes.config"
-import { celebrate } from "@/lib/celebrate"
+import { celebrate, haptic } from "@/lib/celebrate"
+import { springs } from "@/lib/motion"
 
 type QuoteThankYouProps = {
   /** Short reference taken from the quote or batch id. */
@@ -34,6 +36,7 @@ export function QuoteThankYou({ reference, supplierCount, phone, phoneRaw }: Quo
   useEffect(() => {
     if (celebrated.current) return
     celebrated.current = true
+    haptic("success")
     celebrate({ origin: avatarRef.current })
   }, [])
 
@@ -48,9 +51,33 @@ export function QuoteThankYou({ reference, supplierCount, phone, phoneRaw }: Quo
         </p>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-border/70 bg-white p-5 text-center shadow-(--shadow-card) sm:p-8">
-        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-green-50 text-green-700">
-          <Check aria-hidden="true" className="size-6" strokeWidth={3} />
+      <div className="enter-cascade mt-4 rounded-2xl border border-border/70 bg-white p-5 text-center shadow-(--shadow-card) sm:p-8">
+        {/* The outer span takes part in the copy cascade; the badge inside springs in. */}
+        <span className="mx-auto flex size-12 items-center justify-center">
+          <motion.span
+            className="flex size-12 items-center justify-center rounded-full bg-green-50 text-green-700"
+            initial={{ scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ ...springs.sheet, delay: 0.15 }}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <motion.path
+                d="M20 6 9 17l-5-5"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1], delay: 0.35 }}
+              />
+            </svg>
+          </motion.span>
         </span>
         <h1 className="mt-3 font-heading text-2xl font-semibold text-ink-900 sm:text-3xl">
           Quote request sent

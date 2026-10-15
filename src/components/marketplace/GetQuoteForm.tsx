@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { useForm, useWatch, type FieldErrors } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { AlertCircle, ArrowRight, Loader2, SendHorizontal } from "lucide-react"
+import { motion } from "motion/react"
 
 import { GuideAvatar } from "@/components/common/guide-avatar"
 import {
@@ -21,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { AttachmentUploader } from "@/components/marketplace/AttachmentUploader"
 import { GuidedShell } from "@/components/marketplace/wizard/GuidedShell"
 import { celebrate, haptic } from "@/lib/celebrate"
+import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { quoteSchema, type QuoteFormValues } from "@/schemas/quote.schema"
 import { quotesService } from "@/services/quotes.service"
@@ -155,6 +157,15 @@ const SCREEN_META: Record<ScreenId, ScreenMeta> = {
   },
 }
 
+function subscribePhone(onChange: () => void) {
+  const mq = window.matchMedia("(max-width: 767px)")
+  mq.addEventListener("change", onChange)
+  return () => mq.removeEventListener("change", onChange)
+}
+function getIsPhone() {
+  return window.matchMedia("(max-width: 767px)").matches
+}
+
 /** Guided screens a form with no variant/spec options shows. */
 export const QUOTE_FORM_SCREEN_COUNT = 5
 
@@ -188,6 +199,7 @@ export function GetQuoteForm({
     | { status: "error"; message: string }
   >({ status: "idle" })
   const [screenIndex, setScreenIndex] = React.useState(0)
+  const isPhone = React.useSyncExternalStore(subscribePhone, getIsPhone, () => false)
   const uid = React.useId()
 
   // Buyer answers to the sub-category's spec fields, keyed by attribute key.
@@ -487,6 +499,8 @@ export function GetQuoteForm({
 
   const selectedVariantName = context?.variantName ?? selectedVariant?.name
   const guidedOn = Boolean(guided)
+  // Slide screens only while the one-question-per-screen layout is showing.
+  const slideScreens = guided === "always" || (guided === "phones" && isPhone)
   // Visible question headings only in the guided flow; elsewhere they just label the groups.
   const TitleTag = guidedOn ? "h2" : "span"
   /** Inactive screens vanish: below md in "phones" mode, everywhere in "always" mode. */
@@ -821,17 +835,26 @@ export function GetQuoteForm({
           )}
 
           {screens.map((meta, index) => (
-            <div
+            <motion.div
               key={meta.id}
               role="group"
               aria-labelledby={`${uid}-${meta.id}-title`}
               className={cn("grid min-w-0 gap-4", screenClass(index))}
+              // Guided screens slide: the one shown rests at 0, others wait on the
+              // side they came from, so next enters from the right, back from the left.
+              initial={false}
+              animate={
+                slideScreens && index !== screenIndex
+                  ? { x: index < screenIndex ? -28 : 28, opacity: 0 }
+                  : { x: 0, opacity: 1 }
+              }
+              transition={springs.move}
             >
               <TitleTag id={`${uid}-${meta.id}-title`} className={legendClass}>
                 {meta.title}
               </TitleTag>
               {renderScreen(meta)}
-            </div>
+            </motion.div>
           ))}
 
           {submitState.status === "error" && (
@@ -892,6 +915,7 @@ export function GetQuoteForm({
       onBack={screenIndex > 0 || onExit ? goBack : undefined}
       backHref={screenIndex === 0 && !onExit ? (exitHref ?? "/marketplace") : undefined}
       phonesOnly={guided === "phones"}
+      animateContent={false}
       className={className}
       action={(placement, { guard }) => (
         <button
