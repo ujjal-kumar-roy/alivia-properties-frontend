@@ -1,35 +1,39 @@
 /**
- * Sort and type options for a category listing. Plain module (no "use client")
- * so the server page and the client filter sheet share one definition.
+ * Sort, seller-type and search state for a category listing. Plain module (no
+ * "use client") so the server page and the client toolbar share one definition.
  * `api` values are fields the backend can order by (Prisma rejects unknown
- * ones, so only whitelisted keys ever reach the request).
+ * ones, so only whitelisted keys ever reach the request). Rating and review
+ * sorts are deliberately absent: that data is empty in production, so they
+ * would reorder nothing.
  */
 
 export type ListingView = "products" | "suppliers"
-export type SortKey = "newest" | "rating" | "reviews" | "name" | "price-asc" | "price-desc"
+export type SortKey = "newest" | "price-asc" | "price-desc" | "name"
 export type KindKey = "all" | "SUPPLIER" | "SERVICE"
 
 type SortOption = { value: SortKey; label: string; api: string; views: ListingView[] }
 
 export const SORT_OPTIONS: SortOption[] = [
-  { value: "newest", label: "Newest first", api: "createdAt:desc", views: ["products", "suppliers"] },
-  { value: "rating", label: "Top rated", api: "rating:desc", views: ["products", "suppliers"] },
-  { value: "reviews", label: "Most reviewed", api: "reviewCount:desc", views: ["products", "suppliers"] },
-  { value: "name", label: "Name A to Z", api: "name:asc", views: ["products", "suppliers"] },
-  { value: "price-asc", label: "Price, low to high", api: "price:asc", views: ["products"] },
-  { value: "price-desc", label: "Price, high to low", api: "price:desc", views: ["products"] },
+  { value: "newest", label: "Newest", api: "createdAt:desc", views: ["products", "suppliers"] },
+  { value: "price-asc", label: "Price: low to high", api: "price:asc", views: ["products"] },
+  { value: "price-desc", label: "Price: high to low", api: "price:desc", views: ["products"] },
+  { value: "name", label: "Name: A to Z", api: "name:asc", views: ["products", "suppliers"] },
 ]
 
 export const KIND_OPTIONS: { value: KindKey; label: string }[] = [
   { value: "all", label: "All sellers" },
-  { value: "SUPPLIER", label: "Material suppliers" },
+  { value: "SUPPLIER", label: "Material sellers" },
   { value: "SERVICE", label: "Service providers" },
 ]
+
+/** Longest search text sent to the API; anything longer is cut, not rejected. */
+export const SEARCH_MAX_LENGTH = 80
 
 export function sortOptionsFor(view: ListingView) {
   return SORT_OPTIONS.filter((option) => option.views.includes(view))
 }
 
+/** Unknown or retired keys (e.g. an old `sort=rating` link) fall back to newest. */
 export function parseSort(raw: string | undefined, view: ListingView): SortKey {
   const found = sortOptionsFor(view).find((option) => option.value === raw)
   return found ? found.value : "newest"
@@ -49,15 +53,34 @@ export function parseView(raw: string | undefined): ListingView | undefined {
   return raw === "products" || raw === "suppliers" ? raw : undefined
 }
 
+/** Collapses whitespace and caps the length, so the same search always yields the same URL. */
+export function normalizeSearch(raw: string | undefined): string {
+  return (raw ?? "").replace(/\s+/g, " ").trim().slice(0, SEARCH_MAX_LENGTH)
+}
+
+/** The `q` search param, normalised; "" when absent. */
+export function parseSearch(raw: string | undefined): string {
+  return normalizeSearch(raw)
+}
+
 /** Builds a listing URL, leaving defaults out so shared links stay short. */
 export function listingHref(
   basePath: string,
-  state: { view?: ListingView; sort?: SortKey; kind?: KindKey; page?: number },
+  state: {
+    view?: ListingView
+    sort?: SortKey
+    kind?: KindKey
+    page?: number
+    /** Free-text search; written as `q`. */
+    search?: string
+  },
 ): string {
   const params = new URLSearchParams()
   if (state.view) params.set("view", state.view)
   if (state.sort && state.sort !== "newest") params.set("sort", state.sort)
   if (state.kind && state.kind !== "all") params.set("kind", state.kind)
+  const search = normalizeSearch(state.search)
+  if (search) params.set("q", search)
   if (state.page && state.page > 1) params.set("page", String(state.page))
   const query = params.toString()
   return query ? `${basePath}?${query}` : basePath
