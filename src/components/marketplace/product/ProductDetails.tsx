@@ -296,13 +296,16 @@ function SoldBy({
 
   return (
     <section aria-labelledby="pd-seller" className={section}>
+      {/* Below lg the page already shows a compact seller card by the buy box, so the
+          heading must not repeat the name and the identity row below is hidden. */}
       <h2 id="pd-seller" className={h2}>
-        {serviceMode ? "Provided by" : "Sold by"}
+        <span className="lg:hidden">{serviceMode ? "About the provider" : "About the seller"}</span>
+        <span className="hidden lg:inline">{serviceMode ? "Provided by" : "Sold by"}</span>
       </h2>
 
       {/* One flat panel; the facts inside it are rows, not more cards. */}
       <div className="mt-3 rounded-2xl border border-ink-200 p-4">
-        <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-3 lg:flex">
           <span className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-ink-200 bg-brand-50 font-heading text-base font-semibold text-brand-700">
             {supplier.logo ? (
               <MediaImage
@@ -336,47 +339,49 @@ function SoldBy({
           </div>
         </div>
 
-        {showTagline ? (
-          <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-600">{tagline}</p>
-        ) : null}
+        <div className="flex flex-col gap-3.5 lg:mt-3.5">
+          {showTagline ? (
+            <p className="line-clamp-2 text-sm leading-relaxed text-ink-600">{tagline}</p>
+          ) : null}
 
-        {facts.length > 0 ? (
-          <ul className="mt-3 space-y-2">
-            {facts.map((fact) => (
-              <li key={fact.key} className="flex items-center gap-2 text-sm text-ink-700">
-                <fact.icon aria-hidden="true" className="size-4 shrink-0 text-brand-600" />
-                {fact.text}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {areas.length > 0 ? (
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-ink-500">{serviceMode ? "Works in" : "Delivers to"}</p>
-            <ul className="mt-1.5 flex flex-wrap gap-1.5">
-              {areas.slice(0, MAX_AREA_CHIPS).map((area) => (
-                <li key={area} className="rounded-full bg-ink-100 px-2.5 py-1 text-xs font-medium text-ink-700">
-                  {area}
+          {facts.length > 0 ? (
+            <ul className="space-y-2">
+              {facts.map((fact) => (
+                <li key={fact.key} className="flex items-center gap-2 text-sm text-ink-700">
+                  <fact.icon aria-hidden="true" className="size-4 shrink-0 text-brand-600" />
+                  {fact.text}
                 </li>
               ))}
-              {hiddenAreas > 0 ? (
-                <li className="rounded-full px-1.5 py-1 text-xs font-medium text-ink-500">+{hiddenAreas} more</li>
-              ) : null}
             </ul>
-          </div>
-        ) : null}
+          ) : null}
 
-        <Link
-          href={ROUTES.MARKETPLACE_SUPPLIER(supplier.slug)}
-          className={cn(
-            "mt-4 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-ink-300 bg-white px-4 text-sm font-semibold text-ink-900 sm:w-auto [@media(hover:hover)_and_(pointer:fine)]:hover:bg-ink-50",
-            pressable,
-          )}
-        >
-          <Store aria-hidden="true" className="size-4" />
-          {serviceMode ? "Visit provider" : "Visit seller"}
-        </Link>
+          {areas.length > 0 ? (
+            <div>
+              <p className="text-xs font-semibold text-ink-500">{serviceMode ? "Works in" : "Delivers to"}</p>
+              <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                {areas.slice(0, MAX_AREA_CHIPS).map((area) => (
+                  <li key={area} className="rounded-full bg-ink-100 px-2.5 py-1 text-xs font-medium text-ink-700">
+                    {area}
+                  </li>
+                ))}
+                {hiddenAreas > 0 ? (
+                  <li className="rounded-full px-1.5 py-1 text-xs font-medium text-ink-500">+{hiddenAreas} more</li>
+                ) : null}
+              </ul>
+            </div>
+          ) : null}
+
+          <Link
+            href={ROUTES.MARKETPLACE_SUPPLIER(supplier.slug)}
+            className={cn(
+              "inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-ink-300 bg-white px-4 text-sm font-semibold text-ink-900 sm:w-auto sm:self-start [@media(hover:hover)_and_(pointer:fine)]:hover:bg-ink-50",
+              pressable,
+            )}
+          >
+            <Store aria-hidden="true" className="size-4" />
+            {serviceMode ? "Visit provider" : "Visit seller"}
+          </Link>
+        </div>
       </div>
     </section>
   )
