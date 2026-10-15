@@ -1,5 +1,9 @@
 "use client"
 
+import { LayoutGrid, List, Search, X } from "lucide-react"
+import { motion } from "motion/react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   useEffect,
   useId,
@@ -13,10 +17,6 @@ import {
   type FormEvent,
   type MouseEvent,
 } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { motion } from "motion/react"
-import { LayoutGrid, List, Search, X } from "lucide-react"
 
 import { FiltersControl, SortControl } from "@/components/marketplace/CategoryFilters"
 import {
@@ -214,8 +214,13 @@ export function CategoryToolbar({
     setSubmitted(normalized)
     // Typing-as-you-go refines an existing search in place, so Back is not a stack
     // of half-typed words. Starting or ending a search is a real step: it pushes,
-    // so Back returns to the unfiltered list.
-    const refining = typing && submitted !== "" && normalized !== ""
+    // so Back returns to the unfiltered list. "Existing" means what the URL shows
+    // (`search`), not what was last asked for (`submitted`): a push still being
+    // rendered is not in history yet, and Next lets a newer navigation discard
+    // it, so a replace then would overwrite the unfiltered entry. While the URL
+    // is still unfiltered the next burst pushes again, and the net result is one
+    // new entry.
+    const refining = typing && search !== "" && normalized !== ""
     go({ search: normalized }, { replace: refining, resetScroll: !typing })
   }
 
@@ -291,7 +296,7 @@ export function CategoryToolbar({
           "max-sm:[body:has(.autohide[data-edge=top][data-hidden=false],.autohide[data-edge=top]:focus-within)_&]:data-[stuck=true]:translate-y-13",
           // Same timing as .autohide: 300ms away, 240ms back, --ease-out. Hairline fades separately.
           "[transition:translate_300ms_var(--ease-out),border-color_160ms_var(--ease-out)]",
-          "motion-safe:max-sm:[body:has(.autohide[data-edge=top][data-hidden=false],.autohide[data-edge=top]:focus-within)_&]:[transition:translate_240ms_var(--ease-out),border-color_160ms_var(--ease-out)]",
+          "max-sm:[body:has(.autohide[data-edge=top][data-hidden=false],.autohide[data-edge=top]:focus-within)_&]:[transition:translate_240ms_var(--ease-out),border-color_160ms_var(--ease-out)]",
           "data-[stuck=true]:border-ink-200",
           "motion-reduce:[transition:border-color_150ms_linear]",
         )}
@@ -302,7 +307,7 @@ export function CategoryToolbar({
             "grid shrink-0 grid-cols-2 rounded-full bg-ink-100 md:w-72",
             // Once stuck on a phone this row is off-screen or under the breadcrumb: keep it from showing
             // through, and out of the tab order (visibility flips after the fade).
-            "transition-[opacity,visibility] duration-160 ease-(--ease-out) group-data-[stuck=true]/toolbar:max-md:invisible group-data-[stuck=true]/toolbar:max-md:opacity-0",
+            "transition-[opacity,visibility] duration-160 ease-out group-data-[stuck=true]/toolbar:max-md:invisible group-data-[stuck=true]/toolbar:max-md:opacity-0",
           )}
         >
           {segments.map((segment) => {
@@ -314,7 +319,7 @@ export function CategoryToolbar({
                 aria-current={active ? "page" : undefined}
                 onClick={(e) => onSegmentClick(e, segment.view)}
                 className={cn(
-                  "relative flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-[color,scale] duration-140 ease-(--ease-out) active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 motion-reduce:active:scale-100",
+                  "relative flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-[color,scale] duration-140 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 motion-reduce:active:scale-100",
                   active ? "text-brand-800" : "text-ink-600 hover:text-ink-900",
                 )}
               >
@@ -322,7 +327,7 @@ export function CategoryToolbar({
                 <span className="relative">{segment.label}</span>
                 <span
                   className={cn(
-                    "relative tabular-nums transition-colors duration-160 ease-(--ease-out)",
+                    "relative tabular-nums transition-colors duration-160 ease-out",
                     active ? "text-brand-700" : "text-ink-500",
                   )}
                 >
@@ -354,7 +359,7 @@ export function CategoryToolbar({
               spellCheck={false}
               // 16px on phones: smaller text makes iOS zoom the page on focus.
               className={cn(
-                "h-11 w-full min-w-0 appearance-none truncate rounded-full border border-ink-200 bg-white pl-4 text-base text-ink-900 outline-none transition-[border-color,box-shadow] duration-160 ease-(--ease-out) placeholder:text-ink-500 hover:border-ink-300 focus-visible:border-brand-600 focus-visible:shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-brand-500)_28%,transparent)] sm:pl-10 md:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none",
+                "h-11 w-full min-w-0 appearance-none truncate rounded-full border border-ink-200 bg-white pl-4 text-base text-ink-900 outline-none transition-[border-color,box-shadow] duration-160 ease-out placeholder:text-ink-500 hover:border-ink-300 focus-visible:border-brand-600 focus-visible:shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-brand-500)_28%,transparent)] sm:pl-10 md:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none",
                 // Room for the clear button only while it is showing; otherwise the placeholder gets the width.
                 hasText ? "pr-11" : "pr-3",
               )}
@@ -366,7 +371,7 @@ export function CategoryToolbar({
               aria-hidden={hasText ? undefined : true}
               aria-label="Clear search"
               className={cn(
-                "absolute right-0 top-0 grid size-11 place-items-center rounded-full text-ink-500 transition-[opacity,scale,color] duration-160 ease-(--ease-out) hover:text-ink-900 active:scale-[0.97] focus-visible:outline-2 -outline-offset-2 focus-visible:outline-brand-500 motion-reduce:scale-100 motion-reduce:active:scale-100",
+                "absolute right-0 top-0 grid size-11 place-items-center rounded-full text-ink-500 transition-[opacity,scale,color] duration-160 ease-out hover:text-ink-900 active:scale-[0.97] focus-visible:outline-2 -outline-offset-2 focus-visible:outline-brand-500 motion-reduce:scale-100 motion-reduce:active:scale-100",
                 hasText ? "opacity-100" : "pointer-events-none scale-95 opacity-0",
               )}
             >
@@ -410,7 +415,7 @@ function Pill({ layoutId }: { layoutId: string }) {
     <motion.span
       layoutId={layoutId}
       transition={springs.snappy}
-      className="absolute inset-[3px] rounded-full bg-white shadow-[0_1px_2px_rgb(0_0_0/0.14),0_0_0_1px_rgb(0_0_0/0.04)]"
+      className="absolute inset-0.75 rounded-full bg-white shadow-[0_1px_2px_rgb(0_0_0/0.14),0_0_0_1px_rgb(0_0_0/0.04)]"
     />
   )
 }
@@ -448,7 +453,7 @@ function LayoutToggle({
               onChange(value)
             }}
             className={cn(
-              "relative grid size-11 place-items-center rounded-full transition-[color,scale] duration-140 ease-(--ease-out) active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 motion-reduce:active:scale-100",
+              "relative grid size-11 place-items-center rounded-full transition-[color,scale] duration-140 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 motion-reduce:active:scale-100",
               active ? "text-brand-800" : "text-ink-500 hover:text-ink-900",
             )}
           >
@@ -456,10 +461,10 @@ function LayoutToggle({
               animated ? (
                 <Pill layoutId={pillId} />
               ) : (
-                <span className="absolute inset-[3px] rounded-full bg-white shadow-[0_1px_2px_rgb(0_0_0/0.14),0_0_0_1px_rgb(0_0_0/0.04)]" />
+                <span className="absolute inset-0.75 rounded-full bg-white shadow-[0_1px_2px_rgb(0_0_0/0.14),0_0_0_1px_rgb(0_0_0/0.04)]" />
               )
             ) : null}
-            <Icon aria-hidden="true" className="relative size-[1.125rem]" />
+            <Icon aria-hidden="true" className="relative size-4.5" />
           </button>
         )
       })}
