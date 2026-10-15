@@ -339,7 +339,7 @@ export function PreApprovalForm() {
             )}
 
             <StepGroup index={0} active={step === 0} moved={moved}>
-              <div className="enter-cascade grid grid-cols-1 gap-3.5 md:grid-cols-2">
+              <div className={cn("grid grid-cols-1 gap-3.5 md:grid-cols-2", !moved && "enter-cascade")}>
                 <FormField
                   control={form.control}
                   name="fullName"

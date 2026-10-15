@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Check } from "lucide-react"
-import { motion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
 import { GuideAvatar } from "@/components/common/guide-avatar"
 import { ProgressBar } from "@/components/common/progress-bar"
-import { haptic, prefersReducedMotion } from "@/lib/celebrate"
+import { celebrate, haptic, prefersReducedMotion } from "@/lib/celebrate"
 import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
@@ -49,6 +49,9 @@ export function MovingChecklist() {
   const [popId, setPopId] = useState<string | null>(null)
   // The confetti is a once-only reward for finishing, not for every re-tick.
   const celebrated = useRef(false)
+  // True only after the last task is ticked in this visit, so the panel swell never replays on load.
+  const [justCompleted, setJustCompleted] = useState(false)
+  const reduceMotion = useReducedMotion()
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -76,11 +79,14 @@ export function MovingChecklist() {
     }
     setChecked(next)
     setPopId(nowChecked ? id : null)
+    if (!nowChecked) setJustCompleted(false)
     haptic("tap")
 
     if (nowChecked && !celebrated.current && TASKS.every((t) => next.has(t.id))) {
       celebrated.current = true
-      haptic("success")
+      setJustCompleted(true)
+      // A small burst from the progress panel (celebrate also fires the success haptic).
+      celebrate({ count: 24, origin: panelRef.current })
       panelRef.current?.scrollIntoView({
         block: "center",
         behavior: prefersReducedMotion() ? "auto" : "smooth",
@@ -95,12 +101,12 @@ export function MovingChecklist() {
 
   return (
     <div className="space-y-2.5 sm:space-y-4">
-      {/* initial={false}: the swell plays when the last task is ticked, not on load. */}
+      {/* The swell plays only when the last task is ticked (justCompleted), never on load. */}
       <motion.div
         ref={panelRef}
         initial={false}
-        animate={{ scale: complete ? [1, 1.025, 1] : 1 }}
-        transition={complete ? { duration: 0.5, ease: "easeOut" } : springs.move}
+        animate={{ scale: justCompleted ? [1, 1.025, 1] : 1 }}
+        transition={justCompleted ? { duration: 0.5, ease: "easeOut" } : springs.move}
         className="scroll-mt-20 rounded-2xl border border-brand-100 bg-brand-50/70 p-3.5"
       >
         <div className="flex items-center gap-3">
@@ -188,19 +194,22 @@ export function MovingChecklist() {
                               d="M20 6 9 17l-5-5"
                               initial={{ pathLength: popId === task.id ? 0 : 1 }}
                               animate={{ pathLength: 1 }}
-                              transition={{ duration: 0.28, ease: "easeOut", delay: 0.05 }}
+                              transition={reduceMotion ? { duration: 0 } : { duration: 0.28, ease: "easeOut", delay: 0.05 }}
                             />
                           </svg>
                         )}
                       </span>
                       {/* The strike is a background line that grows across the text (wraps with it). */}
-                      <span
-                        className={cn(
-                          "box-decoration-clone bg-linear-to-r from-current to-current bg-no-repeat bg-position-[0_55%] text-[0.9375rem] leading-snug transition-[background-size,color] duration-300 ease-out motion-reduce:transition-none",
-                          isChecked ? "bg-size-[100%_1.5px] text-ink-500" : "bg-size-[0%_1.5px] text-ink-800",
-                        )}
-                      >
-                        {task.label}
+                      {/* The flex item is blockified, so the inline span inside it is what fragments per line. */}
+                      <span className="min-w-0 flex-1 text-[0.9375rem] leading-snug">
+                        <span
+                          className={cn(
+                            "box-decoration-clone bg-linear-to-r from-current to-current bg-no-repeat bg-position-[0_55%] transition-[background-size,color] duration-300 ease-out motion-reduce:transition-none",
+                            isChecked ? "bg-size-[100%_1.5px] text-ink-500" : "bg-size-[0%_1.5px] text-ink-800",
+                          )}
+                        >
+                          {task.label}
+                        </span>
                       </span>
                     </button>
                   </li>

@@ -28,16 +28,15 @@ export function MapSearchShell({ header, count, list, map }: MapSearchShellProps
   const [view, setView] = useState<View>("list")
   const listRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<HTMLDivElement>(null)
-  const swapped = useRef(false)
+  const prevView = useRef<View>("list")
 
   // On phones the incoming panel slides in from the side of its tab (list is left,
   // map is right), like a native segmented control. Skipped on first render, at
   // lg (both panels are always shown) and for reduced motion.
   useEffect(() => {
-    if (!swapped.current) {
-      swapped.current = true
-      return
-    }
+    // Compare with the last view (not a "first run" flag): StrictMode runs effects twice on mount.
+    if (prevView.current === view) return
+    prevView.current = view
     if (prefersReducedMotion() || !window.matchMedia("(max-width: 1023.98px)").matches) return
     const from = view === "map" ? 24 : -24
     ;(view === "map" ? mapRef : listRef).current?.animate(
