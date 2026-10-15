@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { AnimatePresence, motion } from "motion/react"
 import {
   ArrowUpRight,
   BedDouble,
@@ -20,7 +21,9 @@ import {
 
 import { CardFact } from "@/components/common/card-fact"
 import { ROUTES } from "@/config/routes.config"
+import { haptic } from "@/lib/celebrate"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
+import { springs } from "@/lib/motion"
 import { isRecent } from "@/utils/format-date"
 import type { FlagshipProject } from "@/utils/flagship-project"
 
@@ -354,15 +357,24 @@ export function FlagshipProjects({ projects }: { projects: FlagshipProject[] }) 
                 key={f.id}
                 type="button"
                 aria-pressed={filter === f.id}
-                onClick={() => setFilter(f.id)}
+                onClick={() => {
+                  if (filter === f.id) return
+                  haptic("tap")
+                  setFilter(f.id)
+                }}
                 className={
-                  "min-h-9 flex-1 whitespace-nowrap rounded-xl px-3.5 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 sm:flex-none " +
-                  (filter === f.id
-                    ? "bg-brand-700 text-white shadow-sm"
-                    : "text-ink-600 hover:text-ink-900")
+                  "relative min-h-9 flex-1 whitespace-nowrap rounded-xl px-3.5 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 sm:flex-none " +
+                  (filter === f.id ? "text-white" : "text-ink-600 hover:text-ink-900")
                 }
               >
-                {f.label}
+                {filter === f.id && (
+                  <motion.span
+                    layoutId="flagship-filter-pill"
+                    transition={springs.move}
+                    className="absolute inset-0 rounded-xl bg-brand-700 shadow-sm"
+                  />
+                )}
+                <span className="relative z-10">{f.label}</span>
               </button>
             ))}
           </div>
@@ -399,11 +411,24 @@ export function FlagshipProjects({ projects }: { projects: FlagshipProject[] }) 
         </div>
       ) : (
         <ul className="grid gap-2.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-          {filtered.map((p) => (
-            <li key={p.slug || p.name} className="reveal min-w-0">
-              <FlagshipProjectCard project={p} />
-            </li>
-          ))}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {filtered.map((p) => (
+              <motion.li
+                key={p.slug || p.name}
+                layout
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={springs.move}
+                className="min-w-0"
+              >
+                {/* .reveal sets its own transform, so it sits inside the layout item. */}
+                <div className="reveal">
+                  <FlagshipProjectCard project={p} />
+                </div>
+              </motion.li>
+            ))}
+          </AnimatePresence>
         </ul>
       )}
     </section>
