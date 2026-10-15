@@ -25,7 +25,7 @@ export default function ContactUsPage() {
         {/* One grid, DOM order = phone order (intro, quick actions, form, details).
             From lg the intro and details stack in the left column beside the form. */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-x-12 lg:gap-y-8">
-          <header className="lg:col-span-2 lg:row-start-1">
+          <header className="enter-cascade lg:col-span-2 lg:row-start-1">
             <p className="text-eyebrow mb-3 hidden sm:block">Get in Touch</p>
             <h1 className="font-heading text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl lg:text-4xl">
               Contact Us
@@ -36,7 +36,7 @@ export default function ContactUsPage() {
           </header>
 
           {/* Phones: the three fastest ways to reach us, 40px glass buttons. */}
-          <div className="grid grid-cols-3 gap-2 sm:hidden">
+          <div className="reveal-stagger grid grid-cols-3 gap-2 sm:hidden">
             <a href={`tel:${siteConfig.contact.phoneRaw}`} className="btn-glass gap-1.5 px-2 text-[0.8125rem]">
               <Phone aria-hidden="true" className="size-4" />
               Call
@@ -60,7 +60,7 @@ export default function ContactUsPage() {
             </div>
           </div>
 
-          <ul className="space-y-1 lg:col-span-2 lg:row-start-2 lg:space-y-4">
+          <ul className="reveal-stagger space-y-1 lg:col-span-2 lg:row-start-2 lg:space-y-4">
             {DETAILS.map(({ icon: Icon, label, value, href, quick }) => {
               const body = (
                 <>

@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import { useSession } from "next-auth/react"
+import { motion } from "motion/react"
 import { AdminFormNotice } from "@/components/common/admin-form-notice"
 import { Field, FIELD_CLASS, useInlineValidation } from "@/components/booking/form-fields"
 import { FormSuccess } from "@/components/booking/form-success"
 import { ROUTES } from "@/config/routes.config"
+import { springs } from "@/lib/motion"
 import { inquiriesService } from "@/services/inquiries.service"
 import { ApiError } from "@/services/http-client"
 
@@ -71,9 +73,15 @@ export function ContactForm() {
 
   if (submitted) {
     return (
-      <FormSuccess title="Message sent">
-        Thank you. We&apos;ll get back to you within 24 hours.
-      </FormSuccess>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={springs.snappy}
+      >
+        <FormSuccess title="Message sent">
+          Thank you. We&apos;ll get back to you within 24 hours.
+        </FormSuccess>
+      </motion.div>
     )
   }
 
@@ -82,7 +90,7 @@ export function ContactForm() {
       onSubmit={handleSubmit}
       onInput={(e) => clear((e.target as HTMLInputElement).name)}
       noValidate
-      className="space-y-3.5"
+      className="enter-cascade space-y-3.5"
     >
       {submitError && (
         <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">

@@ -22,7 +22,7 @@ export default async function AgentsPage() {
   return (
     <div className="py-4 sm:py-8 lg:py-12">
       <div className="container-page">
-        <header className="mb-3 sm:mb-6">
+        <header className="enter-cascade mb-3 sm:mb-6">
           <p className="text-eyebrow mb-1 hidden sm:block">Our Agents</p>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl lg:text-4xl">
             Verified property professionals
@@ -35,9 +35,9 @@ export default async function AgentsPage() {
         </header>
 
         {agents.length > 0 ? (
-          <ul className="grid gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">
+          <ul className="reveal-stagger grid gap-2.5 md:grid-cols-2 md:gap-3 lg:grid-cols-3">
             {agents.map((a) => (
-              <li key={a.id} className="reveal min-w-0">
+              <li key={a.id} className="min-w-0">
                 <AgentCard agent={a} />
               </li>
             ))}

@@ -1,5 +1,6 @@
 import Image from "next/image"
 import { ShieldCheck, Building2, Users, Clock } from "lucide-react"
+import { CountUp } from "@/components/common/count-up"
 import { siteConfig } from "@/config/site.config"
 import { StatsSection } from "@/pages-sections/home/stats-section"
 
@@ -27,9 +28,9 @@ const PILLARS = [
 
 const TRUST = [
   { icon: ShieldCheck, label: "RAJUK Registered",  sub: "Fully compliant" },
-  { icon: Building2,   label: "14+ Years",          sub: "In real estate" },
-  { icon: Users,       label: "1,800+ Families",    sub: "Served with pride" },
-  { icon: Clock,       label: "12 Apartments",        sub: "Delivered on time" },
+  { icon: Building2,   label: "14+ Years",          sub: "In real estate",    count: 14,   suffix: "+ Years" },
+  { icon: Users,       label: "1,800+ Families",    sub: "Served with pride", count: 1800, suffix: "+ Families" },
+  { icon: Clock,       label: "12 Apartments",        sub: "Delivered on time", count: 12,   suffix: " Apartments" },
 ]
 
 const SECTION_TITLE =
@@ -40,7 +41,7 @@ export default function AboutUsPage() {
     <>
       {/* Hero: title and two lines of copy on phones. */}
       <section className="bg-ink-900 py-5 text-white sm:py-14 md:py-20">
-        <div className="container-page max-w-3xl text-center">
+        <div className="enter-cascade container-page max-w-3xl text-center">
           <p className="text-eyebrow mb-3 hidden text-gold-400 sm:block">About Alivia Properties</p>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
             Building Trust Since 2011
@@ -54,7 +55,7 @@ export default function AboutUsPage() {
       {/* Vision & Mission */}
       <section className="bg-white py-4 sm:py-10 md:py-14">
         <div className="container-page">
-          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-10">
+          <div className="reveal-stagger grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-10">
             {PILLARS.map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
@@ -127,8 +128,8 @@ export default function AboutUsPage() {
       {/* Trust highlights */}
       <section className="bg-ink-50 py-5 sm:py-10 md:py-14">
         <div className="container-page">
-          <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-6">
-            {TRUST.map(({ icon: Icon, label, sub }) => (
+          <ul className="reveal-stagger grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-6">
+            {TRUST.map(({ icon: Icon, label, sub, count, suffix }) => (
               <li
                 key={label}
                 className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-(--shadow-card) md:flex-col md:bg-transparent md:p-0 md:text-center md:shadow-none"
@@ -137,7 +138,16 @@ export default function AboutUsPage() {
                   <Icon aria-hidden="true" className="size-5 text-brand-600" />
                 </span>
                 <span className="min-w-0 md:space-y-1">
-                  <span className="block text-sm font-bold text-ink-900">{label}</span>
+                  {count != null ? (
+                    <span className="block text-sm font-bold text-ink-900" aria-label={label}>
+                      <span aria-hidden="true">
+                        <CountUp value={count} />
+                        {suffix}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="block text-sm font-bold text-ink-900">{label}</span>
+                  )}
                   <span className="block text-xs text-ink-600">{sub}</span>
                 </span>
               </li>

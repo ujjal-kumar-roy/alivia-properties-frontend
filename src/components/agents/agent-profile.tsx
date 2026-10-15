@@ -49,7 +49,7 @@ export function AgentProfile({ agent: a, listings }: { agent: Agent; listings: P
 
       <div className="container-page -mt-10 pb-6 sm:-mt-16 sm:pb-16">
         <div className="relative z-10 grid gap-3 rounded-2xl border border-black/5 bg-white p-3.5 shadow-(--shadow-card) sm:p-5 md:grid-cols-3 md:grid-rows-[auto_1fr] md:gap-4">
-          <div className="flex items-start gap-3 md:col-span-2 md:gap-4">
+          <div className="enter-cascade flex items-start gap-3 md:col-span-2 md:gap-4">
             <Avatar className="size-16 ring-4 ring-white sm:size-20">
               {a.avatar && <AvatarImage src={a.avatar} />}
               <AvatarFallback>{a.name.charAt(0)}</AvatarFallback>
@@ -140,7 +140,7 @@ export function AgentProfile({ agent: a, listings }: { agent: Agent; listings: P
                 <h2 className="mb-2.5 font-heading text-lg font-bold text-ink-900 sm:mb-3 sm:text-2xl">
                   Listings by {firstName}
                 </h2>
-                <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-4">
+                <div className="reveal-stagger grid gap-2.5 sm:grid-cols-2 sm:gap-4">
                   {listings.map((p) => (
                     <PropertyCard key={p.id} property={p} />
                   ))}
