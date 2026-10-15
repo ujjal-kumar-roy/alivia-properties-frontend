@@ -62,7 +62,7 @@ export function DetailSection({
       id={id}
       open={defaultOpen}
       className={cn(
-        "reveal group min-w-0 scroll-mt-20 rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) lg:rounded-3xl lg:p-5",
+        "reveal [animation-range:entry_0px_entry_48px] group min-w-0 scroll-mt-20 rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) lg:rounded-3xl lg:p-5",
         FORCE_OPEN,
         className,
       )}

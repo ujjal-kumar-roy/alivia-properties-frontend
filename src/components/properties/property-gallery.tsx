@@ -152,7 +152,11 @@ function DesktopGallery({ property, images }: { property: Property; images: stri
             loading={activeIndex === 0 ? "eager" : undefined}
             fetchPriority={activeIndex === 0 ? "high" : "auto"}
             sizes="(max-width: 1023px) 100vw, 45vw"
-            className="object-cover motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
+            className={cn(
+              "object-cover",
+              // The first photo is the morph target: no fade-in of its own, or it dips mid-morph.
+              activeIndex !== 0 && "motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300",
+            )}
           />
         </MorphTarget>
         <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />
