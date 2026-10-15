@@ -124,17 +124,25 @@ export function CategoryToolbar({
     })
   }
 
-  function go(patch: Partial<ToolbarState>, options?: { replace?: boolean }) {
+  /** Brings the top of the results into view, but only when the bar is stuck (the visitor is deep in the old list). */
+  function scrollToResults() {
+    if (barRef.current?.dataset.stuck === "true") {
+      anchorRef.current?.scrollIntoView({ block: "start", behavior: "instant" })
+    }
+  }
+
+  function go(
+    patch: Partial<ToolbarState>,
+    options?: { replace?: boolean; resetScroll?: boolean },
+  ) {
     const next = settle({ ...shown, ...patch })
     const href = hrefFor(next)
     // Compared with what is on screen, so undoing a change still in flight navigates back.
     if (href === hrefFor(shown)) return
 
-    // A new result set starts at its top. When the bar is stuck the visitor is
-    // deep in the old list, so bring them back to the top of the results.
-    if (barRef.current?.dataset.stuck === "true") {
-      anchorRef.current?.scrollIntoView({ block: "start", behavior: "instant" })
-    }
+    // A new result set starts at its top. Not while the visitor is still typing:
+    // the page must not jump under a raised keyboard.
+    if (options?.resetScroll !== false) scrollToResults()
 
     startTransition(() => {
       setShown(next)
@@ -157,12 +165,15 @@ export function CategoryToolbar({
   // a throttled scroll read, like AutoHideHeader, so scrolling never re-renders.
   useEffect(() => {
     const bar = barRef.current
-    if (!bar) return
+    const anchor = anchorRef.current
+    if (!bar || !anchor) return
     let frame = 0
     const measure = () => {
       frame = 0
+      // Measured on the in-flow anchor above the bar: the bar's own rect includes
+      // its translate (below the breadcrumb), which would flip this back and forth.
       const top = parseFloat(getComputedStyle(bar).top) || 0
-      const stuck = window.scrollY > 0 && bar.getBoundingClientRect().top <= top + 0.5
+      const stuck = window.scrollY > 0 && anchor.getBoundingClientRect().top <= top + 0.5
       if (bar.dataset.stuck !== String(stuck)) bar.dataset.stuck = String(stuck)
     }
     const schedule = () => {
@@ -197,12 +208,15 @@ export function CategoryToolbar({
     }
   }
 
-  function commitSearch(raw: string, replace: boolean) {
+  function commitSearch(raw: string, typing: boolean) {
     const normalized = normalizeSearch(raw)
     if (normalized === submitted) return
     setSubmitted(normalized)
-    // Typing-as-you-go replaces the entry so Back is not a stack of half-typed words.
-    go({ search: normalized }, { replace })
+    // Typing-as-you-go refines an existing search in place, so Back is not a stack
+    // of half-typed words. Starting or ending a search is a real step: it pushes,
+    // so Back returns to the unfiltered list.
+    const refining = typing && submitted !== "" && normalized !== ""
+    go({ search: normalized }, { replace: refining, resetScroll: !typing })
   }
 
   // The debounce callback must see the latest state, not the render it was created in.
@@ -223,6 +237,8 @@ export function CategoryToolbar({
     e.preventDefault()
     clearTimeout(timer.current)
     commitSearch(text, false)
+    // Enter is explicit: show the results from their top even if the typed query had already applied.
+    scrollToResults()
     // Put the results, not the keyboard, on screen on touch devices.
     if (window.matchMedia("(pointer: coarse)").matches) inputRef.current?.blur()
   }
@@ -254,6 +270,8 @@ export function CategoryToolbar({
   const activeTotal = shown.view === "products" ? productTotal : supplierTotal
 
   const hasText = text.length > 0
+  // Short enough to show in full on a 360px phone ("Search Beds"); the field is only ~130px wide there.
+  const placeholder = categoryName ? `Search ${categoryName}` : "Search this category"
 
   return (
     <>
@@ -267,18 +285,24 @@ export function CategoryToolbar({
           "group/toolbar sticky z-20 -mx-4 flex flex-col gap-2 border-b border-transparent bg-white/95 px-4 py-2 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8",
           // Phones: park the Products/Sellers row (44px + 8px padding) above the screen. From md it is one row.
           "-top-13 md:top-0 md:flex-row md:items-center md:gap-3",
-          // Under the sticky marketplace breadcrumb whenever it is showing (below sm; from sm it scrolls with the page).
-          "max-sm:[body:has(.autohide[data-edge=top][data-hidden=false])_&]:top-0",
-          "transition-[top,border-color] duration-300 ease-(--ease-drawer) data-[stuck=true]:border-ink-200",
-          "motion-reduce:transition-[border-color] motion-reduce:duration-150",
+          // Under the sticky marketplace breadcrumb whenever it is showing (below sm; from sm it scrolls with the
+          // page). Moved with translate (compositor), never `top`, and only once stuck: in flow it stays put.
+          // Shown also while the breadcrumb is held open by focus, like .autohide does.
+          "max-sm:[body:has(.autohide[data-edge=top][data-hidden=false],.autohide[data-edge=top]:focus-within)_&]:data-[stuck=true]:translate-y-13",
+          // Same timing as .autohide: 300ms away, 240ms back, --ease-out. Hairline fades separately.
+          "[transition:translate_300ms_var(--ease-out),border-color_160ms_var(--ease-out)]",
+          "motion-safe:max-sm:[body:has(.autohide[data-edge=top][data-hidden=false],.autohide[data-edge=top]:focus-within)_&]:[transition:translate_240ms_var(--ease-out),border-color_160ms_var(--ease-out)]",
+          "data-[stuck=true]:border-ink-200",
+          "motion-reduce:[transition:border-color_150ms_linear]",
         )}
       >
         <nav
           aria-label="Listing type"
           className={cn(
             "grid shrink-0 grid-cols-2 rounded-full bg-ink-100 md:w-72",
-            // Once stuck on a phone this row is off-screen or under the breadcrumb: keep it from showing through.
-            "transition-opacity duration-160 ease-(--ease-out) group-data-[stuck=true]/toolbar:max-md:opacity-0",
+            // Once stuck on a phone this row is off-screen or under the breadcrumb: keep it from showing
+            // through, and out of the tab order (visibility flips after the fade).
+            "transition-[opacity,visibility] duration-160 ease-(--ease-out) group-data-[stuck=true]/toolbar:max-md:invisible group-data-[stuck=true]/toolbar:max-md:opacity-0",
           )}
         >
           {segments.map((segment) => {
@@ -309,11 +333,11 @@ export function CategoryToolbar({
           })}
         </nav>
 
-        <div className="flex min-w-0 items-center gap-2 md:flex-1">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 md:flex-1">
           <form role="search" onSubmit={onSearchSubmit} className="relative min-w-0 flex-1 md:max-w-md">
             <Search
               aria-hidden="true"
-              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-500"
+              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-500 max-sm:hidden"
             />
             <input
               ref={inputRef}
@@ -322,14 +346,18 @@ export function CategoryToolbar({
               value={text}
               onChange={onSearchChange}
               maxLength={SEARCH_MAX_LENGTH}
-              placeholder={categoryName ? `Search in ${categoryName}` : "Search this category"}
-              aria-label={categoryName ? `Search in ${categoryName}` : "Search this category"}
+              placeholder={placeholder}
+              aria-label={placeholder}
               enterKeyHint="search"
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
               // 16px on phones: smaller text makes iOS zoom the page on focus.
-              className="h-11 w-full min-w-0 appearance-none truncate rounded-full border border-ink-200 bg-white pl-10 pr-11 text-base text-ink-900 outline-none transition-[border-color,box-shadow] duration-160 ease-(--ease-out) placeholder:text-ink-500 hover:border-ink-300 focus-visible:border-brand-600 focus-visible:shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-brand-500)_28%,transparent)] md:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
+              className={cn(
+                "h-11 w-full min-w-0 appearance-none truncate rounded-full border border-ink-200 bg-white pl-4 text-base text-ink-900 outline-none transition-[border-color,box-shadow] duration-160 ease-(--ease-out) placeholder:text-ink-500 hover:border-ink-300 focus-visible:border-brand-600 focus-visible:shadow-[0_0_0_3px_color-mix(in_oklch,var(--color-brand-500)_28%,transparent)] sm:pl-10 md:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none",
+                // Room for the clear button only while it is showing; otherwise the placeholder gets the width.
+                hasText ? "pr-11" : "pr-3",
+              )}
             />
             <button
               type="button"

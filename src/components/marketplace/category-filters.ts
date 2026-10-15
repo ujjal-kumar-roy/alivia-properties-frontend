@@ -53,9 +53,14 @@ export function parseView(raw: string | undefined): ListingView | undefined {
   return raw === "products" || raw === "suppliers" ? raw : undefined
 }
 
-/** Collapses whitespace and caps the length, so the same search always yields the same URL. */
+/**
+ * Collapses whitespace and caps the length, so the same search always yields the
+ * same URL. Cuts by code point (never inside a surrogate pair) and trims again
+ * after the cut, so normalising twice gives the same string.
+ */
 export function normalizeSearch(raw: string | undefined): string {
-  return (raw ?? "").replace(/\s+/g, " ").trim().slice(0, SEARCH_MAX_LENGTH)
+  const collapsed = (raw ?? "").replace(/\s+/g, " ").trim()
+  return Array.from(collapsed).slice(0, SEARCH_MAX_LENGTH).join("").trim()
 }
 
 /** The `q` search param, normalised; "" when absent. */
