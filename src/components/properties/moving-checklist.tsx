@@ -85,8 +85,9 @@ export function MovingChecklist() {
     if (nowChecked && !celebrated.current && TASKS.every((t) => next.has(t.id))) {
       celebrated.current = true
       setJustCompleted(true)
-      // A small burst from the progress panel (celebrate also fires the success haptic).
-      celebrate({ count: 24, origin: panelRef.current })
+      // A small burst from the upper centre of the viewport: the panel may be scrolled
+      // out of view when the last task is ticked (celebrate also fires the success haptic).
+      celebrate({ count: 24 })
       panelRef.current?.scrollIntoView({
         block: "center",
         behavior: prefersReducedMotion() ? "auto" : "smooth",
