@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 
 import { AutoHideHeader } from "@/components/layout/auto-hide-header";
+import { QuoteListButton } from "@/components/marketplace/quote-list/QuoteListButton";
 import { ROUTES } from "@/config/routes.config";
 
 export type Crumb = { label: string; href?: string };
@@ -15,7 +16,8 @@ export type Crumb = { label: string; href?: string };
  * Phones: a sticky Liquid Glass bar with a back arrow to the parent and the
  * trail on one scrollable line; it leaves on scroll-down and returns on
  * scroll-up like the site header. From `sm` it is an ordinary bar in the page
- * flow with the "Back to Marketplace" button.
+ * flow with the "Back to Marketplace" button. The quote list button sits at the
+ * right end on every size.
  */
 export function MarketplaceBreadcrumb({ trail }: { trail: Crumb[] }) {
   const items: Crumb[] = [
@@ -75,13 +77,16 @@ export function MarketplaceBreadcrumb({ trail }: { trail: Crumb[] }) {
           </ol>
         </nav>
 
-        <Link
-          href={ROUTES.MARKETPLACE}
-          className="hidden min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-brand-200 bg-white px-4 text-sm font-semibold text-brand-700 shadow-sm transition-[transform,background-color,border-color,color] duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 sm:inline-flex"
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" />
-          Back to Marketplace
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href={ROUTES.MARKETPLACE}
+            className="hidden min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-brand-200 bg-white px-4 text-sm font-semibold text-brand-700 shadow-sm transition-[scale,background-color,border-color,color] duration-140 ease-(--ease-out) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 active:scale-[0.97] motion-reduce:transition-colors motion-reduce:active:scale-100 [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-300 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-brand-50 [@media(hover:hover)_and_(pointer:fine)]:hover:text-brand-800 sm:inline-flex"
+          >
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            Back to Marketplace
+          </Link>
+          <QuoteListButton />
+        </div>
       </div>
     </AutoHideHeader>
   );
