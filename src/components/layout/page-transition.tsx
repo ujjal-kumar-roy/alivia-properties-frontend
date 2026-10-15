@@ -20,7 +20,7 @@ type NavDir = "forward" | "back" | "none"
 
 /** The bit of the Navigation API we use (not in TypeScript's DOM lib yet). */
 type NavigationLike = {
-  currentEntry: { index: number } | null
+  currentEntry: { index: number; url: string | null } | null
   addEventListener(type: "navigate", listener: (event: NavigateEventLike) => void): void
   removeEventListener(type: "navigate", listener: (event: NavigateEventLike) => void): void
 }
@@ -40,9 +40,45 @@ function dirFor(pathname: string, dir: Exclude<NavDir, "none">): NavDir {
 // Module state shared by whichever PageTransition is mounted ((site), marketplace
 // or /): only one is mounted at a time, and a history traversal outlives the
 // instance that started it.
+/** Pathname the last committed PageTransition rendered (lags the URL during a commit). */
 let committedPathname: string | null = null
+/** A held history traversal: the pathname it goes to, and how to release it. */
+let traverseTarget: string | null = null
 let resolveTraverseCommit: (() => void) | null = null
+/** Bumped by every history traversal; a held one only replays if still current. */
+let traverseSeq = 0
+/** The view transition PageTransition started for the current traversal. */
+let activeTraverse: ViewTransition | null = null
 let redispatching = false
+
+/**
+ * react-dom keeps its in-flight view transition here and, before committing a
+ * view-transition-eligible update, waits for `.finished` of whatever is stored
+ * (react-dom 19.2 `suspendOnActiveViewTransition`). We read it to wait for
+ * React's transition, and publish ours in it so React waits for ours instead
+ * of starting a new one that would skip it. Undocumented: if a React version
+ * drops it, nothing breaks, the two transitions just stop coordinating.
+ */
+type ReactViewTransitionDocument = Document & { __reactViewTransition?: ViewTransition | null }
+
+function releaseTraverse() {
+  resolveTraverseCommit?.()
+  resolveTraverseCommit = null
+  traverseTarget = null
+}
+
+/** End the current traversal transition (if any) and drop its hold and styles. */
+function cancelTraverse() {
+  const transition = activeTraverse
+  activeTraverse = null
+  const doc = document as ReactViewTransitionDocument
+  if (transition && doc.__reactViewTransition === transition) doc.__reactViewTransition = null
+  delete document.documentElement.dataset.navTraverse
+  releaseTraverse()
+  transition?.skipTransition()
+}
+
+const ignore = () => {}
 
 /**
  * Tags each navigation's direction on <html data-nav-dir> for the
@@ -66,6 +102,7 @@ function useNavDirection() {
   useEffect(() => {
     const navigation = (window as Window & { navigation?: NavigationLike }).navigation
     let traverseDir: Exclude<NavDir, "none"> | null = null
+    let traverseFrom: string | null = null
     let edgeTouch = false
     let edgeReleasedAt = -Infinity
 
@@ -84,8 +121,9 @@ function useNavDirection() {
     const onNavigate = (event: NavigateEventLike) => {
       // Fires before popstate, while currentEntry is still the page we leave.
       if (event.navigationType !== "traverse") return
-      const from = navigation?.currentEntry?.index
-      traverseDir = from != null && event.destination.index > from ? "forward" : "back"
+      const from = navigation?.currentEntry
+      traverseDir = from && event.destination.index > from.index ? "forward" : "back"
+      traverseFrom = from?.url ? new URL(from.url).pathname : null
     }
 
     const onTouchStart = (event: TouchEvent) => {
@@ -104,9 +142,15 @@ function useNavDirection() {
         event.hasUAVisualTransition ||
         edgeTouch ||
         performance.now() - edgeReleasedAt < EDGE_SWIPE_GRACE_MS
-      const dir: NavDir = swiped ? "none" : dirFor(location.pathname, traverseDir ?? "back")
+      const to = location.pathname
+      const dir: NavDir = swiped ? "none" : dirFor(to, traverseDir ?? "back")
+      // The page we are leaving. The Navigation API's entry is exact; the
+      // committed pathname is only a fallback, since it lags the URL while a
+      // navigation commits (React defers layout effects inside a view
+      // transition, up to 500ms while fonts/images load).
+      const from = traverseFrom ?? committedPathname
       traverseDir = null
-      setNavDir(dir)
+      traverseFrom = null
 
       const state: unknown = event.state
       const animate =
@@ -115,32 +159,66 @@ function useNavDirection() {
         // Only entries the app router owns; Next reloads or ignores the rest.
         typeof state === "object" && state !== null && "__NA" in state &&
         // Same path (hash / search change): no route change to wait for.
-        location.pathname !== committedPathname &&
-        !window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      if (!animate) return
+        to !== from
+      // Reduced motion is not a reason to skip: like link navigations, the
+      // transition still runs and globals.css zeroes its animations.
+
+      // A newer traversal supersedes a held one: it must not replay its stale
+      // popstate (Next would restore the old tree at the new URL).
+      const seq = ++traverseSeq
+      cancelTraverse()
+      if (!animate) {
+        setNavDir(dir)
+        return
+      }
 
       // Hold Next's handler (and any other popstate listener) until the
       // current page has been captured.
       event.stopImmediatePropagation()
-      const root = document.documentElement
-      root.dataset.navTraverse = ""
-      const committed = new Promise<void>((resolve) => {
-        resolveTraverseCommit = resolve
-        window.setTimeout(resolve, TRAVERSE_COMMIT_TIMEOUT_MS)
-      })
-      const transition = document.startViewTransition(() => {
-        redispatching = true
-        try {
-          window.dispatchEvent(new PopStateEvent("popstate", { state }))
-        } finally {
-          redispatching = false
+      const doc = document as ReactViewTransitionDocument
+
+      const start = () => {
+        if (seq !== traverseSeq) return // superseded while waiting
+        setNavDir(dir)
+        const root = document.documentElement
+        root.dataset.navTraverse = ""
+        traverseTarget = to
+        const committed = new Promise<void>((resolve) => {
+          resolveTraverseCommit = resolve
+          window.setTimeout(resolve, TRAVERSE_COMMIT_TIMEOUT_MS)
+        })
+        const transition = document.startViewTransition(() => {
+          // Skipped before it got here and superseded: the newer traversal
+          // replays its own popstate.
+          if (seq !== traverseSeq) return
+          redispatching = true
+          try {
+            window.dispatchEvent(new PopStateEvent("popstate", { state }))
+          } finally {
+            redispatching = false
+          }
+          return committed
+        })
+        activeTraverse = transition
+        doc.__reactViewTransition = transition
+        // A skipped transition rejects `ready` (AbortError); nothing to do then.
+        transition.ready.catch(ignore)
+        transition.updateCallbackDone.catch(ignore)
+        const done = () => {
+          if (doc.__reactViewTransition === transition) doc.__reactViewTransition = null
+          if (activeTraverse !== transition) return // a newer traversal owns the state
+          activeTraverse = null
+          delete root.dataset.navTraverse
+          releaseTraverse()
         }
-        return committed
-      })
-      transition.finished.finally(() => {
-        delete root.dataset.navTraverse
-        resolveTraverseCommit = null
-      })
+        transition.finished.then(done, done)
+      }
+
+      // Starting ours while React's link-navigation transition is still
+      // running would skip React's mid-flight; start right after it instead.
+      const running = doc.__reactViewTransition
+      if (running) running.finished.then(start, start)
+      else start()
     }
 
     // Capture on window so the direction is set (and a traversal held) before
@@ -181,8 +259,9 @@ export function PageTransition({ children }: { children: ReactNode }) {
   // The new route is on screen: release a held history traversal.
   useLayoutEffect(() => {
     committedPathname = pathname
-    resolveTraverseCommit?.()
-    resolveTraverseCommit = null
+    // Only the destination releases it: a late commit of an earlier navigation
+    // must not end the freeze before the restored page is in the DOM.
+    if (pathname === traverseTarget) releaseTraverse()
   }, [pathname])
 
   return (
