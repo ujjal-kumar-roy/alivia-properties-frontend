@@ -2,6 +2,7 @@
 
 import { Bell, BellOff } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -9,6 +10,7 @@ import {
   notificationsService,
   type NotificationItem,
 } from "@/services/notifications.service";
+import { springs } from "@/lib/motion";
 import { connectNotificationsSocket } from "@/services/notifications.socket";
 import { formatRelative } from "@/utils/format-date";
 
@@ -27,6 +29,8 @@ export function NotificationsList({
   const [items, setItems] = useState(initialItems);
   const [unread, setUnread] = useState(initialUnread);
   const knownIds = useRef(new Set(initialItems.map((item) => item.id)));
+  // Rows present on first paint stay static; only ones pushed in later slide in.
+  const [initialIds] = useState(() => new Set(initialItems.map((item) => item.id)));
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -69,7 +73,7 @@ export function NotificationsList({
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-3 sm:mb-5">
+      <div className="enter-cascade mb-3 flex items-center justify-between gap-3 sm:mb-5">
         <div>
           <p className="text-eyebrow mb-1 hidden sm:block">Activity</p>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl lg:text-4xl">
@@ -94,13 +98,13 @@ export function NotificationsList({
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card)">
+        <ul className="reveal-stagger divide-y divide-border/60 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card)">
           {items.map((n) => {
             const inner = (
               <div className="flex min-h-14 items-start gap-3 px-3.5 py-3 transition-colors active:bg-brand-50 sm:hover:bg-ink-50">
                 <span
                   aria-hidden="true"
-                  className={`mt-1.5 inline-block size-2 flex-none rounded-full ${n.isRead ? "bg-transparent" : "bg-brand-600"}`}
+                  className={`mt-1.5 inline-block size-2 flex-none rounded-full transition-[background-color,scale] duration-300 motion-reduce:transition-none ${n.isRead ? "scale-50" : ""} ${n.isRead ? "bg-transparent" : "bg-brand-600"}`}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-[0.9375rem] font-semibold leading-snug text-ink-900">
@@ -116,8 +120,18 @@ export function NotificationsList({
             );
 
             return (
-              <li key={n.id} className={n.isRead ? "" : "bg-brand-50/40"}>
-                {n.link ? <Link href={n.link} className="block">{inner}</Link> : inner}
+              <li
+                key={n.id}
+                className={`transition-colors duration-300 motion-reduce:transition-none ${n.isRead ? "" : "bg-brand-50/40"}`}
+              >
+                <motion.div
+                  layout="position"
+                  transition={springs.move}
+                  initial={initialIds.has(n.id) ? false : { opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {n.link ? <Link href={n.link} className="block">{inner}</Link> : inner}
+                </motion.div>
               </li>
             );
           })}

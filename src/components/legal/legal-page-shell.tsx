@@ -40,7 +40,7 @@ export function LegalPageShell({
       {/* Header: title, a short summary and the date. Short on phones. */}
       <div className="bg-brand-aurora border-b border-border">
         <div className="container-page py-4 sm:py-10 md:py-16">
-          <div className="max-w-3xl">
+          <div className="enter-cascade max-w-3xl">
             <p className="text-eyebrow mb-3 hidden sm:block">{eyebrow}</p>
             <h1 className="font-heading text-2xl font-bold tracking-tight text-balance text-ink-900 sm:text-4xl md:text-5xl">
               {title}

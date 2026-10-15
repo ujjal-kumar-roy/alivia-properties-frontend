@@ -126,91 +126,95 @@ export function PartnerApplicationForm({ type }: { type: PartnerType }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-3.5 md:[&_input:not([type=checkbox])]:h-10">
-        <div className="grid gap-3.5 sm:grid-cols-2">
+        {/* Fields rise in one after another on first paint. */}
+        <div className="reveal-stagger grid gap-3.5">
+          <div className="grid gap-3.5 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className={ITEM}>
+                  <FormLabel className={LABEL}>Full name *</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="name" placeholder="Rahim Uddin" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem className={ITEM}>
+                  <FormLabel className={LABEL}>Mobile *</FormLabel>
+                  <FormControl>
+                    <Input type="tel" autoComplete="tel" placeholder="+8801712345678" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid gap-3.5 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem className={ITEM}>
+                  <FormLabel className={LABEL}>Email *</FormLabel>
+                  <FormControl>
+                    <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="organization"
+              render={({ field }) => (
+                <FormItem className={ITEM}>
+                  <FormLabel className={LABEL}>Company / Organization</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="organization" placeholder="ABC Trading Ltd. (optional)" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
             control={form.control}
-            name="name"
+            name="purpose"
             render={({ field }) => (
               <FormItem className={ITEM}>
-                <FormLabel className={LABEL}>Full name *</FormLabel>
+                <FormLabel className={LABEL}>{copy.purposeLabel} *</FormLabel>
                 <FormControl>
-                  <Input autoComplete="name" placeholder="Rahim Uddin" {...field} />
+                  <Input placeholder={copy.purposePlaceholder} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
-            name="phone"
+            name="details"
             render={({ field }) => (
               <FormItem className={ITEM}>
-                <FormLabel className={LABEL}>Mobile *</FormLabel>
+                <FormLabel className={LABEL}>{copy.detailsLabel} *</FormLabel>
                 <FormControl>
-                  <Input type="tel" autoComplete="tel" placeholder="+8801712345678" {...field} />
+                  <Textarea rows={4} placeholder={copy.detailsPlaceholder} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
         </div>
-
-        <div className="grid gap-3.5 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem className={ITEM}>
-                <FormLabel className={LABEL}>Email *</FormLabel>
-                <FormControl>
-                  <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="organization"
-            render={({ field }) => (
-              <FormItem className={ITEM}>
-                <FormLabel className={LABEL}>Company / Organization</FormLabel>
-                <FormControl>
-                  <Input autoComplete="organization" placeholder="ABC Trading Ltd. (optional)" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="purpose"
-          render={({ field }) => (
-            <FormItem className={ITEM}>
-              <FormLabel className={LABEL}>{copy.purposeLabel} *</FormLabel>
-              <FormControl>
-                <Input placeholder={copy.purposePlaceholder} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="details"
-          render={({ field }) => (
-            <FormItem className={ITEM}>
-              <FormLabel className={LABEL}>{copy.detailsLabel} *</FormLabel>
-              <FormControl>
-                <Textarea rows={4} placeholder={copy.detailsPlaceholder} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         {state.status === "error" && (
           <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">

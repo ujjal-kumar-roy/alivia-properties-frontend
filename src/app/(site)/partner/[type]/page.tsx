@@ -73,7 +73,7 @@ export default async function PartnerPage({
       <div className="container-page py-4 sm:py-8 lg:py-12">
         <div className="grid gap-3.5 lg:grid-cols-[1.3fr_1fr] lg:items-start lg:gap-8">
           <section className="rounded-2xl border border-black/5 bg-white p-3.5 shadow-(--shadow-card) sm:p-7">
-            <header className="mb-3.5 border-b border-border/60 pb-3.5 sm:mb-5 sm:pb-5">
+            <header className="enter-cascade mb-3.5 border-b border-border/60 pb-3.5 sm:mb-5 sm:pb-5">
               <div className="flex items-center gap-3 sm:block">
                 <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 sm:size-11">
                   <Icon aria-hidden="true" className="size-5" />
@@ -111,7 +111,7 @@ export default async function PartnerPage({
           <aside className="space-y-3 lg:sticky lg:top-24 lg:space-y-4">
             <div className="hidden rounded-2xl border border-black/5 bg-white p-5 shadow-(--shadow-card) sm:block">
               <p className="text-eyebrow mb-3">Why partner with Alivia</p>
-              <ul className="space-y-3 text-sm text-ink-700">
+              <ul className="reveal-stagger space-y-3 text-sm text-ink-700">
                 {t.bullets.map((b) => {
                   const BIcon = b.icon
                   return (
