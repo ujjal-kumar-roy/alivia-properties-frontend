@@ -118,7 +118,9 @@ export function MarketplaceProductCard({
         <div className="relative sm:contents">
           <div className="relative aspect-4/3 overflow-hidden bg-brand-50">
             {morph ? (
-              <ViewTransition name={`product-${product.slug}`}>{image}</ViewTransition>
+              <ViewTransition name={`product-${product.slug}`} share="auto" default="none">
+                {image}
+              </ViewTransition>
             ) : (
               image
             )}

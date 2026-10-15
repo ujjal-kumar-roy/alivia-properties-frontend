@@ -116,7 +116,7 @@ export function MarketplaceSupplierSummaryCard({
       className="group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) transition-[translate,scale,box-shadow] duration-200 active:scale-[0.99] md:rounded-3xl md:hover:-translate-y-0.5 md:hover:shadow-(--shadow-elevated) motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
     >
       <div className="flex gap-2.5 p-2 md:grid md:grid-cols-[170px_minmax(0,1fr)_auto] md:items-center md:gap-6 md:p-5">
-        <ViewTransition name={`supplier-${supplier.slug}`}>
+        <ViewTransition name={`supplier-${supplier.slug}`} share="auto" default="none">
         <div className="relative aspect-square w-25 shrink-0 self-start overflow-hidden rounded-xl bg-brand-100 md:w-full md:rounded-2xl">
           <MediaImage
             src={imageSrc}

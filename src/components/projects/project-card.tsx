@@ -1,7 +1,7 @@
-import Link from "next/link"
 import Image from "next/image"
 import { ViewTransition } from "react"
 import { MapPin, Calendar, Building2, ArrowRight, Eye } from "lucide-react"
+import { MorphLink } from "@/components/common/morph-placeholder"
 import { Button } from "@/components/ui/button"
 import { formatPriceRange } from "@/utils/format-price"
 import { PROJECT_STATUS_STYLES } from "@/lib/constants"
@@ -28,14 +28,20 @@ export function ProjectCard({ project }: ProjectCardProps) {
     : "TBA"
 
   const gradient = CARD_GRADIENTS[project.status] ?? CARD_GRADIENTS.ongoing
+  const cover = project.coverImage ?? project.coverImageUrl ?? ""
+  const morph = `apartment-${project.slug}`
 
   return (
     <article className="surface-card group pressable-lift overflow-hidden">
-      <Link href={ROUTES.PROJECT_DETAIL(project.slug)} className="block">
+      <MorphLink
+        href={ROUTES.PROJECT_DETAIL(project.slug)}
+        morph={cover ? morph : undefined}
+        className="block"
+      >
         <div className={`relative h-60 overflow-hidden bg-linear-to-br ${gradient}`}>
-          <ViewTransition name={`apartment-${project.slug}`}>
+          <ViewTransition name={morph} share="auto" default="none">
             <Image
-              src={project.coverImage ?? project.coverImageUrl ?? ""}
+              src={cover}
               alt={project.name}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -91,7 +97,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             ) : null}
           </div>
         </div>
-      </Link>
+      </MorphLink>
 
       <div className="space-y-4 p-5">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -125,12 +131,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
               {formatPriceRange(project.priceFrom ?? 0, project.priceTo ?? project.priceFrom ?? 0)}
             </p>
           </div>
-          <Link href={ROUTES.PROJECT_DETAIL(project.slug)}>
+          <MorphLink href={ROUTES.PROJECT_DETAIL(project.slug)} morph={cover ? morph : undefined}>
             <Button size="sm" variant="outline" className="rounded-full border-brand-200 text-brand-700 hover:bg-brand-50">
               Details
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
-          </Link>
+          </MorphLink>
         </div>
 
         <div className="flex items-center gap-2 text-xs text-ink-500">

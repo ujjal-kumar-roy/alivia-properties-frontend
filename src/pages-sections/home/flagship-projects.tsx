@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 
 import { CardFact } from "@/components/common/card-fact"
+import { MorphLink } from "@/components/common/morph-placeholder"
 import { ROUTES } from "@/config/routes.config"
 import { haptic } from "@/lib/celebrate"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
@@ -80,14 +81,18 @@ function ImageCta({
   href,
   icon: Icon,
   label,
+  morph,
 }: {
   href: string
   icon: typeof Eye
   label: string
+  /** The card photo's morph name, for a CTA that opens the detail page. */
+  morph?: string
 }) {
   return (
-    <Link
+    <MorphLink
       href={href}
+      morph={morph}
       aria-label={label}
       className="group/cta pointer-events-none flex h-11 items-center overflow-hidden rounded-full bg-white text-brand-700 shadow-[0_6px_20px_-4px_rgba(2,6,23,0.25)] outline-none transition-colors duration-200 hover:text-brand-800 focus-visible:ring-2 focus-visible:ring-brand-400 group-hover:pointer-events-auto group-focus-within:pointer-events-auto"
     >
@@ -97,7 +102,7 @@ function ImageCta({
       <span className="grid size-11 shrink-0 place-items-center">
         <Icon aria-hidden="true" className="h-5 w-5" />
       </span>
-    </Link>
+    </MorphLink>
   )
 }
 
@@ -114,6 +119,7 @@ export function FlagshipProjectCard({ project: p }: { project: FlagshipProject }
   const merch = merchBadge(p)
   const MerchIcon = merch ? MERCH_ICON[merch.kind] : null
   const href = p.slug ? ROUTES.PROJECT_DETAIL(p.slug) : ROUTES.PROJECTS
+  const morph = p.slug && p.cover ? `apartment-${p.slug}` : undefined
   const status = p.status.toLowerCase()
   const left = p.availableUnits ?? null
   const total = p.totalUnits ?? null
@@ -128,14 +134,15 @@ export function FlagshipProjectCard({ project: p }: { project: FlagshipProject }
       data-card
       className="group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) transition-[translate,scale,box-shadow] duration-200 active:scale-[0.99] sm:rounded-3xl sm:hover:-translate-y-1 sm:hover:shadow-(--shadow-elevated) motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
     >
-      <Link
+      <MorphLink
         href={href}
+        morph={morph}
         className="flex gap-2.5 rounded-[inherit] p-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 sm:block sm:p-0"
       >
         {/* Media: square thumbnail on phones, 16:10 image from sm. */}
         <div className="relative aspect-square w-25 shrink-0 self-start overflow-hidden rounded-xl bg-ink-100 sm:aspect-16/10 sm:w-full sm:self-auto sm:rounded-none">
           {p.cover ? (
-            <ViewTransition name={p.slug ? `apartment-${p.slug}` : undefined}>
+            <ViewTransition name={morph} share="auto" default="none">
               <Image
                 src={p.cover}
                 alt={p.name}
@@ -297,12 +304,12 @@ export function FlagshipProjectCard({ project: p }: { project: FlagshipProject }
             </div>
           </div>
         </div>
-      </Link>
+      </MorphLink>
 
       {/* Action buttons over the image (hover / keyboard focus, tablet and up).
           Pure CSS (group-hover), so hovering never re-renders. */}
       <div className="pointer-events-none absolute right-3 top-3 z-10 hidden flex-col items-end gap-2.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 sm:flex motion-reduce:transition-none">
-        <ImageCta href={href} icon={Eye} label="View Details" />
+        <ImageCta href={href} icon={Eye} label="View Details" morph={morph} />
         <ImageCta
           href={p.slug ? `${ROUTES.PROJECT_DETAIL(p.slug)}#enquire` : ROUTES.CONTACT}
           icon={MessageCircle}

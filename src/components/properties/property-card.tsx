@@ -1,8 +1,8 @@
 import { ViewTransition } from "react"
-import Link from "next/link"
 import Image from "next/image"
 import { ArrowUpRight, Eye, House, MapPin, ShieldCheck, Star } from "lucide-react"
 import { CardFact } from "@/components/common/card-fact"
+import { MorphLink } from "@/components/common/morph-placeholder"
 import { VerifiedBadge } from "@/components/common/verified-badge"
 import { SaveButton } from "@/components/properties/save-button"
 import { CompareButton } from "@/components/properties/compare-button"
@@ -58,6 +58,7 @@ export function PropertyCard({ property: p, layout = "grid", eager = false, morp
   const seller = sellerLabel(p)
   const views = p.viewCount ?? 0
   const hasBadge = Boolean(p.isFeatured || p.isVerified)
+  const morph = cover && morphName ? `property-${p.slug}` : undefined
 
   const photo = cover ? (
     <Image
@@ -85,8 +86,9 @@ export function PropertyCard({ property: p, layout = "grid", eager = false, morp
         "motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:has-[a:active]:scale-100",
       )}
     >
-      <Link
+      <MorphLink
         href={href}
+        morph={morph}
         className={cn(
           "flex gap-2.5 rounded-[inherit] p-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400 sm:p-0",
           isList ? "sm:grid sm:grid-cols-[13rem_1fr] sm:gap-0 md:grid-cols-[20rem_1fr]" : "sm:block",
@@ -102,8 +104,10 @@ export function PropertyCard({ property: p, layout = "grid", eager = false, morp
           )}
         >
           {cover ? (
-            morphName ? (
-              <ViewTransition name={`property-${p.slug}`}>{photo}</ViewTransition>
+            morph ? (
+              <ViewTransition name={morph} share="auto" default="none">
+                {photo}
+              </ViewTransition>
             ) : (
               photo
             )
@@ -256,7 +260,7 @@ export function PropertyCard({ property: p, layout = "grid", eager = false, morp
             )}
           </div>
         </div>
-      </Link>
+      </MorphLink>
 
       {/* Save and Compare sit over the thumbnail but outside the link. Bottom corners
           of the thumbnail on phones, a column at the image's top-right from sm. */}
