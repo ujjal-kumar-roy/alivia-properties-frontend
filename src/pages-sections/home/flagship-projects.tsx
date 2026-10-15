@@ -410,7 +410,7 @@ export function FlagshipProjects({ projects }: { projects: FlagshipProject[] }) 
           </Link>
         </div>
       ) : (
-        <ul className="grid gap-2.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+        <ul className="relative grid gap-2.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
           <AnimatePresence mode="popLayout" initial={false}>
             {filtered.map((p) => (
               <motion.li

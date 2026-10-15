@@ -46,7 +46,6 @@ const VERTEX = /* glsl */ `
 `
 
 const FRAGMENT = /* glsl */ `
-  precision highp float;
   uniform sampler2D uA;
   uniform sampler2D uB;
   uniform vec2 uCoverA;
@@ -101,7 +100,9 @@ function textureUrl(src: string) {
 function webglAvailable() {
   try {
     const c = document.createElement("canvas")
-    return !!(c.getContext("webgl2") ?? c.getContext("webgl"))
+    const gl = c.getContext("webgl2") ?? c.getContext("webgl")
+    gl?.getExtension("WEBGL_lose_context")?.loseContext() // don't keep the probe context alive
+    return !!gl
   } catch {
     return false
   }
@@ -172,7 +173,9 @@ async function createScene(
   let destroyed = false
   let still = initialStill
   let current = -1 // slide shown in uA
-  let target = initialIndex
+  let incoming = -1 // slide in uB while a transition runs
+  let target = initialIndex // newest requested slide; queued while a transition runs
+  let canvasShown = false
   let transitionT = -1 // seconds into a transition, -1 when idle
   let slideAgeA = 0
   let slideAgeB = 0
@@ -193,6 +196,7 @@ async function createScene(
   }
 
   function setCanvasShown(shown: boolean) {
+    canvasShown = shown
     canvas.style.opacity = shown ? "1" : "0"
   }
 
@@ -205,6 +209,7 @@ async function createScene(
     uniforms.uProgress.value = 0
     transitionT = -1
     current = i
+    incoming = -1
     slideAgeA = 0
     setCanvasShown(true)
     images.forEach((_, j) => load(j))
@@ -219,12 +224,16 @@ async function createScene(
       load(i)
       return
     }
-    if (current === -1 || current === i) return settleOn(i)
+    // Hidden canvas: its fade-in over the DOM crossfade is the transition, so
+    // never dissolve from whatever stale slide is still sitting in uA.
+    if (current === -1 || !canvasShown) return settleOn(i)
+    if (transitionT >= 0) return // picked up when the running dissolve completes
+    if (current === i) return
     uniforms.uB.value = tex
     coverOf(tex, uniforms.uCoverB.value)
+    incoming = i
     slideAgeB = 0
     transitionT = 0
-    setCanvasShown(true)
     kick()
   }
 
@@ -309,8 +318,6 @@ async function createScene(
     // Slow push-in over a slide's life (Ken Burns, but on a real camera plane).
     // The incoming slide starts a little closer and settles onto the same curve.
     const pushIn = (age: number) => 1 + 0.06 * Math.min(age / SLIDE_DURATION_S, 1)
-    uniforms.uZoomA.value = pushIn(slideAgeA)
-    uniforms.uZoomB.value = pushIn(slideAgeB) + 0.06 * (1 - uniforms.uProgress.value)
 
     if (transitionT >= 0) {
       transitionT += dt
@@ -319,12 +326,18 @@ async function createScene(
       if (t >= 1) {
         uniforms.uA.value = uniforms.uB.value
         uniforms.uCoverA.value.copy(uniforms.uCoverB.value)
-        current = target
+        current = incoming
+        incoming = -1
         slideAgeA = slideAgeB // continue from B's zoom without a jump
         uniforms.uProgress.value = 0
         transitionT = -1
+        if (target !== current) show(target) // a slide change arrived mid-dissolve
       }
     }
+
+    // After the swap, so the completing frame already uses the new slide's zoom.
+    uniforms.uZoomA.value = pushIn(slideAgeA)
+    uniforms.uZoomB.value = pushIn(slideAgeB) + 0.06 * (1 - uniforms.uProgress.value)
 
     // Restrained tilt toward the pointer + scroll-linked push and lift.
     plane.rotation.y = (pointer.x - 0.5) * 0.09
@@ -413,6 +426,9 @@ export function HeroScene({ images, index, still }: HeroSceneProps) {
           if (cancelled) return created.destroy()
           api = created
           apiRef.current = created
+          // Catch up on index/still changes that landed while three.js was loading.
+          created.show(indexRef.current)
+          created.setStill(stillRef.current)
         })
         .catch(() => {}) // chunk failed to load: the photo carousel is already there
     }
