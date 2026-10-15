@@ -1655,6 +1655,12 @@
 :root {
   /* Height of the mobile action bar while one is mounted (see .action-bar). */
   --bottom-bar-h: 0px;
+  /* Motion easing tokens. UI never eases in: entering/exiting and state changes
+     use --ease-out, on-screen movement --ease-in-out, sheets/drawers --ease-drawer.
+     Use as Tailwind arbitrary values, e.g. `ease-(--ease-out)`. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 html[data-action-bar="true"] {
   --bottom-bar-h: 4.75rem;
@@ -1836,6 +1842,22 @@ html[data-nav-traverse]:active-view-transition .vt-page {
 }
 @keyframes page-nav-out {
   to { opacity: 0; }
+}
+
+/* Card photo -> detail hero morph through a loading skeleton
+   (src/components/common/morph-placeholder.tsx, class `morph`). The photo
+   changes shape on the way (a square phone thumbnail into a 4:3 hero), so both
+   snapshots fill the moving box and crop like the object-cover photos they
+   are, instead of the default fit-to-width that spills past the box. Same
+   curve as the page slide, a little longer for the bigger move. */
+::view-transition-group(.morph) {
+  animation-duration: 360ms;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+::view-transition-old(.morph),
+::view-transition-new(.morph) {
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Persistent chrome and fixed overlays hold still above the sliding pages.
