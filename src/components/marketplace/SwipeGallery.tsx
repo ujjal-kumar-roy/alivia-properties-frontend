@@ -1,6 +1,15 @@
 "use client"
 
-import { useCallback, useEffect, useId, useRef, useState, ViewTransition, type ReactNode } from "react"
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  ViewTransition,
+  type ReactNode,
+} from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { ChevronLeft, ChevronRight, ExternalLink, ImageIcon, Play } from "lucide-react"
 
@@ -11,8 +20,23 @@ import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
 import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
-/** Viewport width (px) from which the product variant stacks its slides into a crossfading stage. */
-const STAGE_QUERY = "(min-width: 768px)"
+/**
+ * Where the product variant stacks its slides into a crossfading stage with
+ * hover-zoom: a wide viewport (rem, like Tailwind's `md`) and a mouse. Touch
+ * devices of any width keep the swipeable snap strip. JS is the single source of
+ * truth: the stage classes hang off `data-stacked` on the carousel region, so CSS
+ * and behaviour cannot disagree.
+ */
+const STAGE_QUERY = "(min-width: 48rem) and (hover: hover) and (pointer: fine)"
+
+function subscribeStage(onChange: () => void) {
+  const mql = window.matchMedia(STAGE_QUERY)
+  mql.addEventListener("change", onChange)
+  return () => mql.removeEventListener("change", onChange)
+}
+const stageSnapshot = () => window.matchMedia(STAGE_QUERY).matches
+// Server and first hydration render are the strip; the stage takes over right after.
+const stageServerSnapshot = () => false
 
 /** How a video slide plays once the visitor taps it. */
 export type VideoSource =
@@ -46,10 +70,10 @@ type SwipeGalleryProps = {
   transitionName?: string
   /**
    * `strip` (default): scroll-snap strip with dots and a thumbnail row below.
-   * `product`: square stage on white with `object-contain`. Phones swipe the
-   * strip edge to edge (counter pill, dots under the stage); from `md` the
-   * slides stack and crossfade, a vertical thumbnail column sits on the left,
-   * and a fine pointer hover-zooms the photo.
+   * `product`: square stage on white with `object-contain`. Phones and touch
+   * tablets swipe the strip (counter pill and dots under the stage on phones);
+   * from `md` a vertical thumbnail column sits on the left, and with a mouse the
+   * slides also stack, crossfade and hover-zoom.
    */
   variant?: "strip" | "product"
 }
@@ -61,10 +85,10 @@ type SwipeGalleryProps = {
  * counter chip and dots; `sm` and up add arrows and a thumbnail strip. A video
  * slide shows its poster with a play button and only loads the player on tap.
  *
- * The `product` variant keeps the same slides and swaps the layout with CSS
- * only (one DOM tree, so the shared-element name and `#product-hero-image` stay
- * unique): below `md` the slides are the snap strip, from `md` they are stacked
- * and the active one fades in over the previous.
+ * The `product` variant keeps the same slides in one DOM tree (so the
+ * shared-element name and `#product-hero-image` stay unique). They are the snap
+ * strip, except on a wide mouse-driven viewport (`STAGE_QUERY`) where they are
+ * stacked and the active one fades in over the previous.
  */
 export function SwipeGallery({
   slides,
@@ -84,7 +108,10 @@ export function SwipeGallery({
   const ringId = useId()
   const reduced = usePrefersReducedMotion()
   const scroller = useRef<HTMLDivElement>(null)
+  const thumbColumn = useRef<HTMLDivElement>(null)
   const activeRef = useRef(0)
+  const stacked =
+    useSyncExternalStore(subscribeStage, stageSnapshot, stageServerSnapshot) && isProduct
   const [active, setActive] = useState(0)
   const [playing, setPlaying] = useState<number | null>(null)
   const [lightbox, setLightbox] = useState<number | null>(null)
@@ -99,49 +126,49 @@ export function SwipeGallery({
     activeRef.current = active
   }, [active])
 
-  // Track which slide is centred, without a scroll listener. The product stage
-  // stacks its slides from `md` (nothing scrolls, every slide would read as
-  // visible), so there the observer is paused and `goTo` sets the slide directly.
+  // Track which slide is centred, without a scroll listener. The stacked stage
+  // has nothing to scroll (every slide would read as visible), so there the
+  // observer is off and `goTo` sets the slide directly.
   useEffect(() => {
     const root = scroller.current
-    if (!root || count < 2) return
-    const stage = isProduct ? window.matchMedia(STAGE_QUERY) : null
-    let io: IntersectionObserver | null = null
-
-    const sync = () => {
-      io?.disconnect()
-      io = null
-      if (stage?.matches) return
-      // Back to the strip (window resized past `md`): land it on the current slide.
-      const left = activeRef.current * root.clientWidth
-      if (Math.abs(root.scrollLeft - left) > 1) root.scrollTo({ left, behavior: "auto" })
-      io = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-              const next = Number((entry.target as HTMLElement).dataset.index)
-              setActive(next)
-              setPlaying(null)
-            }
+    if (!root || count < 2 || stacked) return
+    // Back on the strip (the stage just turned off): land it on the current slide.
+    const left = activeRef.current * root.clientWidth
+    if (Math.abs(root.scrollLeft - left) > 1) root.scrollTo({ left, behavior: "auto" })
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+            const next = Number((entry.target as HTMLElement).dataset.index)
+            setActive(next)
+            setPlaying(null)
           }
-        },
-        { root, threshold: [0.6] },
-      )
-      root.querySelectorAll("[data-index]").forEach((el) => io?.observe(el))
-    }
+        }
+      },
+      { root, threshold: [0.6] },
+    )
+    root.querySelectorAll("[data-index]").forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [count, stacked])
 
-    sync()
-    stage?.addEventListener("change", sync)
-    return () => {
-      stage?.removeEventListener("change", sync)
-      io?.disconnect()
-    }
-  }, [count, isProduct])
+  // Keep the active thumbnail inside the column when there are more than fit.
+  // Scrolls the column itself, never the page (scrollIntoView could move both).
+  useEffect(() => {
+    const column = thumbColumn.current
+    const thumb = column?.querySelector<HTMLElement>('[aria-current="true"]')
+    if (!column || !thumb || column.clientHeight === 0) return
+    const top = thumb.offsetTop
+    const bottom = top + thumb.offsetHeight
+    const behavior = reduced ? "auto" : "smooth"
+    if (top < column.scrollTop) column.scrollTo({ top: Math.max(0, top - 4), behavior })
+    else if (bottom > column.scrollTop + column.clientHeight)
+      column.scrollTo({ top: bottom - column.clientHeight + 4, behavior })
+  }, [active, reduced])
 
   const goTo = useCallback(
     (index: number, instantly = false) => {
       const target = Math.max(0, Math.min(count - 1, index))
-      if (isProduct && window.matchMedia(STAGE_QUERY).matches) {
+      if (stacked) {
         setInstant(instantly)
         setActive(target)
         setPlaying(null)
@@ -154,7 +181,7 @@ export function SwipeGallery({
         behavior: reduced || instantly ? "auto" : "smooth",
       })
     },
-    [count, reduced, isProduct],
+    [count, reduced, stacked],
   )
 
   if (count === 0) return <div className={className}>{empty}</div>
@@ -164,7 +191,9 @@ export function SwipeGallery({
 
   // The add-to-quote flight starts from this wrapper: the photo on show (the
   // first one until the visitor browses), never a slide scrolled off-screen.
-  const heroIndex = slides[active]?.kind === "image" ? active : slides.findIndex((slide) => slide.kind === "image")
+  // While a video slide is showing there is no photo to fly, so the id moves to
+  // the stage frame instead.
+  const heroIndex = slides[active]?.kind === "image" ? active : -1
 
   const tile = (
     <span className="flex size-full items-center justify-center bg-linear-to-br from-brand-50 to-brand-100 text-brand-300">
@@ -173,22 +202,24 @@ export function SwipeGallery({
   )
 
   function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0
+    if (step === 0) return
+    e.preventDefault()
+    // On the stage the departing slide turns invisible, and with it the opener
+    // button the key press came from: park focus on the region so the next arrow
+    // still lands here instead of on <body>.
+    if (stacked && document.activeElement !== e.currentTarget) e.currentTarget.focus({ preventScroll: true })
     // Keyboard-initiated: apply instantly, no scroll or crossfade.
-    if (e.key === "ArrowRight") {
-      e.preventDefault()
-      goTo(active + 1, true)
-    } else if (e.key === "ArrowLeft") {
-      e.preventDefault()
-      goTo(active - 1, true)
-    }
+    goTo(active + step, true)
   }
 
-  // Hover-zoom (product stage, scale 1.6 via the zoom layer's classes): the origin follows the cursor, written
-  // straight to the DOM so a mouse move never re-renders the gallery. Mouse
-  // only (touch taps go to the lightbox), photos only, never under reduced motion.
+  // Hover-zoom (stacked stage, scale 1.6 via the zoom layer's classes): the
+  // origin follows the cursor, written straight to the DOM so a mouse move never
+  // re-renders the gallery. Mouse only (touch taps go to the lightbox), photos
+  // only, never under reduced motion.
   function trackZoom(e: React.PointerEvent<HTMLDivElement>) {
     const stage = e.currentTarget
-    if (e.pointerType !== "mouse" || reduced || slides[active]?.kind !== "image") {
+    if (!stacked || e.pointerType !== "mouse" || reduced || slides[active]?.kind !== "image") {
       delete stage.dataset.zoom
       return
     }
@@ -214,14 +245,14 @@ export function SwipeGallery({
         className={cn(
           "relative shrink-0 rounded-lg transition-[opacity,scale] duration-140 ease-(--ease-out) active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 motion-reduce:duration-150 motion-reduce:active:scale-100",
           sizeClassName,
-          index !== active && "opacity-70 hover:opacity-100",
+          index !== active && "opacity-70 pointer-fine:hover:opacity-100",
         )}
       >
         {/* Clipping lives on this inner box so the sliding ring below can travel between thumbs. */}
         <span
           className={cn(
             "absolute inset-0 overflow-hidden rounded-lg",
-            thumbTone === "dark" ? "bg-ink-900" : isProduct ? "bg-white" : "bg-ink-50",
+            thumbTone === "dark" ? "bg-ink-900" : isProduct ? "border border-border/60 bg-white" : "bg-ink-50",
           )}
         >
           <MediaImage
@@ -255,7 +286,7 @@ export function SwipeGallery({
   }
 
   const arrowClassName =
-    "absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-[opacity,scale,background-color] duration-140 ease-(--ease-out) hover:bg-black/65 active:scale-[0.97] disabled:opacity-0 motion-reduce:duration-150 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:flex"
+    "absolute top-1/2 hidden size-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-[opacity,scale,background-color] duration-140 ease-(--ease-out) pointer-fine:hover:bg-black/65 active:scale-[0.97] disabled:opacity-0 motion-reduce:duration-150 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:flex"
 
   return (
     <div className={className}>
@@ -267,6 +298,7 @@ export function SwipeGallery({
         {showColumn ? (
           <div className="relative hidden md:block">
             <div
+              ref={thumbColumn}
               role="group"
               aria-label={`${name} gallery thumbnails`}
               className="absolute inset-0 flex flex-col gap-2 overflow-y-auto p-1 scrollbar-none"
@@ -278,6 +310,7 @@ export function SwipeGallery({
 
         <div className="min-w-0">
           <div
+            id={isProduct && heroIndex < 0 ? "product-hero-image" : undefined}
             className={cn(
               "relative",
               isProduct && "md:overflow-hidden md:rounded-2xl md:border md:border-border/70 md:bg-white",
@@ -289,6 +322,7 @@ export function SwipeGallery({
               aria-roledescription="carousel"
               aria-label={`${name} photos`}
               tabIndex={0}
+              data-stacked={stacked ? "" : undefined}
               onKeyDown={onKeyDown}
               onPointerEnter={isProduct ? trackZoom : undefined}
               onPointerMove={isProduct ? trackZoom : undefined}
@@ -302,8 +336,8 @@ export function SwipeGallery({
               className={cn(
                 "group/stage flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain scrollbar-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400",
                 aspectClassName,
-                // From md the slides stack (absolute) and crossfade; nothing scrolls.
-                isProduct && "max-h-[75svh] md:relative md:block md:snap-none md:overflow-hidden",
+                // Stacked stage: the slides are absolute and crossfade; nothing scrolls.
+                isProduct && "max-h-[75svh] data-stacked:relative data-stacked:block data-stacked:snap-none data-stacked:overflow-hidden",
               )}
             >
               {slides.map((slide, index) => {
@@ -343,8 +377,9 @@ export function SwipeGallery({
                           // Crossfade 200ms ease-out; the 2px blur bridges the two photos.
                           // `visibility` flips at the end of the fade so hidden slides leave
                           // the tab order. Reduced motion: a short plain fade.
-                          "md:absolute md:inset-0 md:transition-[opacity,filter,visibility] motion-safe:md:duration-200 motion-reduce:md:duration-150 md:ease-(--ease-out) md:data-instant:transition-none",
-                          index !== active && "md:invisible md:opacity-0 motion-safe:md:blur-[2px]",
+                          "group-data-stacked/stage:absolute group-data-stacked/stage:inset-0 group-data-stacked/stage:transition-[opacity,filter,visibility] motion-safe:group-data-stacked/stage:duration-200 motion-reduce:group-data-stacked/stage:duration-150 group-data-stacked/stage:ease-(--ease-out) group-data-stacked/stage:data-instant:transition-none",
+                          index !== active &&
+                            "group-data-stacked/stage:invisible group-data-stacked/stage:opacity-0 motion-safe:group-data-stacked/stage:blur-[2px]",
                         ),
                     )}
                   >
@@ -364,7 +399,7 @@ export function SwipeGallery({
                             className={cn(
                               "absolute inset-0 block",
                               isProduct &&
-                                "md:origin-(--zoom-origin) md:transition-[scale] motion-safe:md:duration-200 md:ease-(--ease-out) md:group-data-[zoom=on]/stage:scale-[1.6]",
+                                "origin-(--zoom-origin) transition-[scale] motion-safe:duration-200 ease-(--ease-out) group-data-[zoom=on]/stage:scale-[1.6]",
                             )}
                           >
                             {index === 0 && transitionName ? (
@@ -402,7 +437,7 @@ export function SwipeGallery({
                           type="button"
                           aria-label={`Play ${slide.label}`}
                           onClick={() => setPlaying(index)}
-                          className="absolute left-1/2 top-1/2 flex size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-brand-700 shadow-lg transition-[scale] duration-140 ease-(--ease-out) active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:hover:scale-105 motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
+                          className="absolute left-1/2 top-1/2 flex size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-brand-700 shadow-lg transition-[scale] duration-140 ease-(--ease-out) active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-safe:pointer-fine:hover:scale-105 motion-reduce:transition-none motion-reduce:active:scale-100"
                         >
                           <Play aria-hidden="true" className="size-6 translate-x-0.5 fill-current" />
                         </button>
@@ -485,6 +520,13 @@ export function SwipeGallery({
             ) : null}
           </div>
 
+          {/* The counter pill is visual-only and hidden from md; this announces the change. */}
+          {isProduct && count > 1 ? (
+            <p className="sr-only max-md:hidden" aria-live="polite" aria-atomic="true">
+              {`${slides[active]?.kind === "video" ? "Video" : "Photo"} ${active + 1} of ${count}`}
+            </p>
+          ) : null}
+
           {isProduct && count > 1 ? (
             <div aria-hidden="true" className="flex justify-center gap-1.5 pt-3 md:hidden">
               {slides.map((_, index) => (
@@ -532,6 +574,9 @@ export function SwipeGallery({
           }}
           onIndexChange={setLightbox}
           label={name}
+          // The opener button may be hidden by now (the stage moved on): without
+          // this the dialog returns focus to it and focus falls to <body>.
+          finalFocus={isProduct ? scroller : undefined}
         />
       ) : null}
     </div>

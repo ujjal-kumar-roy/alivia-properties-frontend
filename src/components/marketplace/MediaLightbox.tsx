@@ -55,6 +55,8 @@ type Props = {
   onIndexChange: (index: number) => void
   /** Used to build per-image alt text, e.g. "Mir Ceramics photo 2". */
   label?: string
+  /** Where focus goes on close (default: the element that opened the viewer). */
+  finalFocus?: React.ComponentProps<typeof DialogContent>["finalFocus"]
 }
 
 /**
@@ -73,6 +75,7 @@ export function MediaLightbox({
   onOpenChange,
   onIndexChange,
   label,
+  finalFocus,
 }: Props) {
   const [scale, setScale] = useState(1)
   const [rotation, setRotation] = useState(0)
@@ -348,6 +351,8 @@ export function MediaLightbox({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
+        // Only forwarded when set, so the dialog keeps its default focus return otherwise.
+        {...(finalFocus !== undefined && { finalFocus })}
         // Opts out of the auto-glass that [data-slot="dialog-content"] applies:
         // the viewer is a dark stage, and the controls carry their own glass.
         data-slot="media-lightbox"

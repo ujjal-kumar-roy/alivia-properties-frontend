@@ -7,8 +7,9 @@ import { resolveVideoLink } from "@/lib/video-link"
  * Product photo and video stage. Phones: an edge-to-edge square strip (the
  * negative margin cancels the page gutter), swipe with a counter and dots, tap
  * for the full-screen viewer. From `md`: a 1:1 stage on white with a vertical
- * thumbnail column, a crossfade between photos and hover-zoom. Uploaded video
- * and pasted video links become slides that load their player only when tapped.
+ * thumbnail column; with a mouse the photos also crossfade and hover-zoom, and
+ * touch tablets keep the swipe. Uploaded video and pasted video links become
+ * slides that load their player only when tapped.
  *
  * The page must not wrap this in a clipped or bordered box: on phones the
  * stage bleeds into the gutter, and from `md` the stage draws its own frame.
