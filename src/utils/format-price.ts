@@ -36,3 +36,15 @@ export function formatPriceRange(min: number, max: number): string {
 export function formatRent(amount: number): string {
   return `৳${amount.toLocaleString("en-BD")}/month`
 }
+
+// Exact taka amounts for marketplace prices (cards, rows, buy box, quote list).
+// A fixed locale so the server and every browser print the same string: en-IN groups
+// the South Asian way Bangladeshi buyers read (৳5,50,000); "en-BD" falls back to
+// plain en grouping in some ICU builds, which risks hydration mismatches.
+const takaFraction = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 })
+const takaWhole = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 })
+
+/** ৳ amount with lakh grouping. Whole taka from ৳100 up; small unit prices keep paisa (৳11.5). */
+export function formatTaka(amount: number): string {
+  return `৳${(Math.abs(amount) >= 100 ? takaWhole : takaFraction).format(amount)}`
+}
