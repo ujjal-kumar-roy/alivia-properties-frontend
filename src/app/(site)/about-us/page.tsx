@@ -139,11 +139,9 @@ export default function AboutUsPage() {
                 </span>
                 <span className="min-w-0 md:space-y-1">
                   {count != null ? (
-                    <span className="block text-sm font-bold text-ink-900" aria-label={label}>
-                      <span aria-hidden="true">
-                        <CountUp value={count} />
-                        {suffix}
-                      </span>
+                    <span className="block text-sm font-bold text-ink-900">
+                      <CountUp value={count} />
+                      {suffix}
                     </span>
                   ) : (
                     <span className="block text-sm font-bold text-ink-900">{label}</span>

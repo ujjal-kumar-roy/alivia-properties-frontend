@@ -36,7 +36,7 @@ export default function ContactUsPage() {
           </header>
 
           {/* Phones: the three fastest ways to reach us, 40px glass buttons. */}
-          <div className="reveal-stagger grid grid-cols-3 gap-2 sm:hidden">
+          <div className="grid grid-cols-3 gap-2 sm:hidden">
             <a href={`tel:${siteConfig.contact.phoneRaw}`} className="btn-glass gap-1.5 px-2 text-[0.8125rem]">
               <Phone aria-hidden="true" className="size-4" />
               Call
