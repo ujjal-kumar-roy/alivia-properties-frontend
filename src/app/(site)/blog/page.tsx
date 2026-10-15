@@ -27,7 +27,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   return (
     <div className="py-4 sm:py-8 lg:py-12">
       <div className="container-page">
-        <header className="mb-3 sm:mb-6">
+        <header className="enter-cascade mb-3 sm:mb-6">
           <p className="text-eyebrow mb-2 hidden sm:block">Our Blog</p>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl lg:text-4xl">
             Real Estate Insights
@@ -58,9 +58,9 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
         </nav>
 
         {posts.length > 0 ? (
-          <ul className="grid gap-2.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+          <ul className="reveal-stagger grid gap-2.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
             {posts.map((post) => (
-              <li key={post.id} className="reveal min-w-0">
+              <li key={post.id} className="min-w-0">
                 <BlogCard post={post} />
               </li>
             ))}

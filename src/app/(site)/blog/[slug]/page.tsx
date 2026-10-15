@@ -82,35 +82,37 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           <span className="line-clamp-1 font-medium text-foreground">{post.title}</span>
         </nav>
 
-        <span className="mb-4 hidden w-fit rounded-full bg-brand-100 px-3 py-0.5 text-xs font-semibold text-brand-700 sm:block">
-          {post.category}
-        </span>
+        <div className="enter-cascade">
+          <span className="mb-4 hidden w-fit rounded-full bg-brand-100 px-3 py-0.5 text-xs font-semibold text-brand-700 sm:block">
+            {post.category}
+          </span>
 
-        <h1 className="font-heading text-2xl font-bold leading-tight tracking-tight text-ink-900 text-balance sm:text-4xl">
-          {post.title}
-        </h1>
+          <h1 className="font-heading text-2xl font-bold leading-tight tracking-tight text-ink-900 text-balance sm:text-4xl">
+            {post.title}
+          </h1>
 
-        <div className="mt-2.5 mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-ink-600 sm:mt-4 sm:mb-8">
-          <div className="flex items-center gap-2">
-            {authorObj.avatar && (
-              <Image
-                src={authorObj.avatar}
-                alt=""
-                width={28}
-                height={28}
-                unoptimized
-                className="size-7 rounded-full object-cover"
-              />
-            )}
-            <p className="text-[0.8125rem] font-semibold text-ink-900">
-              {authorObj.name}
-              {"title" in authorObj && authorObj.title ? (
-                <span className="hidden font-normal text-ink-600 sm:inline"> · {authorObj.title}</span>
-              ) : null}
-            </p>
+          <div className="mt-2.5 mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-ink-600 sm:mt-4 sm:mb-8">
+            <div className="flex items-center gap-2">
+              {authorObj.avatar && (
+                <Image
+                  src={authorObj.avatar}
+                  alt=""
+                  width={28}
+                  height={28}
+                  unoptimized
+                  className="size-7 rounded-full object-cover"
+                />
+              )}
+              <p className="text-[0.8125rem] font-semibold text-ink-900">
+                {authorObj.name}
+                {"title" in authorObj && authorObj.title ? (
+                  <span className="hidden font-normal text-ink-600 sm:inline"> · {authorObj.title}</span>
+                ) : null}
+              </p>
+            </div>
+            <CardFact icon={CalendarDays}>{formatDate(post.publishedAt, "d MMMM yyyy")}</CardFact>
+            {readMinutes != null && <CardFact icon={Clock}>{readMinutes} min read</CardFact>}
           </div>
-          <CardFact icon={CalendarDays}>{formatDate(post.publishedAt, "d MMMM yyyy")}</CardFact>
-          {readMinutes != null && <CardFact icon={Clock}>{readMinutes} min read</CardFact>}
         </div>
 
         <div className="relative mb-5 aspect-video overflow-hidden rounded-2xl bg-ink-100 sm:mb-8 md:aspect-auto md:h-96">
@@ -157,9 +159,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </article>
 
         {related.length > 0 && (
-          <div className="mt-10 border-t border-border pt-6 sm:mt-16 sm:pt-8">
+          <div className="reveal mt-10 border-t border-border pt-6 sm:mt-16 sm:pt-8">
             <h2 className="mb-3 font-heading text-lg font-bold text-ink-900 sm:mb-6 sm:text-2xl">Related Articles</h2>
-            <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-5">
+            <ul className="reveal-stagger grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-5">
               {related.map((item) => (
                 <li key={item.id} className="min-w-0">
                   <BlogCard post={item} />

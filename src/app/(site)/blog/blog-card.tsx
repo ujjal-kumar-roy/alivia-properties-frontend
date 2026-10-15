@@ -39,7 +39,7 @@ export function BlogCard({ post }: { post: BlogPost }) {
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100px"
             placeholder="blur"
             blurDataURL={CARD_BLUR_DATA_URL}
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover transition-transform duration-500 motion-reduce:transition-none sm:group-hover:scale-105 motion-reduce:sm:group-hover:scale-100"
           />
           <span className="absolute left-1.5 top-1.5 max-w-[calc(100%-0.75rem)] truncate rounded-full bg-brand-700 px-2 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wider text-white sm:left-3 sm:top-3 sm:max-w-[calc(100%-1.5rem)] sm:px-2.5 sm:py-1">
             {post.category}
