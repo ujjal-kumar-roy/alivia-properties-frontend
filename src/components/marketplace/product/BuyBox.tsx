@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Clock3,
   FileText,
+  ListChecks,
   MessageCircle,
   Phone,
   Truck,
@@ -15,16 +16,18 @@ import {
 } from "lucide-react"
 
 import { MobileActionBar } from "@/components/common/mobile-action-bar"
-import { PriceEstimate, formatTaka } from "@/components/marketplace/product/PriceEstimate"
+import { PriceEstimate, tierFor } from "@/components/marketplace/product/PriceEstimate"
 import {
   QuantityStepper,
   STEADY_CHANGE,
   type QuantityChange,
 } from "@/components/marketplace/product/QuantityStepper"
 import { AddToQuoteButton } from "@/components/marketplace/quote-list/AddToQuoteButton"
+import { useQuoteList } from "@/hooks/use-quote-list"
 import { haptic } from "@/lib/celebrate"
 import { cn } from "@/lib/utils"
 import type { ProductWithSupplier } from "@/services/marketplace.service"
+import { formatTaka } from "@/utils/format-price"
 
 type BuyBoxProps = {
   product: ProductWithSupplier
@@ -36,6 +39,11 @@ type BuyBoxProps = {
 }
 
 type Fact = { key: string; icon: LucideIcon; text: string; tone?: string }
+
+/** Stepper changes reach the saved quote list after this pause (a held button fires ~20/s). */
+const LIST_WRITE_DELAY_MS = 200
+/** Screen-reader quantity updates wait for the number to settle. */
+const ANNOUNCE_DELAY_MS = 300
 
 const HOVER = "[@media(hover:hover)_and_(pointer:fine)]:hover"
 
@@ -72,17 +80,71 @@ function useHeroImage(): RefObject<HTMLElement | null> {
  */
 export function BuyBox({ product, serviceMode, quoteHref, call, whatsapp }: BuyBoxProps) {
   const unit = product.unit
-  const moq = typeof product.moq === "number" && product.moq > 0 ? Math.floor(product.moq) : null
-  const minQty = moq ?? 1
+  // MOQ as the seller gave it (may be fractional, e.g. 0.5 Ton); the stepper counts whole units from 1.
+  const moq = typeof product.moq === "number" && product.moq > 0 ? product.moq : null
+  const minQty = Math.max(1, Math.ceil(moq ?? 1))
   const lead =
     typeof product.leadTimeDays === "number" && product.leadTimeDays > 0 ? product.leadTimeDays : null
+  // Sellers mark not-yet-released items in the unit ("Pcs (Upcoming)"); "In stock" and
+  // "Ships in 1 day" are API defaults there, not claims, so don't show them.
+  const upcoming = /upcoming/i.test(unit)
   const sellerName = product.supplier?.name ?? (serviceMode ? "the provider" : "the seller")
 
-  const [qty, setQty] = useState<{ value: number; change: QuantityChange }>({
-    value: minQty,
-    change: STEADY_CHANGE,
+  // The saved quote list is read after hydration (`ready`), so server and first client
+  // render agree and a listed product then shows its saved quantity.
+  const { items, ready, setQty: setQuoteListQty } = useQuoteList()
+  const listed = ready ? items.find((row) => row.productId === product.id) : undefined
+
+  // null until the buyer uses a stepper: until then the quantity is the listed one
+  // (return visit) or the minimum. Afterwards it is theirs and is written to the list.
+  const [touched, setTouched] = useState<{ value: number; change: QuantityChange } | null>(null)
+  const qty = touched ?? { value: listed ? Math.max(minQty, listed.qty) : minQty, change: STEADY_CHANGE }
+
+  // Debounced write-through: setQuoteListQty is a no-op while the product is not listed,
+  // so this needs no "is it listed" check (and a stale closure during a held repeat is harmless).
+  const pendingWrite = useRef<{ timer: number | undefined; value: number | null }>({
+    timer: undefined,
+    value: null,
   })
-  const onQty = useCallback((value: number, change: QuantityChange) => setQty({ value, change }), [])
+  const flushWrite = useCallback(() => {
+    const pending = pendingWrite.current
+    window.clearTimeout(pending.timer)
+    pending.timer = undefined
+    if (pending.value !== null) {
+      setQuoteListQty(product.id, pending.value)
+      pending.value = null
+    }
+  }, [product.id, setQuoteListQty])
+  // Leaving the page (or the tab going away) must not drop the last change.
+  useEffect(() => {
+    window.addEventListener("pagehide", flushWrite)
+    return () => {
+      window.removeEventListener("pagehide", flushWrite)
+      flushWrite()
+    }
+  }, [flushWrite])
+
+  // Screen readers: the estimate line announces itself; when there is no estimate (price 0)
+  // or the change also edits the quote list, say so here, once the number settles.
+  const [announcement, setAnnouncement] = useState("")
+  const announceTimer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(announceTimer.current), [])
+
+  const onQty = (value: number, change: QuantityChange) => {
+    setTouched({ value, change })
+    pendingWrite.current.value = value
+    window.clearTimeout(pendingWrite.current.timer)
+    pendingWrite.current.timer = window.setTimeout(flushWrite, LIST_WRITE_DELAY_MS)
+
+    const hasEstimate = (tierFor(value, product.priceTiers)?.price ?? product.price) > 0
+    const message = hasEstimate
+      ? listed
+        ? `Quote list updated to ${value} ${unit}`
+        : ""
+      : `Quantity ${value} ${unit}${listed ? ", quote list updated" : ""}`
+    window.clearTimeout(announceTimer.current)
+    announceTimer.current = window.setTimeout(() => setAnnouncement(message), ANNOUNCE_DELAY_MS)
+  }
 
   const quantityId = useId()
   const heroImage = useHeroImage()
@@ -122,11 +184,13 @@ export function BuyBox({ product, serviceMode, quoteHref, call, whatsapp }: BuyB
   const askHref = `${quoteHref}&qty=${qty.value}&unit=${encodeURIComponent(unit)}`
 
   const facts: Fact[] = [
-    product.inStock
-      ? { key: "stock", icon: CheckCircle2, text: serviceMode ? "Available now" : "In stock", tone: "text-success" }
-      : { key: "stock", icon: Clock3, text: serviceMode ? "Schedule needed" : "On order", tone: "text-amber-600" },
+    upcoming
+      ? { key: "stock", icon: Clock3, text: "Upcoming", tone: "text-amber-600" }
+      : product.inStock
+        ? { key: "stock", icon: CheckCircle2, text: serviceMode ? "Available now" : "In stock", tone: "text-success" }
+        : { key: "stock", icon: Clock3, text: serviceMode ? "Schedule needed" : "On order", tone: "text-amber-600" },
   ]
-  if (lead) {
+  if (lead && !upcoming) {
     facts.push({
       key: "lead",
       icon: serviceMode ? CalendarClock : Truck,
@@ -199,6 +263,15 @@ export function BuyBox({ product, serviceMode, quoteHref, call, whatsapp }: BuyB
             unit={unit}
             instant={qty.change.instant}
           />
+          {/* Listed: the stepper edits the saved quantity, so say what is in the list. */}
+          {listed ? (
+            <p className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-brand-700 transition-[opacity,translate] duration-200 ease-(--ease-out) starting:translate-y-2 starting:opacity-0 motion-reduce:starting:translate-y-0">
+              <ListChecks aria-hidden="true" className="size-4 shrink-0" />
+              <span>
+                In your quote list · <span className="tabular-nums">{qty.value}</span> {unit}
+              </span>
+            </p>
+          ) : null}
         </div>
 
         <div className="grid gap-2.5">
@@ -233,6 +306,10 @@ export function BuyBox({ product, serviceMode, quoteHref, call, whatsapp }: BuyB
           </div>
         </div>
       </section>
+
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
 
       {/* Hidden bar is inert: off screen, out of the tab order and the a11y tree. */}
       <div inert={!barShown}>

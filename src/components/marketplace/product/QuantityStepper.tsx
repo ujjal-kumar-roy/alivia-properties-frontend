@@ -266,7 +266,12 @@ export function QuantityStepper({
           value={text}
           onFocus={(event) => {
             setDraft(String(value))
-            event.currentTarget.select()
+            // Select after the focus settles: iOS Safari ignores select() inside the
+            // focus event, and typing would then append ("1" -> "15").
+            const field = event.currentTarget
+            requestAnimationFrame(() => {
+              if (document.activeElement === field) field.setSelectionRange(0, field.value.length)
+            })
           }}
           onChange={(event) => {
             const clean = event.target.value.replace(/\D/g, "").slice(0, String(max).length)
