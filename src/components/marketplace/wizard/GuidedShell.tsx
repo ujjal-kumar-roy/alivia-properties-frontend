@@ -12,11 +12,18 @@ import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 /**
- * The screen a shell last LEFT (stamped on cleanup, so `at` is the departure
- * time). A shell that mounts right after another unmounts (the wizard hands over
- * from the picks to the form, and back) uses it to slide the right way.
+ * The screen the visitor is leaving, noted by the wizard just before it swaps one
+ * shell for another (picks <-> form hand-off). A shell mounts BEFORE the old one's
+ * effects clean up, so this has to be written by the caller synchronously, not by
+ * the shell itself. A fresh shell reads it once to pick a direction; without a
+ * recent note (cold load, deep link) nothing animates.
  */
 let lastNav: { step: number; at: number } | null = null
+
+/** Call right before swapping to a different shell, with the zero-based screen index being left. */
+export function noteShellDeparture(step: number) {
+  lastNav = { step, at: Date.now() }
+}
 
 const screenVariants: Variants = {
   enter: (dir: number) => ({ x: dir * 40, opacity: 0 }),
@@ -104,14 +111,6 @@ export function GuidedShell({
   })
   if (nav.step !== step) setNav({ step, dir: step > nav.step ? 1 : -1, fresh: true })
   const dir = nav.dir
-
-  // Stamp departure, not arrival: cleanup runs when the step changes or the shell unmounts.
-  useEffect(
-    () => () => {
-      lastNav = { step, at: Date.now() }
-    },
-    [step],
-  )
 
   const guard = useCallback(
     (handler: () => void, ms = 300) =>

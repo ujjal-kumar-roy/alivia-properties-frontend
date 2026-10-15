@@ -22,7 +22,7 @@ import {
   QUOTE_FORM_SCREEN_COUNT,
 } from "@/components/marketplace/GetQuoteForm"
 import { MediaImage } from "@/components/marketplace/MediaImage"
-import { GuidedShell } from "@/components/marketplace/wizard/GuidedShell"
+import { GuidedShell, noteShellDeparture } from "@/components/marketplace/wizard/GuidedShell"
 import { ROUTES } from "@/config/routes.config"
 import { haptic } from "@/lib/celebrate"
 import {
@@ -82,6 +82,7 @@ export function QuoteWizard({ tree, initial }: Props) {
   function advanceTo(target: Step) {
     // A double tap must not record the same screen twice.
     if (history.current[history.current.length - 1] !== step) history.current.push(step)
+    noteShellDeparture(step - 1)
     setStep(target)
   }
 
@@ -108,7 +109,11 @@ export function QuoteWizard({ tree, initial }: Props) {
 
   function back() {
     const last = history.current.pop()
-    if (last != null) setStep(last)
+    if (last != null) {
+      // Leaving the form's first screen (index PICK_SCREENS) or a pick screen.
+      noteShellDeparture(step === 4 ? PICK_SCREENS : step - 1)
+      setStep(last)
+    }
   }
 
   // ── Load suppliers when a category is chosen ─────────────────────────────────
