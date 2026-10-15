@@ -1,3 +1,4 @@
+import { ViewTransition } from "react"
 import Link from "next/link"
 import { Boxes, CheckCircle2, Clock3, Package, Store, Truck, Wrench } from "lucide-react"
 
@@ -24,6 +25,8 @@ type ProductCardProps = {
   serviceMode?: boolean
   /** Hide the "sold by" line when every card in the list has the same seller. */
   hideSupplier?: boolean
+  /** Name the photo for the card-to-page morph. Turn off when the same product can appear twice on a page. */
+  morph?: boolean
   className?: string
 }
 
@@ -40,6 +43,7 @@ export function MarketplaceProductCard({
   supplierName,
   serviceMode,
   hideSupplier = false,
+  morph = true,
   className,
 }: ProductCardProps) {
   const service = serviceMode ?? isServiceKind(product.supplier?.kind)
@@ -79,11 +83,29 @@ export function MarketplaceProductCard({
 
   const Fallback = service ? Wrench : Package
 
+  const image = (
+    <MediaImage
+      src={product.image}
+      alt={product.name}
+      fill
+      unoptimized
+      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+      placeholder="blur"
+      blurDataURL={CARD_BLUR_DATA_URL}
+      className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+      fallback={
+        <div className="flex size-full items-start justify-center bg-linear-to-br from-brand-50 to-brand-100 pt-7 text-brand-300 sm:items-center sm:pt-0">
+          <Fallback aria-hidden="true" className="size-8 sm:size-12" />
+        </div>
+      }
+    />
+  )
+
   return (
     <article
       data-card
       className={cn(
-        "group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) transition-[translate,scale,box-shadow] duration-200 active:scale-[0.99] sm:rounded-3xl sm:hover:-translate-y-1 sm:hover:shadow-(--shadow-elevated) motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100",
+        "group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) transition-[translate,scale,box-shadow] duration-200 active:scale-[0.98] sm:rounded-3xl sm:hover:-translate-y-1 sm:hover:shadow-(--shadow-elevated) motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100",
         className,
       )}
     >
@@ -95,21 +117,11 @@ export function MarketplaceProductCard({
             From sm it disappears (contents) so the caption flows below the photo. */}
         <div className="relative sm:contents">
           <div className="relative aspect-4/3 overflow-hidden bg-brand-50">
-            <MediaImage
-              src={product.image}
-              alt={product.name}
-              fill
-              unoptimized
-              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-              placeholder="blur"
-              blurDataURL={CARD_BLUR_DATA_URL}
-              className="object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-              fallback={
-                <div className="flex size-full items-start justify-center bg-linear-to-br from-brand-50 to-brand-100 pt-7 text-brand-300 sm:items-center sm:pt-0">
-                  <Fallback aria-hidden="true" className="size-8 sm:size-12" />
-                </div>
-              }
-            />
+            {morph ? (
+              <ViewTransition name={`product-${product.slug}`}>{image}</ViewTransition>
+            ) : (
+              image
+            )}
             {product.badge ? (
               <span className="absolute left-1.5 top-1.5 inline-flex rounded-full bg-gold-400 px-2 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wide text-brand-950 shadow-sm sm:left-3 sm:top-3 sm:px-2.5 sm:py-1">
                 {product.badge}

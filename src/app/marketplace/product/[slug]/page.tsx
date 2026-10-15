@@ -33,6 +33,8 @@ import type { ProductVariant, Supplier } from "@/types/marketplace.types"
 import { formatPrice } from "@/utils/format-price"
 import { isServiceKind } from "@/utils/marketplace-kind"
 
+import { HapticLink } from "./haptic-link"
+
 export const dynamic = "force-dynamic"
 
 type PageProps = {
@@ -140,11 +142,13 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
                 videoUrl={product.videoUrl}
                 externalVideoUrl={product.externalVideoUrl}
                 serviceMode={serviceMode}
+                slug={product.slug}
               />
             </div>
           </div>
 
           <div className="min-w-0">
+            <div className="enter-cascade">
             {product.category?.name && (
               <p className="text-eyebrow mb-2 hidden sm:block">{product.category.name}</p>
             )}
@@ -229,6 +233,7 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
                 </li>
               )}
             </ul>
+            </div>
 
             {supplier && supplierHref ? (
               <Link
@@ -261,10 +266,10 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
 
             {/* Wide screens: the actions sit under the facts. Phones use the bottom bar. */}
             <div className="mt-4 hidden flex-wrap gap-2 md:flex">
-              <Link href={quoteHref} className="btn-tactile">
+              <HapticLink href={quoteHref} className="btn-tactile">
                 <FileText aria-hidden="true" className="size-4" />
                 {serviceMode ? "Get a service quote" : "Get a product quote"}
-              </Link>
+              </HapticLink>
               {call ? (
                 <a href={call} className="btn-glass">
                   <Phone aria-hidden="true" className="size-4" /> Call
@@ -277,7 +282,7 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
               ) : null}
             </div>
 
-            <div className="mt-4 grid gap-2.5 sm:mt-6">
+            <div className="reveal-stagger mt-4 grid gap-2.5 sm:mt-6">
               <Disclosure title={serviceMode ? "About this service" : "About this product"} defaultOpen>
                 <p className="whitespace-pre-line text-[0.9375rem] leading-relaxed text-ink-700 sm:text-base">
                   {product.shortDescription ? (
@@ -468,11 +473,14 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
         </div>
       </section>
 
-      <MobileActionBar label={serviceMode ? "Book this service" : "Quote this product"}>
-        <Link href={quoteHref} className="btn-tactile flex-1">
+      <MobileActionBar
+        label={serviceMode ? "Book this service" : "Quote this product"}
+        className="transition-[translate,opacity] duration-500 ease-out starting:translate-y-[150%] starting:opacity-0 motion-reduce:transition-none"
+      >
+        <HapticLink href={quoteHref} className="btn-tactile flex-1">
           <FileText aria-hidden="true" className="size-4" />
           Get a quote
-        </Link>
+        </HapticLink>
         {call ? (
           <a
             href={call}

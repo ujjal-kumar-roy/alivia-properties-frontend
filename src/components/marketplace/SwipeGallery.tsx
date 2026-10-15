@@ -1,12 +1,15 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react"
+import { ViewTransition } from "react"
+import { motion } from "motion/react"
 import { ChevronLeft, ChevronRight, ExternalLink, ImageIcon, Play } from "lucide-react"
 
 import { MediaImage } from "@/components/marketplace/MediaImage"
 import { MediaLightbox } from "@/components/marketplace/MediaLightbox"
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
+import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 /** How a video slide plays once the visitor taps it. */
@@ -37,6 +40,8 @@ type SwipeGalleryProps = {
   unoptimized?: boolean
   /** Eager-load the first photo (use when the gallery is above the fold). */
   priority?: boolean
+  /** Shared-element name for the first photo (morphs from the list card image). */
+  transitionName?: string
 }
 
 /**
@@ -57,7 +62,9 @@ export function SwipeGallery({
   thumbTone = "light",
   unoptimized = false,
   priority = false,
+  transitionName,
 }: SwipeGalleryProps) {
+  const ringId = useId()
   const reduced = usePrefersReducedMotion()
   const scroller = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
@@ -137,7 +144,23 @@ export function SwipeGallery({
             aspectClassName,
           )}
         >
-          {slides.map((slide, index) => (
+          {slides.map((slide, index) => {
+            const photo =
+              slide.kind === "image" ? (
+                <MediaImage
+                  src={slide.src}
+                  alt={slide.alt}
+                  fill
+                  unoptimized={unoptimized}
+                  priority={priority && index === 0}
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  placeholder="blur"
+                  blurDataURL={CARD_BLUR_DATA_URL}
+                  className="object-cover"
+                  fallback={tile}
+                />
+              ) : null
+            return (
             <div
               key={`${slide.kind}-${index}`}
               data-index={index}
@@ -153,18 +176,11 @@ export function SwipeGallery({
                   onClick={() => setLightbox(imageIndexOf(index))}
                   className="absolute inset-0 block cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400"
                 >
-                  <MediaImage
-                    src={slide.src}
-                    alt={slide.alt}
-                    fill
-                    unoptimized={unoptimized}
-                    priority={priority && index === 0}
-                    sizes="(min-width: 1024px) 50vw, 100vw"
-                    placeholder="blur"
-                    blurDataURL={CARD_BLUR_DATA_URL}
-                    className="object-cover"
-                    fallback={tile}
-                  />
+                  {index === 0 && transitionName ? (
+                    <ViewTransition name={transitionName}>{photo}</ViewTransition>
+                  ) : (
+                    photo
+                  )}
                 </button>
               ) : playing === index ? (
                 <VideoPlayer source={slide.source} title={slide.label} />
@@ -192,7 +208,8 @@ export function SwipeGallery({
                 </>
               )}
             </div>
-          ))}
+            )
+          })}
         </div>
 
         {overlay ? (
@@ -204,7 +221,16 @@ export function SwipeGallery({
         {count > 1 ? (
           <>
             <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold tabular-nums text-white backdrop-blur-sm sm:right-3 sm:top-3">
-              {active + 1} / {count}
+              <motion.span
+                key={active}
+                className="inline-block"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={springs.snappy}
+              >
+                {active + 1}
+              </motion.span>{" "}
+              / {count}
             </span>
             <div
               aria-hidden="true"
@@ -218,7 +244,7 @@ export function SwipeGallery({
                 <span
                   key={index}
                   className={cn(
-                    "h-1.5 rounded-full bg-white/70 shadow-sm transition-colors duration-200 motion-reduce:transition-none",
+                    "h-1.5 rounded-full bg-white/70 shadow-sm transition-[width,background-color] duration-300 ease-out motion-reduce:transition-none",
                     index === active ? "w-5 bg-white" : "w-1.5",
                   )}
                 />
@@ -229,7 +255,7 @@ export function SwipeGallery({
               aria-label="Previous photo"
               onClick={() => goTo(active - 1)}
               disabled={active === 0}
-              className="absolute left-3 top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-opacity hover:bg-black/65 disabled:opacity-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:flex"
+              className="absolute left-3 top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-[opacity,scale] hover:bg-black/65 active:scale-90 disabled:opacity-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:flex"
             >
               <ChevronLeft aria-hidden="true" className="size-5" />
             </button>
@@ -238,7 +264,7 @@ export function SwipeGallery({
               aria-label="Next photo"
               onClick={() => goTo(active + 1)}
               disabled={active === count - 1}
-              className="absolute right-3 top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-opacity hover:bg-black/65 disabled:opacity-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:flex"
+              className="absolute right-3 top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-[opacity,scale] hover:bg-black/65 active:scale-90 disabled:opacity-0 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:flex"
             >
               <ChevronRight aria-hidden="true" className="size-5" />
             </button>
@@ -265,13 +291,9 @@ export function SwipeGallery({
                 aria-current={index === active ? "true" : undefined}
                 onClick={() => goTo(index)}
                 className={cn(
-                  "relative size-14 shrink-0 overflow-hidden rounded-lg border-2 transition-[border-color,opacity] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400",
+                  "relative size-14 shrink-0 overflow-hidden rounded-lg border-2 border-transparent transition-[opacity,scale] duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 motion-reduce:transition-none motion-reduce:active:scale-100",
                   thumbTone === "dark" ? "bg-ink-900" : "bg-ink-50",
-                  index === active
-                    ? thumbTone === "dark"
-                      ? "border-gold-300"
-                      : "border-brand-600"
-                    : "border-transparent opacity-70 hover:opacity-100",
+                  index !== active && "opacity-70 hover:opacity-100",
                 )}
               >
                 <MediaImage
@@ -287,6 +309,17 @@ export function SwipeGallery({
                   <span className="absolute inset-0 flex items-center justify-center bg-black/35">
                     <Play aria-hidden="true" className="size-4 fill-white text-white" />
                   </span>
+                ) : null}
+                {index === active ? (
+                  <motion.span
+                    layoutId={`${ringId}-thumb-ring`}
+                    transition={springs.move}
+                    aria-hidden="true"
+                    className={cn(
+                      "pointer-events-none absolute inset-0 rounded-[0.4rem] border-2",
+                      thumbTone === "dark" ? "border-gold-300" : "border-brand-600",
+                    )}
+                  />
                 ) : null}
               </button>
             )

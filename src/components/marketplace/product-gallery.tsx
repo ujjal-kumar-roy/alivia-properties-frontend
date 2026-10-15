@@ -16,6 +16,7 @@ export function ProductGallery({
   videoUrl,
   externalVideoUrl,
   serviceMode,
+  slug,
 }: {
   name: string
   image: string
@@ -23,6 +24,8 @@ export function ProductGallery({
   videoUrl?: string | null
   externalVideoUrl?: string | null
   serviceMode: boolean
+  /** Product slug: names the hero photo for the card-to-page morph. */
+  slug?: string
 }) {
   const photos = [image, ...gallery].filter(Boolean)
   const slides: GallerySlide[] = photos.map((src, index) => ({
@@ -62,6 +65,7 @@ export function ProductGallery({
       slides={slides}
       name={name}
       priority
+      transitionName={slug ? `product-${slug}` : undefined}
       empty={
         <div className="flex h-36 w-full flex-col items-center justify-center gap-2 bg-linear-to-br from-brand-50 via-white to-gold-50 px-6 text-center sm:aspect-4/3 sm:h-auto sm:gap-4">
           <span className="flex size-14 items-center justify-center rounded-2xl bg-white text-brand-500 shadow-(--shadow-card) sm:size-20">
