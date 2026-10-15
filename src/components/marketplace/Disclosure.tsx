@@ -40,11 +40,13 @@ export function Disclosure({
         "group rounded-2xl border border-border/70 bg-white shadow-(--shadow-card)",
         // Open/close slides the height (::details-content + interpolate-size).
         // Browsers without them ignore these rules and the panel just toggles.
-        "[interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-clip [&::details-content]:transition-[height,content-visibility] [&::details-content]:duration-300 [&::details-content]:ease-[cubic-bezier(0.32,0.72,0,1)] [&::details-content]:transition-discrete open:[&::details-content]:h-auto motion-reduce:[&::details-content]:transition-none",
+        // Gated on interpolate-size: engines with ::details-content but without it
+        // would flip height at the halfway point, so they keep the plain toggle.
+        "[@supports(interpolate-size:allow-keywords)]:[interpolate-size:allow-keywords] [@supports(interpolate-size:allow-keywords)]:[&::details-content]:h-0 [@supports(interpolate-size:allow-keywords)]:[&::details-content]:overflow-clip [@supports(interpolate-size:allow-keywords)]:[&::details-content]:transition-[height,content-visibility] [@supports(interpolate-size:allow-keywords)]:[&::details-content]:duration-300 [@supports(interpolate-size:allow-keywords)]:[&::details-content]:ease-[cubic-bezier(0.32,0.72,0,1)] [@supports(interpolate-size:allow-keywords)]:[&::details-content]:transition-discrete [@supports(interpolate-size:allow-keywords)]:open:[&::details-content]:h-auto [@supports(interpolate-size:allow-keywords)]:motion-reduce:[&::details-content]:transition-none",
         expandedFrom === "lg" &&
-          "lg:[&::details-content]:h-auto lg:[&::details-content]:[content-visibility:visible]",
+          "[@supports(interpolate-size:allow-keywords)]:lg:[&::details-content]:h-auto lg:[&::details-content]:[content-visibility:visible]",
         expandedFrom === "xl" &&
-          "xl:[&::details-content]:h-auto xl:[&::details-content]:[content-visibility:visible]",
+          "[@supports(interpolate-size:allow-keywords)]:xl:[&::details-content]:h-auto xl:[&::details-content]:[content-visibility:visible]",
         className,
       )}
     >

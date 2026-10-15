@@ -12,8 +12,9 @@ import { springs } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 /**
- * Last screen shown by any shell, so a shell that mounts fresh (the wizard hands
- * over from the picks to the form, and back) still knows which way to slide.
+ * The screen a shell last LEFT (stamped on cleanup, so `at` is the departure
+ * time). A shell that mounts right after another unmounts (the wizard hands over
+ * from the picks to the form, and back) uses it to slide the right way.
  */
 let lastNav: { step: number; at: number } | null = null
 
@@ -104,9 +105,13 @@ export function GuidedShell({
   if (nav.step !== step) setNav({ step, dir: step > nav.step ? 1 : -1, fresh: true })
   const dir = nav.dir
 
-  useEffect(() => {
-    lastNav = { step, at: Date.now() }
-  }, [step])
+  // Stamp departure, not arrival: cleanup runs when the step changes or the shell unmounts.
+  useEffect(
+    () => () => {
+      lastNav = { step, at: Date.now() }
+    },
+    [step],
+  )
 
   const guard = useCallback(
     (handler: () => void, ms = 300) =>
@@ -173,7 +178,7 @@ export function GuidedShell({
       {animateContent ? (
         // Clipped sideways so the sliding screen never widens the page; the small
         // negative margin keeps card shadows from being cut at the edges.
-        <div className="relative mt-4 -mx-1 overflow-x-clip px-1">
+        <div className="relative -mx-2 mt-4 overflow-x-clip px-2">
           <AnimatePresence mode="popLayout" custom={dir} initial={nav.fresh}>
             <motion.div
               key={step}
@@ -188,7 +193,17 @@ export function GuidedShell({
           </AnimatePresence>
         </div>
       ) : (
-        <div className="mt-4">{children}</div>
+        // No per-step swap (the children keep their state), but a shell that mounts
+        // right after another one (picks <-> form hand-off) still slides in once.
+        <div className="-mx-2 mt-4 overflow-x-clip px-2">
+          <motion.div
+            initial={nav.fresh ? { x: dir * 40, opacity: 0 } : false}
+            animate={{ x: 0, opacity: 1 }}
+            transition={springs.move}
+          >
+            {children}
+          </motion.div>
+        </div>
       )}
 
       <MobileActionBar label="Next step">{action("bar", { guard })}</MobileActionBar>

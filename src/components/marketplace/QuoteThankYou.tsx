@@ -3,11 +3,11 @@
 import Link from "next/link"
 import { useEffect, useRef } from "react"
 import { Phone } from "lucide-react"
-import { motion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
 
 import { GuideAvatar } from "@/components/common/guide-avatar"
 import { ROUTES } from "@/config/routes.config"
-import { celebrate, haptic } from "@/lib/celebrate"
+import { celebrate } from "@/lib/celebrate"
 import { springs } from "@/lib/motion"
 
 type QuoteThankYouProps = {
@@ -32,11 +32,12 @@ const NEXT_STEPS = [
 export function QuoteThankYou({ reference, supplierCount, phone, phoneRaw }: QuoteThankYouProps) {
   const avatarRef = useRef<HTMLSpanElement>(null)
   const celebrated = useRef(false)
+  // Under reduced motion the badge and tick are simply there (no scale, no draw).
+  const reduceMotion = useReducedMotion()
 
   useEffect(() => {
     if (celebrated.current) return
     celebrated.current = true
-    haptic("success")
     celebrate({ origin: avatarRef.current })
   }, [])
 
@@ -56,7 +57,7 @@ export function QuoteThankYou({ reference, supplierCount, phone, phoneRaw }: Quo
         <span className="mx-auto flex size-12 items-center justify-center">
           <motion.span
             className="flex size-12 items-center justify-center rounded-full bg-green-50 text-green-700"
-            initial={{ scale: 0.4, opacity: 0 }}
+            initial={reduceMotion ? false : { scale: 0.4, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ ...springs.sheet, delay: 0.15 }}
           >
@@ -72,7 +73,7 @@ export function QuoteThankYou({ reference, supplierCount, phone, phoneRaw }: Quo
             >
               <motion.path
                 d="M20 6 9 17l-5-5"
-                initial={{ pathLength: 0 }}
+                initial={reduceMotion ? false : { pathLength: 0 }}
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1], delay: 0.35 }}
               />
