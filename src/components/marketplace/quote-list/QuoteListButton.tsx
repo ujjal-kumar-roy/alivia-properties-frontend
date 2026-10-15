@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ClipboardList } from "lucide-react"
 
 import { ROUTES } from "@/config/routes.config"
@@ -23,19 +23,62 @@ export function QuoteListButton({ className }: { className?: string }) {
   const { count, ready } = useQuoteList()
   const onList = usePathname() === ROUTES.MARKETPLACE_CART
   const [bumped, setBumped] = useState(false)
+  const linkRef = useRef<HTMLAnchorElement>(null)
+  // An add happened while this button was off screen (the bar leaves on
+  // scroll-down), so no flight could land on it: pulse the badge once on return.
+  const missedBump = useRef(false)
+  const lastCount = useRef<number | null>(null)
 
-  // A flight landing bumps the badge. CSS transitions (not a keyframe) so a
-  // second add mid-bump reverses from where the scale currently is.
+  // The badge animates on a count change after mount only, never on load or
+  // when a page mounts its own bar, so nothing here depends on first render.
+  useEffect(() => {
+    if (!ready) return
+    const before = lastCount.current
+    lastCount.current = count
+    if (count === 0) missedBump.current = false
+    // First read after mount (page load, client navigation) is not a change.
+    if (before === null || count <= before) return
+    const r = linkRef.current?.getBoundingClientRect()
+    const visible =
+      !!r &&
+      r.width > 0 &&
+      r.height > 0 &&
+      r.top + r.height / 2 > 0 &&
+      r.top + r.height / 2 < window.innerHeight
+    // Visible: a flight, when one plays, bumps the badge as it lands.
+    if (!visible) missedBump.current = true
+  }, [count, ready])
+
+  // Bump on a flight landing, or on the first reveal after a missed add. CSS
+  // transitions (not a keyframe) so a second add mid-bump reverses from where
+  // the scale currently is.
   useEffect(() => {
     let timer: number | undefined
-    function onBump() {
+    function bump() {
       setBumped(true)
       window.clearTimeout(timer)
       timer = window.setTimeout(() => setBumped(false), BUMP_HALF_MS)
     }
-    window.addEventListener(QUOTE_LIST_BUMP_EVENT, onBump)
+    window.addEventListener(QUOTE_LIST_BUMP_EVENT, bump)
+
+    const el = linkRef.current
+    const reveal =
+      el && typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(
+            ([entry]) => {
+              if (entry.intersectionRatio >= 0.9 && missedBump.current) {
+                missedBump.current = false
+                bump()
+              }
+            },
+            { threshold: [0.9] },
+          )
+        : null
+    if (el) reveal?.observe(el)
+
     return () => {
-      window.removeEventListener(QUOTE_LIST_BUMP_EVENT, onBump)
+      window.removeEventListener(QUOTE_LIST_BUMP_EVENT, bump)
+      reveal?.disconnect()
       window.clearTimeout(timer)
     }
   }, [])
@@ -44,6 +87,7 @@ export function QuoteListButton({ className }: { className?: string }) {
 
   return (
     <Link
+      ref={linkRef}
       href={ROUTES.MARKETPLACE_CART}
       data-quote-list-target=""
       aria-current={onList ? "page" : undefined}
@@ -67,7 +111,7 @@ export function QuoteListButton({ className }: { className?: string }) {
         <span
           aria-hidden="true"
           data-bumped={bumped}
-          className="pointer-events-none absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-brand-600 px-1 text-[0.6875rem] font-bold leading-none tabular-nums text-white ring-2 ring-white transition-[scale,opacity] duration-110 ease-(--ease-out) starting:scale-95 starting:opacity-0 data-[bumped=true]:scale-[1.2] motion-reduce:data-[bumped=true]:scale-100 motion-reduce:starting:scale-100"
+          className="pointer-events-none absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-brand-600 px-1 text-[0.6875rem] font-bold leading-none tabular-nums text-white ring-2 ring-white transition-[scale] duration-110 ease-(--ease-out) data-[bumped=true]:scale-[1.2] motion-reduce:data-[bumped=true]:scale-100"
         >
           {count > 99 ? "99+" : count}
         </span>

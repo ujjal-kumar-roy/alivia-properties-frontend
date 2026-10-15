@@ -217,7 +217,6 @@ export function AddToQuoteButton({ item, qty, variant, className, flyFrom }: Add
         <button
           ref={setEl}
           type="button"
-          aria-pressed={false}
           onClick={onClick}
           className={cn("btn-tactile btn-tactile--block", className)}
         >
