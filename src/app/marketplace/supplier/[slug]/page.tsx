@@ -18,6 +18,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { CountUp } from "@/components/common/count-up";
 import { MobileActionBar } from "@/components/common/mobile-action-bar";
 import { Disclosure } from "@/components/marketplace/Disclosure";
 import { MarketplaceProductCard } from "@/components/marketplace/MarketplaceProductCard";
@@ -130,7 +131,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
               className="order-1 lg:order-2 lg:mt-2"
             />
 
-            <div className="order-2 min-w-0 lg:order-1">
+            <div className="enter-cascade order-2 min-w-0 lg:order-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="hidden rounded-full bg-white/10 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-brand-50 backdrop-blur-sm sm:inline-block">
                   {serviceMode ? "Bangladesh Service Provider" : "Bangladesh Supplier"}
@@ -234,25 +235,25 @@ export default async function SupplierProfilePage({ params }: PageProps) {
       </section>
 
       <section className="container-page pb-6 pt-4 sm:py-10 lg:py-12">
-        <ul className="mb-5 grid grid-cols-2 gap-2.5 sm:mb-8 sm:grid-cols-4 sm:gap-4">
+        <ul className="reveal-stagger mb-5 grid grid-cols-2 gap-2.5 sm:mb-8 sm:grid-cols-4 sm:gap-4">
           <InfoCard
             label={serviceMode ? "Available packages" : "Ready products"}
-            value={String(readyProducts)}
+            value={readyProducts}
             note={serviceMode ? "service lines buyers can request now" : "in-stock lines buyers can request now"}
           />
           <InfoCard
             label={serviceMode ? "Schedule needed" : "On order"}
-            value={String(onOrderProducts)}
+            value={onOrderProducts}
             note={serviceMode ? "packages that need booking or confirmation" : "special-order or limited-stock lines"}
           />
           <InfoCard
             label={serviceMode ? "Package options" : "Size options"}
-            value={String(variantCount)}
+            value={variantCount}
             note={serviceMode ? "packages, visit types, and service specs" : "variants, dimensions, finishes, and specs"}
           />
           <InfoCard
             label="Showroom media"
-            value={String(mediaCount)}
+            value={mediaCount}
             note="photos and video used to build buyer trust"
           />
         </ul>
@@ -525,7 +526,7 @@ function InfoCard({
   note,
 }: {
   label: string;
-  value: string;
+  value: number;
   note: string;
 }) {
   return (
@@ -534,7 +535,7 @@ function InfoCard({
         {label}
       </p>
       <p className="mt-1 text-xl font-semibold tabular-nums text-ink-900 sm:mt-2 sm:text-2xl">
-        {value}
+        <CountUp value={value} />
       </p>
       <p className="mt-1 hidden text-sm text-ink-600 sm:block">{note}</p>
     </li>

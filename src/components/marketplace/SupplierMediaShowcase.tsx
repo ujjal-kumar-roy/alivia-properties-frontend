@@ -1,4 +1,5 @@
 import { Camera, Video } from "lucide-react";
+import { ViewTransition } from "react";
 
 import {
   SwipeGallery,
@@ -44,43 +45,45 @@ export function SupplierMediaShowcase({
   );
 
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-2xl border border-white/12 bg-white/8 shadow-[0_30px_90px_rgba(7,28,21,0.35)] backdrop-blur-md sm:rounded-[2rem]",
-        className,
-      )}
-    >
-      <SwipeGallery
-        slides={slides}
-        name={supplier.name}
-        unoptimized
-        priority
-        thumbTone="dark"
-        aspectClassName="aspect-4/3 sm:aspect-16/11"
-        overlay={
-          <>
-            {images.length > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                <Camera aria-hidden="true" className="size-3.5" />
-                {images.length} Photo{images.length === 1 ? "" : "s"}
+    <ViewTransition name={`supplier-${supplier.slug}`}>
+      <div
+        className={cn(
+          "overflow-hidden rounded-2xl border border-white/12 bg-white/8 shadow-[0_30px_90px_rgba(7,28,21,0.35)] backdrop-blur-md sm:rounded-[2rem]",
+          className,
+        )}
+      >
+        <SwipeGallery
+          slides={slides}
+          name={supplier.name}
+          unoptimized
+          priority
+          thumbTone="dark"
+          aspectClassName="aspect-4/3 sm:aspect-16/11"
+          overlay={
+            <>
+              {images.length > 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                  <Camera aria-hidden="true" className="size-3.5" />
+                  {images.length} Photo{images.length === 1 ? "" : "s"}
+                </span>
+              ) : null}
+              {supplier.videoUrl ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                  <Video aria-hidden="true" className="size-3.5" />
+                  Video
+                </span>
+              ) : null}
+            </>
+          }
+          empty={
+            <div className="flex aspect-4/3 w-full items-center justify-center bg-linear-to-br from-brand-100 via-brand-200 to-gold-100 sm:aspect-16/11">
+              <span className="font-heading text-6xl font-semibold text-brand-700/35 sm:text-7xl">
+                {supplierInitials(supplier.name)}
               </span>
-            ) : null}
-            {supplier.videoUrl ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                <Video aria-hidden="true" className="size-3.5" />
-                Video
-              </span>
-            ) : null}
-          </>
-        }
-        empty={
-          <div className="flex aspect-4/3 w-full items-center justify-center bg-linear-to-br from-brand-100 via-brand-200 to-gold-100 sm:aspect-16/11">
-            <span className="font-heading text-6xl font-semibold text-brand-700/35 sm:text-7xl">
-              {supplierInitials(supplier.name)}
-            </span>
-          </div>
-        }
-      />
-    </div>
+            </div>
+          }
+        />
+      </div>
+    </ViewTransition>
   );
 }

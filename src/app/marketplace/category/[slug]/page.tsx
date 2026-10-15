@@ -290,7 +290,7 @@ export default async function MarketplaceCategoryPage({
                   fallback={null}
                 />
               </div>
-              <div className="min-w-0">
+              <div className="enter-cascade min-w-0">
                 <p className="text-eyebrow hidden text-gold-200 sm:block">
                   Marketplace procurement desk
                 </p>

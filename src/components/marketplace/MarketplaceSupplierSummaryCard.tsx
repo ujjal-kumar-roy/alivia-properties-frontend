@@ -9,6 +9,7 @@ import {
   Truck,
 } from "lucide-react";
 import Link from "next/link";
+import { ViewTransition } from "react";
 
 import { CardFact } from "@/components/common/card-fact";
 import { GoldStar } from "@/components/marketplace/card-icons";
@@ -115,6 +116,7 @@ export function MarketplaceSupplierSummaryCard({
       className="group relative min-w-0 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-(--shadow-card) transition-[translate,scale,box-shadow] duration-200 active:scale-[0.99] md:rounded-3xl md:hover:-translate-y-0.5 md:hover:shadow-(--shadow-elevated) motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
     >
       <div className="flex gap-2.5 p-2 md:grid md:grid-cols-[170px_minmax(0,1fr)_auto] md:items-center md:gap-6 md:p-5">
+        <ViewTransition name={`supplier-${supplier.slug}`}>
         <div className="relative aspect-square w-25 shrink-0 self-start overflow-hidden rounded-xl bg-brand-100 md:w-full md:rounded-2xl">
           <MediaImage
             src={imageSrc}
@@ -142,6 +144,7 @@ export function MarketplaceSupplierSummaryCard({
             {supplier.isFeatured ? "Featured" : service ? "Service" : "Supplier"}
           </span>
         </div>
+        </ViewTransition>
 
         <div className="flex min-w-0 flex-1 flex-col">
           <h3 className="line-clamp-1 font-heading text-[0.95rem] font-semibold leading-tight text-ink-900 transition-colors group-hover:text-brand-700 md:line-clamp-2 md:text-2xl">
