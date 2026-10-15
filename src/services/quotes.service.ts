@@ -10,9 +10,16 @@ import type {
 const BASE = "/marketplace/quotes"
 
 export const quotesService = {
-  /** Public — submit a quote request from the marketplace */
-  create(input: CreateQuoteInput, token?: string): Promise<QuoteRequest> {
-    return httpClient.post<QuoteRequest>(BASE, input, { token })
+  /**
+   * Public — submit a quote request from the marketplace. `signal` (optional)
+   * lets a caller cancel or time out the request (the quote list does).
+   */
+  create(
+    input: CreateQuoteInput,
+    token?: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<QuoteRequest> {
+    return httpClient.post<QuoteRequest>(BASE, input, { token, signal: options.signal })
   },
 
   /** Public — submit one quote to multiple suppliers (the wizard). */

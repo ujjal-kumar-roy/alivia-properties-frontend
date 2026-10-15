@@ -11,6 +11,7 @@ import {
   Circle,
   Loader2,
   SendHorizontal,
+  TriangleAlert,
 } from "lucide-react"
 import { motion } from "motion/react"
 
@@ -72,8 +73,21 @@ export type QuoteItemRequest = {
   supplierId?: string
 }
 
-type ItemRunStatus = "waiting" | "sending" | "sent" | "failed"
-type ItemRun = QuoteItemRequest & { status: ItemRunStatus; error?: string }
+/**
+ * sent: confirmed by the server. failed: the server answered with an error, so
+ * nothing was created and a resend is safe. unconfirmed: no answer (connection
+ * lost or timed out), so the quote may exist: held back until the buyer asks to
+ * resend. skipped: never tried because the run stopped at a lost connection.
+ */
+type ItemRunStatus = "waiting" | "sending" | "sent" | "failed" | "unconfirmed" | "skipped"
+type ItemRun = QuoteItemRequest & {
+  status: ItemRunStatus
+  error?: string
+  /** Unconfirmed only: the buyer chose "Send again", so the next send includes it. */
+  resend?: boolean
+  /** Held back from an earlier run and shown again; not part of this run's count. */
+  carried?: boolean
+}
 
 type Props = {
   context?: QuoteContext
@@ -96,11 +110,16 @@ type Props = {
   /** Items mode: the products to request (each carries its own qty, unit, seller). */
   items?: QuoteItemRequest[]
   /**
-   * Items mode: called after a run with the products whose request went
-   * through, so the host can drop them from its list. `complete` = all sent
-   * (with redirectOnSuccess the page is already navigating away).
+   * Items mode: called the moment one product's request is confirmed, so the
+   * host drops it from its list right away. The list then only ever holds
+   * what is not sent yet: a reload or an interrupted run cannot resend it.
    */
-  onItemsSent?: (productIds: string[], outcome: { complete: boolean }) => void
+  onItemSent?: (productId: string) => void
+  /**
+   * Items mode: every request is confirmed and nothing is held back (with
+   * redirectOnSuccess the page is already navigating to the thank-you page).
+   */
+  onAllItemsSent?: () => void
   /** Offer the file-attachment field (logged-in buyers only). Default true. */
   enableAttachments?: boolean
   className?: string
@@ -216,6 +235,48 @@ function errorText(err: unknown) {
     : "Could not submit your request. Please try again."
 }
 
+/** Items mode: give up waiting on one request after this long (it may still land). */
+const ITEM_TIMEOUT_MS = 20_000
+
+/** Products not confirmed by an earlier run that the buyer has not asked to resend. */
+function heldBackIds(run: ItemRun[] | null) {
+  return new Set(
+    (run ?? [])
+      .filter((entry) => entry.status === "unconfirmed" && !entry.resend)
+      .map((entry) => entry.productId),
+  )
+}
+
+/** What happened in an items run that did not fully go through, in plain words. */
+function runSummary(outcome: {
+  sent: number
+  failed: number
+  skipped: number
+  lost: { name: string; timedOut: boolean } | null
+}) {
+  const { sent, failed, skipped, lost } = outcome
+  const parts: string[] = []
+  if (lost) {
+    parts.push(
+      `${lost.timedOut ? "The server did not reply in time" : "The connection dropped"}, so ${lost.name} is not confirmed. It may have reached the seller, so check before sending it again.`,
+    )
+  }
+  if (skipped) {
+    // Only after a lost answer: the run stops there (the rest would fail the same way).
+    parts.push(
+      `${skipped === 1 ? "1 item was" : `${skipped} items were`} not sent yet. ${lost?.timedOut ? "Send again in a moment." : "Send again when your connection is back."}`,
+    )
+  }
+  if (failed) {
+    parts.push(
+      sent === 0 && !lost
+        ? "None of your requests were sent. The reason is under each item."
+        : `${failed === 1 ? "1 request was" : `${failed} requests were`} not sent. The reason is under each item.`,
+    )
+  }
+  return parts.join(" ")
+}
+
 function subscribePhone(onChange: () => void) {
   const mq = window.matchMedia("(max-width: 767px)")
   mq.addEventListener("change", onChange)
@@ -240,6 +301,7 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const
 function RunIcon({ status }: { status: ItemRunStatus }) {
   switch (status) {
     case "waiting":
+    case "skipped":
       return <Circle aria-hidden="true" className="size-4 text-ink-300" />
     case "sending":
       return <Loader2 aria-hidden="true" className="size-4 text-brand-600 motion-safe:animate-spin" />
@@ -247,6 +309,8 @@ function RunIcon({ status }: { status: ItemRunStatus }) {
       return <CheckCircle2 aria-hidden="true" className="size-4 text-green-600" />
     case "failed":
       return <AlertCircle aria-hidden="true" className="size-4 text-destructive" />
+    case "unconfirmed":
+      return <TriangleAlert aria-hidden="true" className="size-4 text-amber-600" />
   }
 }
 
@@ -255,13 +319,18 @@ const RUN_LABEL: Record<ItemRunStatus, string> = {
   sending: "Sending...",
   sent: "Sent to the seller",
   failed: "Not sent",
+  unconfirmed: "Not confirmed. It may have reached the seller",
+  skipped: "Not sent yet",
 }
 
 function runHeadline(run: ItemRun[]) {
-  const sent = run.filter((entry) => entry.status === "sent").length
-  const settled = run.filter((entry) => entry.status === "sent" || entry.status === "failed").length
-  if (settled < run.length) return `Sending ${settled + 1} of ${run.length}...`
-  return sent === run.length ? "All requests sent" : `${sent} of ${run.length} sent`
+  const current = run.filter((entry) => !entry.carried)
+  const sent = current.filter((entry) => entry.status === "sent").length
+  const pending = current.filter(
+    (entry) => entry.status === "waiting" || entry.status === "sending",
+  ).length
+  if (pending > 0) return `Sending ${current.length - pending + 1} of ${current.length}...`
+  return sent === current.length ? "All requests sent" : `${sent} of ${current.length} sent`
 }
 
 export function GetQuoteForm({
@@ -272,7 +341,8 @@ export function GetQuoteForm({
   supplierIds,
   mode = "single",
   items,
-  onItemsSent,
+  onItemSent,
+  onAllItemsSent,
   enableAttachments = true,
   className,
   guided,
@@ -305,6 +375,10 @@ export function GetQuoteForm({
   // a run is in flight (double tap before "Sending..." renders) must not start another.
   const itemsInFlight = React.useRef(false)
   const runRef = React.useRef<HTMLDivElement>(null)
+  // Bumped on every items send attempt, so the progress list scrolls into view each time.
+  const [runSeq, setRunSeq] = React.useState(0)
+  // Across runs on this page: what the thank-you page reports once everything is in.
+  const reached = React.useRef({ requests: 0, sellers: new Set<string>() })
   const itemsMode = mode === "items"
 
   // Spec fields + variant choices: disabled via ENABLE_VARIANTS_SPECS (see top).
@@ -390,16 +464,15 @@ export function GetQuoteForm({
     onSubmittingChange?.(submitting)
   }, [submitting, onSubmittingChange])
 
-  // Items mode: bring the progress list into view when a run starts (the send
-  // button may be the phone's bottom bar, far from the list).
-  const runShown = itemRun !== null
+  // Items mode: bring the progress list (or the message) into view on every send
+  // attempt (the send button may be the phone's bottom bar, far from the list).
   React.useEffect(() => {
-    if (!runShown) return
+    if (runSeq === 0) return
     runRef.current?.scrollIntoView({
       block: "nearest",
       behavior: prefersReducedMotion() ? "auto" : "smooth",
     })
-  }, [runShown])
+  }, [runSeq])
 
   // Coming back to this page from the thank-you page (back/forward cache)
   // restores it mid-"Sending...": put the form back to a usable state.
@@ -444,99 +517,169 @@ export function GetQuoteForm({
     setScreenIndex(0)
   }
 
+  /** Items mode: the buyer's "Send again" on a product that was not confirmed. */
+  function toggleResend(productId: string) {
+    setItemRun((run) =>
+      run
+        ? run.map((entry) =>
+            entry.productId === productId ? { ...entry, resend: !entry.resend } : entry,
+          )
+        : run,
+    )
+  }
+
   /**
    * Items mode: one POST /marketplace/quotes per product (the API has no
-   * multi-product quote), sent one after another so progress reads in order.
-   * Sent products are reported to the host; failed ones stay for a retry.
+   * multi-product quote and no idempotency key), sent one after another so
+   * progress reads in order. Every request goes to a real seller, so:
+   * - each confirmed product leaves the host's list at once (write-through);
+   * - a request with no answer (connection lost, or no reply within
+   *   ITEM_TIMEOUT_MS) may still have been created: it is held back from the
+   *   next send until the buyer taps "Send again", and the run stops there;
+   * - a server error means nothing was created: the product stays and is
+   *   resent with the next send.
    */
   async function sendItems(values: QuoteFormValues, specs: QuoteSpec[]) {
-    const queue = items ?? []
     if (itemsInFlight.current) return
+    const list = items ?? []
+    const held = heldBackIds(itemRun)
+    const queue = list.filter((item) => !held.has(item.productId))
+    // Held-back products still in the list stay visible with their note.
+    const carried: ItemRun[] = (itemRun ?? [])
+      .filter((entry) => held.has(entry.productId) && list.some((item) => item.productId === entry.productId))
+      .map((entry) => ({ ...entry, carried: true }))
+    setRunSeq((seq) => seq + 1)
+
     if (!queue.length) {
-      setSubmitState({ status: "error", message: "Your quote list is empty. Add a product first." })
+      setSubmitState({
+        status: "error",
+        message: carried.length
+          ? "What is left is not confirmed and may already be with the seller. Check with them, or tap Send again on an item to resend it."
+          : "Your quote list is empty. Add a product first.",
+      })
       return
     }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setSubmitState({
+        status: "error",
+        message: "You are offline. Nothing was sent. Connect to the internet, then send again.",
+      })
+      return
+    }
+
     itemsInFlight.current = true
+    let redirecting = false
     setSubmitState({ status: "submitting" })
-
-    // What every item shares; product, seller, quantity, unit and message are per item.
-    const shared: Omit<CreateQuoteInput, "productId" | "supplierId" | "quantity" | "unit" | "message"> = {
-      name: values.name,
-      email: values.email,
-      phone: values.phone,
-      company: values.company || undefined,
-      city: values.city || undefined,
-      deliveryLocation: values.deliveryLocation,
-      deliveryDate: values.deliveryDate || undefined,
-      specs: specs.length ? specs : undefined,
-      attachments: attachments.length ? attachments : undefined,
-    }
-    const note = (values.message ?? "").trim()
-
-    let run: ItemRun[] = queue.map((item) => ({ ...item, status: "waiting" }))
-    const mark = (index: number, patch: Partial<ItemRun>) => {
-      run = run.map((entry, i) => (i === index ? { ...entry, ...patch } : entry))
-      setItemRun(run)
-    }
-    setItemRun(run)
-
-    const sent: { productId: string; quoteId: string; seller: string }[] = []
-    for (const [index, item] of queue.entries()) {
-      mark(index, { status: "sending" })
-      try {
-        const quote = await quotesService.create(
-          {
-            ...shared,
-            productId: item.productId,
-            supplierId: item.supplierId,
-            quantity: item.quantity,
-            unit: item.unit || undefined,
-            message: itemMessage(item, note),
-          },
-          session?.accessToken,
-        )
-        sent.push({
-          productId: item.productId,
-          quoteId: quote.id,
-          seller: item.supplierId ?? item.productId,
-        })
-        mark(index, { status: "sent" })
-      } catch (err) {
-        mark(index, { status: "failed", error: errorText(err) })
+    try {
+      // What every item shares; product, seller, quantity, unit and message are per item.
+      const shared: Omit<CreateQuoteInput, "productId" | "supplierId" | "quantity" | "unit" | "message"> = {
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        company: values.company || undefined,
+        city: values.city || undefined,
+        deliveryLocation: values.deliveryLocation,
+        deliveryDate: values.deliveryDate || undefined,
+        specs: specs.length ? specs : undefined,
+        attachments: attachments.length ? attachments : undefined,
       }
-    }
+      const note = (values.message ?? "").trim()
 
-    const sentIds = sent.map((entry) => entry.productId)
-    const complete = sent.length === queue.length
-    if (complete && redirectOnSuccess) {
-      // `count` = sellers reached (the thank-you copy reads it as suppliers),
-      // `items` = requests sent. Like batch, stay in "Sending..." until the
-      // thank-you page replaces this one.
-      const sellers = new Set(sent.map((entry) => entry.seller)).size
-      window.location.assign(
-        `${ROUTES.MARKETPLACE_QUOTE_THANK_YOU}?count=${sellers}&items=${sent.length}`,
-      )
-      onItemsSent?.(sentIds, { complete: true })
-      return
-    }
+      let run: ItemRun[] = [
+        ...queue.map((item): ItemRun => ({ ...item, status: "waiting" })),
+        ...carried,
+      ]
+      const mark = (index: number, patch: Partial<ItemRun>) => {
+        run = run.map((entry, i) => (i === index ? { ...entry, ...patch } : entry))
+        setItemRun(run)
+      }
+      setItemRun(run)
 
-    itemsInFlight.current = false
-    onItemsSent?.(sentIds, { complete })
-    if (complete) {
-      setItemRun(null)
-      setSubmitState({ status: "success", quoteId: sent[0].quoteId, email: values.email })
-      resetForm()
-      celebrate()
-      onSuccess?.(sent[0].quoteId)
-      return
+      let sent = 0
+      let failed = 0
+      let skipped = 0
+      let firstQuoteId = ""
+      let lost: { name: string; timedOut: boolean } | null = null
+
+      for (const [index, item] of queue.entries()) {
+        if (lost) {
+          // The connection is the problem: the rest would fail the same way.
+          skipped += 1
+          mark(index, { status: "skipped" })
+          continue
+        }
+        mark(index, { status: "sending" })
+        const controller = new AbortController()
+        const timer = window.setTimeout(() => controller.abort(), ITEM_TIMEOUT_MS)
+        let quoteId = ""
+        try {
+          const quote = await quotesService.create(
+            {
+              ...shared,
+              productId: item.productId,
+              supplierId: item.supplierId,
+              quantity: item.quantity,
+              unit: item.unit || undefined,
+              message: itemMessage(item, note),
+            },
+            session?.accessToken,
+            { signal: controller.signal },
+          )
+          quoteId = quote.id
+        } catch (err) {
+          // Status 0 = no HTTP answer (offline, dropped, or our timeout abort).
+          const timedOut = controller.signal.aborted
+          if (timedOut || (err instanceof ApiError && err.status === 0)) {
+            lost = { name: item.name, timedOut }
+            mark(index, { status: "unconfirmed", resend: false })
+          } else {
+            failed += 1
+            mark(index, { status: "failed", error: errorText(err) })
+          }
+          continue
+        } finally {
+          window.clearTimeout(timer)
+        }
+        // Outside the request's try: nothing after a created quote may mark it failed.
+        sent += 1
+        firstQuoteId ||= quoteId
+        reached.current.requests += 1
+        reached.current.sellers.add(item.supplierId ?? item.productId)
+        mark(index, { status: "sent" })
+        onItemSent?.(item.productId)
+      }
+
+      const allIn = sent === queue.length && carried.length === 0
+      if (allIn && redirectOnSuccess) {
+        // `count` = sellers reached (the thank-you copy reads it as suppliers),
+        // `items` = requests sent, across every run on this page. Like batch,
+        // stay in "Sending..." until the thank-you page replaces this one.
+        redirecting = true
+        window.location.assign(
+          `${ROUTES.MARKETPLACE_QUOTE_THANK_YOU}?count=${reached.current.sellers.size}&items=${reached.current.requests}`,
+        )
+        onAllItemsSent?.()
+        return
+      }
+      if (allIn) {
+        setItemRun(null)
+        setSubmitState({ status: "success", quoteId: firstQuoteId, email: values.email })
+        resetForm()
+        celebrate()
+        onSuccess?.(firstQuoteId)
+        onAllItemsSent?.()
+        return
+      }
+      const summary = runSummary({ sent, failed, skipped, lost })
+      // Everything in this run went through; only earlier unconfirmed items remain,
+      // and the list already says so under each of them.
+      setSubmitState(summary ? { status: "error", message: summary } : { status: "idle" })
+    } catch (err) {
+      // Not from a request (those are caught per item): never leave the form stuck.
+      setSubmitState({ status: "error", message: errorText(err) })
+    } finally {
+      if (!redirecting) itemsInFlight.current = false
     }
-    const failed = queue.length - sent.length
-    setSubmitState({
-      status: "error",
-      message: sent.length
-        ? `${failed} of ${queue.length} requests could not be sent. They are still in your list, so you can send them again.`
-        : "Your requests could not be sent. Check your connection and try again.",
-    })
   }
 
   async function onSubmit(values: QuoteFormValues) {
@@ -748,6 +891,9 @@ export function GetQuoteForm({
       ? GUIDED_FIELD_PHONES
       : GUIDED_FIELD_ALWAYS
   const isLast = screenIndex >= lastScreen
+  // Items mode: one request per product, minus those held back as not confirmed.
+  const heldNow = heldBackIds(itemRun)
+  const sendable = (items ?? []).filter((item) => !heldNow.has(item.productId)).length
 
   function renderScreen(meta: ScreenMeta) {
     switch (meta.id) {
@@ -1108,57 +1254,93 @@ export function GetQuoteForm({
             </motion.div>
           ))}
 
-          {/* Items mode: one line per product so the buyer sees each request land. */}
-          {itemsMode && itemRun ? (
-            <div
-              ref={runRef}
-              className="grid scroll-mb-28 gap-2 border-t border-border/60 pt-4 md:scroll-mb-6"
-            >
-              <p role="status" className="text-sm font-bold text-ink-900">
-                {runHeadline(itemRun)}
-              </p>
-              <ol className="grid gap-1">
-                {itemRun.map((entry) => (
-                  <li key={entry.productId} className="flex items-start gap-2.5 py-1">
-                    {/* Keyed by status: each change swaps the icon with a short fade + settle. */}
-                    <motion.span
-                      key={entry.status}
-                      className="mt-0.5 flex size-5 shrink-0 items-center justify-center"
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.18, ease: EASE_OUT }}
-                    >
-                      <RunIcon status={entry.status} />
-                    </motion.span>
-                    <span className="min-w-0 flex-1">
-                      <span className="line-clamp-1 text-sm font-semibold text-ink-800">
-                        {entry.name}
-                      </span>
-                      <span
-                        className={cn(
-                          "line-clamp-2 text-xs",
-                          entry.status === "failed" ? "text-destructive" : "text-ink-500",
-                        )}
-                      >
-                        {entry.quantity}
-                        {entry.unit ? ` ${entry.unit}` : ""} · {RUN_LABEL[entry.status]}
-                        {entry.status === "failed" && entry.error ? `: ${entry.error}` : ""}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
+          {/* Items mode: one line per product so the buyer sees each request land,
+              with the run's message right under it (one block to scroll to). */}
+          {itemsMode ? (
+            <div ref={runRef} className="grid scroll-mb-28 gap-4 empty:hidden md:scroll-mb-6">
+              {itemRun ? (
+                <div className="grid gap-2 border-t border-border/60 pt-4">
+                  <p role="status" className="text-sm font-bold text-ink-900">
+                    {runHeadline(itemRun)}
+                  </p>
+                  <ol className="grid gap-1">
+                    {itemRun.map((entry) => (
+                      <li key={entry.productId} className="flex items-start gap-2.5 py-1">
+                        {/* Keyed by status: each change swaps the icon with a short fade + settle. */}
+                        <motion.span
+                          key={entry.status}
+                          className="mt-0.5 flex size-5 shrink-0 items-center justify-center"
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.18, ease: EASE_OUT }}
+                        >
+                          <RunIcon status={entry.status} />
+                        </motion.span>
+                        <span className="min-w-0 flex-1">
+                          <span className="line-clamp-1 text-sm font-semibold text-ink-800">
+                            {entry.name}
+                          </span>
+                          <span
+                            className={cn(
+                              "line-clamp-2 text-xs",
+                              entry.status === "failed"
+                                ? "text-destructive"
+                                : entry.status === "unconfirmed"
+                                  ? "text-amber-800"
+                                  : "text-ink-500",
+                            )}
+                          >
+                            {entry.quantity}
+                            {entry.unit ? ` ${entry.unit}` : ""} · {RUN_LABEL[entry.status]}
+                            {entry.status === "failed" && entry.error ? `: ${entry.error}` : ""}
+                          </span>
+                        </span>
+                        {/* Never resent on its own: it may already be with the seller. */}
+                        {entry.status === "unconfirmed" ? (
+                          <button
+                            type="button"
+                            aria-pressed={Boolean(entry.resend)}
+                            disabled={submitting}
+                            onClick={() => toggleResend(entry.productId)}
+                            className={cn(
+                              "-my-1.5 inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-bold transition-[background-color,color,scale] duration-140 ease-(--ease-out) active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:pointer-events-none disabled:opacity-50 motion-reduce:active:scale-100",
+                              entry.resend
+                                ? "bg-brand-50 text-brand-800"
+                                : "text-brand-700 hover:bg-brand-50",
+                            )}
+                          >
+                            {entry.resend ? (
+                              <CheckCircle2 aria-hidden="true" className="size-3.5" />
+                            ) : null}
+                            Send again
+                            <span className="sr-only">: {entry.name}</span>
+                          </button>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
+              {submitState.status === "error" ? (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+                >
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                  <span>{submitState.message}</span>
+                </div>
+              ) : null}
             </div>
-          ) : null}
-
-          {submitState.status === "error" && (
-            <div
-              role="alert"
-              className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-            >
-              <AlertCircle className="mt-0.5 size-4 shrink-0" />
-              <span>{submitState.message}</span>
-            </div>
+          ) : (
+            submitState.status === "error" && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+              >
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <span>{submitState.message}</span>
+              </div>
+            )
           )}
 
           {hideSubmit !== true && (
@@ -1186,7 +1368,9 @@ export function GetQuoteForm({
                   <>
                     <SendHorizontal className="size-4" />
                     {itemsMode
-                      ? `Send request for ${items?.length ?? 0} item${items?.length === 1 ? "" : "s"}`
+                      ? sendable <= 1
+                        ? "Send request"
+                        : `Send ${sendable} requests`
                       : "Submit Quote Request"}
                   </>
                 )}

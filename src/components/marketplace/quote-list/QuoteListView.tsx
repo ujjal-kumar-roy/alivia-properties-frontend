@@ -26,21 +26,15 @@ import { haptic, prefersReducedMotion } from "@/lib/celebrate"
 import { reducedTransition } from "@/lib/motion"
 import type { QuoteListItem } from "@/lib/quote-list"
 import { cn } from "@/lib/utils"
+// Exact taka with lakh grouping (৳1,25,000), not formatPrice()'s rounded "৳1.3 Lakh":
+// this is the review step before asking sellers, so the figures should add up.
+import { formatTaka } from "@/utils/format-price"
 
 const FORM_ID = "quote-list-form"
 const MAX_QTY = 999_999
 const UNDO_MS = 8000
 /** Exponential ease-out (globals.css --ease-out) for motion props. */
 const EASE_OUT = [0.23, 1, 0.32, 1] as const
-
-// Exact taka with lakh grouping (৳1,25,000) instead of formatPrice()'s rounded
-// "৳1.3 Lakh": this is the review step before asking sellers, so the figures
-// should add up. Fractions only for small unit prices (৳11.5 a brick).
-const TAKA_SMALL = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 })
-const TAKA = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 })
-function taka(amount: number) {
-  return `৳${(amount < 100 ? TAKA_SMALL : TAKA).format(amount)}`
-}
 
 function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? "" : "s"}`
@@ -138,10 +132,10 @@ export function QuoteListView() {
     setQty(item.productId, Math.min(MAX_QTY, Math.max(minQty(item), next)))
   }
 
-  function handleSent(productIds: string[], { complete }: { complete: boolean }) {
-    if (complete) setLeaving(true)
+  // Every request is in and the thank-you page is loading.
+  function handleAllSent() {
+    setLeaving(true)
     setRemoved(null)
-    for (const productId of productIds) remove(productId)
   }
 
   if (!ready) return <QuoteListSkeleton />
@@ -160,7 +154,8 @@ export function QuoteListView() {
   const rowHidden = reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }
   const rowShown = reduceMotion ? { opacity: 1 } : { opacity: 1, height: "auto" }
   const rowTransition = reduceMotion ? reducedTransition : { duration: 0.2, ease: EASE_OUT }
-  const viewKey = leaving ? "sent" : items.length ? "list" : "empty"
+  // Rows leave one by one as their requests land; keep the form mounted until the run ends.
+  const viewKey = leaving ? "sent" : items.length || sending ? "list" : "empty"
 
   const undo = (
     <AnimatePresence initial={false}>
@@ -192,8 +187,8 @@ export function QuoteListView() {
           ) : (
             <>
               <p className="mt-1 text-sm text-ink-600">
-                {plural(items.length, "item")} from {plural(sellers, "seller")}. Each seller gets
-                a request for their items and replies with a final price.
+                {plural(items.length, "item")} from {plural(sellers, "seller")}. Each product goes to
+                its seller as a separate request, and the seller replies with a price.
               </p>
 
               <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-start lg:gap-8">
@@ -258,7 +253,7 @@ export function QuoteListView() {
                       Your details
                     </h2>
                     <p className="mt-1 text-sm text-ink-600">
-                      Sellers use these to reply by phone or email.
+                      Sellers use these to reply. You get a confirmation email for each request.
                     </p>
                     <GetQuoteForm
                       className="mt-4"
@@ -267,7 +262,9 @@ export function QuoteListView() {
                       formId={FORM_ID}
                       hideSubmit="phones"
                       redirectOnSuccess
-                      onItemsSent={handleSent}
+                      // Write-through: a product leaves the list the moment its request is confirmed.
+                      onItemSent={remove}
+                      onAllItemsSent={handleAllSent}
                       onSubmittingChange={setSending}
                     />
                   </div>
@@ -308,7 +305,8 @@ export function QuoteListView() {
                 </>
               ) : (
                 <>
-                  Send request
+                  {/* No count: the form may hold back an item it could not confirm. */}
+                  {items.length === 1 ? "Send request" : "Send requests"}
                   <SendHorizontal aria-hidden="true" className="size-4" />
                 </>
               )}
@@ -398,7 +396,7 @@ function QuoteRow({
           <p className="mt-1 text-[0.8125rem] font-semibold tabular-nums text-ink-800">
             {priced ? (
               <>
-                {taka(item.price)}
+                {formatTaka(item.price)}
                 {item.unit ? <span className="font-medium text-ink-500"> / {item.unit}</span> : null}
               </>
             ) : (
@@ -594,7 +592,7 @@ function Amount({ value, instant }: { value: number; instant: boolean }) {
     const from = shown.current
     if (from === null || from === value || instant || prefersReducedMotion()) {
       shown.current = value
-      el.textContent = taka(value)
+      el.textContent = formatTaka(value)
       return
     }
     const controls = animate(from, value, {
@@ -602,11 +600,11 @@ function Amount({ value, instant }: { value: number; instant: boolean }) {
       ease: EASE_OUT,
       onUpdate: (n) => {
         shown.current = n
-        el.textContent = taka(n)
+        el.textContent = formatTaka(n)
       },
       onComplete: () => {
         shown.current = value
-        el.textContent = taka(value)
+        el.textContent = formatTaka(value)
       },
     })
     return () => controls.stop()
@@ -615,7 +613,7 @@ function Amount({ value, instant }: { value: number; instant: boolean }) {
   return (
     <>
       <span ref={ref} aria-hidden="true" className="tabular-nums" />
-      <span className="sr-only">{taka(value)}</span>
+      <span className="sr-only">{formatTaka(value)}</span>
     </>
   )
 }
@@ -660,7 +658,9 @@ function EmptyQuoteList() {
     {
       icon: SendHorizontal,
       solid: false,
-      text: <>Send one request. Each seller replies with a final price, free and with no obligation.</>,
+      text: (
+        <>Send your list. Each product goes to its seller as a separate request, free and with no obligation.</>
+      ),
     },
   ]
 

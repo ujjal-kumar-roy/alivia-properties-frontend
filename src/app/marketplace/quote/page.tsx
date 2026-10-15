@@ -23,20 +23,30 @@ type Props = {
     productSlug?: string
     variantId?: string
     categorySlug?: string
-    /** Prefill from the product page's quantity stepper. */
-    qty?: string
-    unit?: string
+    /** Prefill from the product page's quantity stepper (a repeated param arrives as an array). */
+    qty?: string | string[]
+    unit?: string | string[]
   }>
+}
+
+/** Same ceiling as the quote list's stepper; anything larger is not a real order. */
+const MAX_PREFILL_QTY = 999_999
+
+/** First value of a search param that may be repeated (`?unit=a&unit=b`). */
+function firstParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value
 }
 
 export default async function MarketplaceQuotePage({ searchParams }: Props) {
   const params = await searchParams
 
-  // Quantity/unit prefill: only a positive number and a short unit (the form's
-  // own limit is 32 characters); anything else leaves the fields empty.
-  const qtyParam = Number(params.qty)
-  const quantity = Number.isFinite(qtyParam) && qtyParam > 0 ? qtyParam : undefined
-  const unit = params.unit?.trim().slice(0, 32) || undefined
+  // Quantity/unit prefill: only a positive number up to MAX_PREFILL_QTY and a
+  // short unit (the form's own limit is 32 characters); anything else leaves
+  // the fields empty.
+  const qtyParam = Number(firstParam(params.qty))
+  const quantity =
+    Number.isFinite(qtyParam) && qtyParam > 0 && qtyParam <= MAX_PREFILL_QTY ? qtyParam : undefined
+  const unit = firstParam(params.unit)?.trim().slice(0, 32) || undefined
 
   // Best-effort resolution of names from slugs (so the form shows context).
   // Failures (e.g. backend not reachable) are silently ignored: the form
