@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, ViewTransition } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { AnimatePresence, motion } from "motion/react"
@@ -135,15 +135,17 @@ export function FlagshipProjectCard({ project: p }: { project: FlagshipProject }
         {/* Media: square thumbnail on phones, 16:10 image from sm. */}
         <div className="relative aspect-square w-25 shrink-0 self-start overflow-hidden rounded-xl bg-ink-100 sm:aspect-16/10 sm:w-full sm:self-auto sm:rounded-none">
           {p.cover ? (
-            <Image
-              src={p.cover}
-              alt={p.name}
-              fill
-              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100px"
-              placeholder="blur"
-              blurDataURL={CARD_BLUR_DATA_URL}
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
+            <ViewTransition name={p.slug ? `apartment-${p.slug}` : undefined}>
+              <Image
+                src={p.cover}
+                alt={p.name}
+                fill
+                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100px"
+                placeholder="blur"
+                blurDataURL={CARD_BLUR_DATA_URL}
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            </ViewTransition>
           ) : (
             <div className="flex h-full items-center justify-center text-brand-200">
               <Building2 aria-hidden="true" className="h-8 w-8 sm:h-10 sm:w-10" />

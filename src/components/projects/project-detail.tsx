@@ -216,7 +216,12 @@ export function ProjectDetail({ project }: { project: Project }) {
 
       <div className="container-page pb-4 sm:py-6 md:py-8 lg:py-12">
         {galleryImages.length > 0 ? (
-          <ProjectGallery images={galleryImages} label={project.name} className="-mx-4 sm:mx-0">
+          <ProjectGallery
+            images={galleryImages}
+            label={project.name}
+            transitionName={`apartment-${project.slug}`}
+            className="-mx-4 sm:mx-0"
+          >
             <Link
               href={ROUTES.PROJECTS}
               aria-label="Back to all apartments"
@@ -235,7 +240,7 @@ export function ProjectDetail({ project }: { project: Project }) {
         <div className="grid grid-cols-1 gap-x-10 lg:grid-cols-3">
           {/* Main content */}
           <div className="min-w-0 lg:col-span-2">
-            <header className="mt-3 sm:mt-0">
+            <header className="enter-cascade mt-3 sm:mt-0">
               <div className="mb-1.5 flex flex-wrap items-center gap-1.5 sm:mb-2 sm:gap-2">
                 <span
                   className={cn(

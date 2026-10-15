@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useRef, useState, type ReactNode } from "react"
+import { useRef, useState, ViewTransition, type ReactNode } from "react"
 import { ChevronLeft, ChevronRight, Images, Maximize2 } from "lucide-react"
 import { ProjectLightbox } from "@/components/projects/project-image-lightbox-button"
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
@@ -13,6 +13,8 @@ type ProjectGalleryProps = {
   images: string[]
   label: string
   className?: string
+  /** Shared-element name for the first photo (matches the card image on the list). */
+  transitionName?: string
   /** Controls the page floats over the photo (e.g. a back button). */
   children?: ReactNode
 }
@@ -27,7 +29,7 @@ const GALLERY_SIZES = "(min-width: 1280px) 1216px, (min-width: 640px) calc(100vw
  * lightbox. From `sm` the strip becomes a rounded card with arrows and a
  * thumbnail row for mouse users.
  */
-export function ProjectGallery({ images, label, className, children }: ProjectGalleryProps) {
+export function ProjectGallery({ images, label, className, transitionName, children }: ProjectGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [viewerOpen, setViewerOpen] = useState(false)
   const stripRef = useRef<HTMLDivElement>(null)
@@ -79,17 +81,33 @@ export function ProjectGallery({ images, label, className, children }: ProjectGa
               onClick={() => setViewerOpen(true)}
               className="relative aspect-4/3 max-h-[64svh] w-full shrink-0 cursor-zoom-in snap-center snap-always sm:aspect-16/10 sm:max-h-none md:aspect-[16/8.5]"
             >
-              <Image
-                src={src}
-                alt={`${label} image ${index + 1}`}
-                fill
-                priority={index === 0}
-                sizes={GALLERY_SIZES}
-                placeholder="blur"
-                blurDataURL={CARD_BLUR_DATA_URL}
-                draggable={false}
-                className="object-cover select-none"
-              />
+              {index === 0 && transitionName ? (
+                <ViewTransition name={transitionName}>
+                <Image
+                  src={src}
+                  alt={`${label} image ${index + 1}`}
+                  fill
+                  priority={index === 0}
+                  sizes={GALLERY_SIZES}
+                  placeholder="blur"
+                  blurDataURL={CARD_BLUR_DATA_URL}
+                  draggable={false}
+                  className="object-cover select-none"
+                />
+                </ViewTransition>
+              ) : (
+                <Image
+                  src={src}
+                  alt={`${label} image ${index + 1}`}
+                  fill
+                  priority={index === 0}
+                  sizes={GALLERY_SIZES}
+                  placeholder="blur"
+                  blurDataURL={CARD_BLUR_DATA_URL}
+                  draggable={false}
+                  className="object-cover select-none"
+                />
+              )}
             </div>
           ))}
         </div>

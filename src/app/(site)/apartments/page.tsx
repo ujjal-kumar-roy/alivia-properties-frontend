@@ -59,6 +59,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   return (
     <div className="py-3 md:py-12">
       <div className="container-page">
+        <div className="enter-cascade">
         <SectionHeader
           as="h1"
           eyebrow="Our Portfolio"
@@ -93,6 +94,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           <p className="hidden text-sm text-muted-foreground sm:block">
             {res.meta.total === 0 ? "0 apartments" : `${res.meta.total} apartments`}
           </p>
+        </div>
         </div>
 
         {activeTags.length > 0 && (

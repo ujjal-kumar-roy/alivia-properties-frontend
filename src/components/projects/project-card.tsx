@@ -1,5 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
+import { ViewTransition } from "react"
 import { MapPin, Calendar, Building2, ArrowRight, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatPriceRange } from "@/utils/format-price"
@@ -32,13 +33,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
     <article className="surface-card group pressable-lift overflow-hidden">
       <Link href={ROUTES.PROJECT_DETAIL(project.slug)} className="block">
         <div className={`relative h-60 overflow-hidden bg-linear-to-br ${gradient}`}>
-          <Image
-            src={project.coverImage ?? project.coverImageUrl ?? ""}
-            alt={project.name}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-          />
+          <ViewTransition name={`apartment-${project.slug}`}>
+            <Image
+              src={project.coverImage ?? project.coverImageUrl ?? ""}
+              alt={project.name}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover motion-safe:transition-transform motion-safe:duration-500 group-hover:scale-105 motion-reduce:group-hover:scale-100"
+            />
+          </ViewTransition>
           {/* Dot texture overlay for gradient-only state */}
           <div
             aria-hidden
