@@ -3,21 +3,15 @@
 import { animate, useReducedMotion } from "motion/react"
 import { useEffect, useRef, useState } from "react"
 
+import { useDebounce } from "@/hooks/use-debounce"
 import { cn } from "@/lib/utils"
 import type { ProductPriceTier } from "@/types/marketplace.types"
+import { formatTaka } from "@/utils/format-price"
 
 const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1]
 const TWEEN_S = 0.2
-
-// A fixed locale so the server and every browser print the same string. en-IN groups
-// the South Asian way Bangladeshi buyers read (৳5,50,000); "en-BD" falls back to plain en.
-const takaFraction = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 })
-const takaWhole = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 })
-
-/** ৳ amount with lakh grouping. Whole taka from ৳100 up; small unit prices keep paisa (৳11.5). */
-export function formatTaka(amount: number): string {
-  return `৳${(Math.abs(amount) >= 100 ? takaWhole : takaFraction).format(amount)}`
-}
+/** The spoken estimate waits for the quantity to settle (a held stepper button changes it many times a second). */
+const ANNOUNCE_DELAY_MS = 400
 
 /** The seller's bulk tier that covers `qty` (the deepest one wins), or null. */
 export function tierFor(qty: number, tiers?: ProductPriceTier[] | null): ProductPriceTier | null {
@@ -55,21 +49,29 @@ type PriceEstimateProps = {
  * "Estimated ৳X for n {unit}". The total tweens (200ms) by writing to the DOM each
  * frame, so the page never re-renders for the animation. Uses the seller's bulk
  * tiers when there are any. Indicative only: the seller confirms the final price.
+ * Screen readers get the same sentence from a separate live region, updated
+ * 400ms after the last change, so holding a stepper button is one announcement.
  */
 export function PriceEstimate({ price, tiers, qty, unit, instant, className }: PriceEstimateProps) {
   const tier = tierFor(qty, tiers)
   const unitPrice = tier?.price ?? price
+  const total = Math.round(unitPrice * qty * 100) / 100
+  const sentence = `Estimated ${formatTaka(total)} for ${qty} ${unit}`
+  const announced = useDebounce(sentence, ANNOUNCE_DELAY_MS)
   if (!(unitPrice > 0)) return null
 
-  const total = Math.round(unitPrice * qty * 100) / 100
   const next = nextTier(qty, unitPrice, tiers)
 
   return (
     <div className={cn("text-sm text-ink-600", className)}>
-      <p aria-live="polite" aria-atomic="true">
+      {/* Visual only: the tween and every intermediate quantity stay silent. */}
+      <p aria-hidden="true">
         Estimated{" "}
         <TweenedTaka value={total} instant={instant} className="font-extrabold tabular-nums text-ink-900" />{" "}
         for <span className="tabular-nums">{qty}</span> {unit}
+      </p>
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {announced}
       </p>
       {tier && tier.price !== price ? (
         <p className="mt-0.5 text-xs text-ink-500">
@@ -120,11 +122,8 @@ function TweenedTaka({ value, instant, className }: { value: number; instant: bo
   }, [value, instant, reduceMotion])
 
   return (
-    <>
-      <span ref={ref} aria-hidden="true" className={className}>
-        {firstText}
-      </span>
-      <span className="sr-only">{formatTaka(value)}</span>
-    </>
+    <span ref={ref} className={className}>
+      {firstText}
+    </span>
   )
 }

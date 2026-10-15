@@ -4,7 +4,7 @@ import { useMotionValueEvent, useScroll } from "motion/react"
 import { useEffect, useRef, type ComponentPropsWithoutRef, type ElementType } from "react"
 import { cn } from "@/lib/utils"
 
-/** Downward travel (px) that sends the bar away; upward travel (px) that brings it back. */
+/** Downward travel (px) that sends the bar away; upward travel (px) that brings it back (kept small: returning should feel immediate). */
 const HIDE_AFTER = 12
 const SHOW_AFTER = 6
 /** Beyond this scroll depth the bar counts as "scrolled" (drives its shadow). */
@@ -28,7 +28,9 @@ type AutoHideHeaderProps = ComponentPropsWithoutRef<"header"> & {
  * Scroll direction comes from Motion's `useScroll` (no raw scroll listener) and
  * is written straight to `data-hidden` / `data-scrolled`, so scrolling never
  * re-renders React. The slide itself is the `.autohide` rule in globals.css:
- * transform only, so it stays on the compositor. The bar stays put while focus
+ * transform only, so it stays on the compositor. Coming back is the fast leg
+ * (240ms ease-out: a scroll-up means the visitor is reaching for the bar);
+ * leaving takes 300ms. The bar stays put while focus
  * is inside it or one of its menus is open (`aria-expanded`), and `children`
  * can read the state with `group-data-[scrolled=true]/header:*`.
  *

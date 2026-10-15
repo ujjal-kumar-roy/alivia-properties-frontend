@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { useEffect, useRef } from "react"
 import { Phone } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
@@ -13,7 +14,7 @@ import { springs } from "@/lib/motion"
 type QuoteThankYouProps = {
   /** Short reference taken from the quote or batch id. */
   reference?: string
-  /** How many suppliers the request went to (0 or 1 means "matched for you"). */
+  /** How many sellers the request went to (0 or 1 means "matched for you"). */
   supplierCount: number
   phone: string
   phoneRaw: string
@@ -25,11 +26,30 @@ const NEXT_STEPS = [
   "Compare the replies and choose the best fit.",
 ]
 
+function plural(count: number, word: string) {
+  return `${count} ${word}${count === 1 ? "" : "s"}`
+}
+
+/** What was sent, in plain words. The reply time is in the steps below, so it is not repeated here. */
+function sentSummary(itemCount: number | null, sellerCount: number) {
+  if (itemCount) {
+    // The quote list sends one request per product: `?count={sellers}&items={n}`.
+    const to = sellerCount > 0 ? plural(sellerCount, "seller") : "the sellers"
+    return `Your request for ${plural(itemCount, "item")} went to ${to}.`
+  }
+  return sellerCount > 1
+    ? `Thanks, your request was sent to ${sellerCount} sellers.`
+    : "Thanks, we have sent your request to verified sellers."
+}
+
 /**
  * The moment after a quote is sent. The Alivia guide cheers and confetti bursts
  * once from it (honours reduced motion), then the page says what happens next.
  */
 export function QuoteThankYou({ reference, supplierCount, phone, phoneRaw }: QuoteThankYouProps) {
+  // Read here rather than from the page props: the quote list adds `items` to the redirect.
+  const itemsParam = Number(useSearchParams().get("items"))
+  const itemCount = Number.isInteger(itemsParam) && itemsParam > 0 ? itemsParam : null
   const avatarRef = useRef<HTMLSpanElement>(null)
   const celebrated = useRef(false)
   // Under reduced motion the badge and tick are simply there (no scale, no draw).
@@ -84,9 +104,7 @@ export function QuoteThankYou({ reference, supplierCount, phone, phoneRaw }: Quo
           Quote request sent
         </h1>
         <p className="mt-2 text-sm text-ink-600 sm:text-base">
-          {supplierCount > 1
-            ? `Thanks, your request was sent to ${supplierCount} suppliers. Most reply within 24 hours via email or phone.`
-            : "Thanks, we have routed your request to verified suppliers. Most reply within 24 hours via email or phone."}
+          {sentSummary(itemCount, supplierCount)}
         </p>
 
         {reference ? (

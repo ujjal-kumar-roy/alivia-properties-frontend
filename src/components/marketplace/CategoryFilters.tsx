@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useSyncExternalStore, type ReactNode } from "react"
 import { Menu } from "@base-ui/react/menu"
 import { Popover } from "@base-ui/react/popover"
 import { ArrowUpDown, Check, SlidersHorizontal } from "lucide-react"
+import { useState, useSyncExternalStore, type ReactNode } from "react"
 
 import { GlassSheet } from "@/components/common/glass-sheet"
 import {
@@ -158,7 +158,7 @@ function SortMenu({ options, sort, highlighted, onChoose, children }: SortSurfac
                   key={option.value}
                   value={option.value}
                   closeOnClick
-                  className="flex min-h-10 cursor-default select-none items-center gap-3 rounded-xl px-3 text-sm font-semibold text-ink-800 outline-none transition-colors duration-140 ease-(--ease-out) data-highlighted:bg-ink-100 data-checked:text-brand-800"
+                  className="flex min-h-10 cursor-default select-none items-center gap-3 rounded-xl px-3 text-sm font-semibold text-ink-800 outline-none transition-colors duration-140 ease-out data-highlighted:bg-ink-100 data-checked:text-brand-800"
                 >
                   <span className="flex-1">{option.label}</span>
                   <span aria-hidden="true" className="flex size-4 items-center justify-center">
@@ -219,7 +219,7 @@ export function FiltersControl({ view, kind, total, onApply }: FiltersControlPro
       <SlidersHorizontal aria-hidden="true" className="size-4 shrink-0" />
       <span className="max-sm:sr-only">Filters</span>
       {activeCount > 0 ? (
-        <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-brand-700 text-[0.6875rem] font-bold tabular-nums text-white transition-[opacity,scale] duration-160 ease-(--ease-out) starting:scale-50 starting:opacity-0">
+        <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-brand-700 text-[0.6875rem] font-bold tabular-nums text-white transition-[opacity,scale] duration-160 ease-out starting:scale-95 starting:opacity-0 motion-reduce:starting:scale-100">
           {activeCount}
           <span className="sr-only"> active</span>
         </span>
@@ -237,7 +237,7 @@ export function FiltersControl({ view, kind, total, onApply }: FiltersControlPro
           setDraftKind("all")
           haptic("tap")
         }}
-        className="inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-ink-200 bg-white px-5 text-sm font-bold text-ink-800 transition-[background-color,border-color,opacity,scale] duration-140 ease-(--ease-out) hover:bg-ink-50 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:pointer-events-none disabled:opacity-50 motion-reduce:active:scale-100"
+        className="inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-ink-200 bg-white px-5 text-sm font-bold text-ink-800 transition-[background-color,border-color,opacity,scale] duration-140 ease-out hover:bg-ink-50 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:pointer-events-none disabled:opacity-50 motion-reduce:active:scale-100"
       >
         Reset
       </button>
@@ -327,7 +327,7 @@ function OptionRow({
         onSelect()
       }}
       className={cn(
-        "flex min-h-12 w-full items-center gap-3 rounded-xl border px-4 text-left text-[0.9375rem] font-semibold transition-[background-color,border-color,color,scale] duration-140 ease-(--ease-out) active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 motion-reduce:active:scale-100",
+        "flex min-h-12 w-full items-center gap-3 rounded-xl border px-4 text-left text-[0.9375rem] font-semibold transition-[background-color,border-color,color,scale] duration-140 ease-out active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 motion-reduce:active:scale-100",
         selected
           ? "border-brand-600 bg-brand-50 text-brand-800"
           : "border-ink-200 bg-white text-ink-800 hover:border-ink-300 hover:bg-ink-50",
@@ -337,14 +337,14 @@ function OptionRow({
       <span
         aria-hidden="true"
         className={cn(
-          "flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-[background-color,border-color] duration-160 ease-(--ease-out)",
+          "flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-[background-color,border-color] duration-160 ease-out",
           selected ? "border-brand-600 bg-brand-600 text-white" : "border-ink-300",
         )}
       >
         <Check
           className={cn(
-            "size-3.5 transition-[opacity,scale] duration-160 ease-(--ease-out)",
-            selected ? "scale-100 opacity-100" : "scale-75 opacity-0",
+            "size-3.5 transition-[opacity,scale] duration-160 ease-out motion-reduce:transition-opacity motion-reduce:duration-150",
+            selected ? "scale-100 opacity-100" : "scale-75 opacity-0 motion-reduce:scale-100",
           )}
           strokeWidth={3}
         />

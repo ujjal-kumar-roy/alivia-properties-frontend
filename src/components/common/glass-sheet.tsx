@@ -12,6 +12,7 @@ import {
   DISMISS_VELOCITY_THRESHOLD,
   project,
   rubberband,
+  springs,
 } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
@@ -112,16 +113,16 @@ export function GlassSheet({
 
     if (dismiss) {
       const distance = panelRef.current?.offsetHeight ?? window.innerHeight
-      animate(y, distance, {
-        type: "spring",
-        duration: 0.34,
-        bounce: 0,
-        velocity,
-      }).then(() => onOpenChange(false))
+      // The shared sheet spring, critically damped: an overshoot past the bottom
+      // edge would only delay the close.
+      animate(y, distance, { ...springs.sheet, bounce: 0, velocity }).then(() =>
+        onOpenChange(false),
+      )
       haptic("tap")
     } else {
-      // Only a flick carried momentum, so a hint of bounce is earned here.
-      animate(y, 0, { type: "spring", duration: 0.4, bounce: 0.18, velocity })
+      // Only a flick carried momentum, so a hint of bounce is earned here
+      // (the shared momentum-gesture spring).
+      animate(y, 0, { ...springs.rotate, velocity })
     }
   }
 

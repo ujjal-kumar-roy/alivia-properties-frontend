@@ -368,7 +368,11 @@ export function SwipeGallery({
                             )}
                           >
                             {index === 0 && transitionName ? (
-                              <ViewTransition name={transitionName}>{photo}</ViewTransition>
+                              // Morph only (same class as the detail skeletons' MorphPlaceholder):
+                              // default="none" so the photo never replays a crossfade on its own updates.
+                              <ViewTransition name={transitionName} share="morph" default="none">
+                                {photo}
+                              </ViewTransition>
                             ) : (
                               photo
                             )}

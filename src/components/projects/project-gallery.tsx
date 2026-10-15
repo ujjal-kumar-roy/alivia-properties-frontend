@@ -82,18 +82,20 @@ export function ProjectGallery({ images, label, className, transitionName, child
               className="relative aspect-4/3 max-h-[64svh] w-full shrink-0 cursor-zoom-in snap-center snap-always sm:aspect-16/10 sm:max-h-none md:aspect-[16/8.5]"
             >
               {index === 0 && transitionName ? (
-                <ViewTransition name={transitionName}>
-                <Image
-                  src={src}
-                  alt={`${label} image ${index + 1}`}
-                  fill
-                  priority={index === 0}
-                  sizes={GALLERY_SIZES}
-                  placeholder="blur"
-                  blurDataURL={CARD_BLUR_DATA_URL}
-                  draggable={false}
-                  className="object-cover select-none"
-                />
+                // share="morph" matches the loading skeleton's MorphPlaceholder;
+                // default="none" stops the photo replaying a crossfade after load.
+                <ViewTransition name={transitionName} share="morph" default="none">
+                  <Image
+                    src={src}
+                    alt={`${label} image ${index + 1}`}
+                    fill
+                    priority={index === 0}
+                    sizes={GALLERY_SIZES}
+                    placeholder="blur"
+                    blurDataURL={CARD_BLUR_DATA_URL}
+                    draggable={false}
+                    className="object-cover select-none"
+                  />
                 </ViewTransition>
               ) : (
                 <Image

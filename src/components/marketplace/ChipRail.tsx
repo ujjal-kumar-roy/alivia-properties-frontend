@@ -1,14 +1,10 @@
 "use client"
 
-import { useEffect, useRef, type ReactNode } from "react"
+import { useLayoutEffect, useRef, type ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
-/**
- * One horizontally scrollable row of chips (never wraps). On mount it centres
- * the chip marked aria-current, so a long list opens on the visitor's place
- * instead of the far left. Pass the chips as children (links work).
- */
+
 export function ChipRail({
   label,
   children,
@@ -20,12 +16,14 @@ export function ChipRail({
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const rail = ref.current
     const current = rail?.querySelector<HTMLElement>('[aria-current="page"]')
     if (!rail || !current) return
-    const target = current.offsetLeft - (rail.clientWidth - current.offsetWidth) / 2
-    rail.scrollLeft = Math.max(0, target)
+    const railBox = rail.getBoundingClientRect()
+    const chipBox = current.getBoundingClientRect()
+    const offset = chipBox.left + chipBox.width / 2 - (railBox.left + rail.clientWidth / 2)
+    rail.scrollTo({ left: rail.scrollLeft + offset, behavior: "instant" })
   }, [])
 
   return (
@@ -34,7 +32,11 @@ export function ChipRail({
       role="group"
       aria-label={label}
       className={cn(
-        "relative -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 scrollbar-none sm:mx-0 sm:px-0",
+        // Shadow room: 8px above, 14px below (the selected chip's shadow drops 6px
+        // and blurs 16px), 16px / 12px at the sides; the margins cancel it.
+        "relative -mx-4 -mb-2.5 -mt-2 flex gap-1.5 overflow-x-auto px-4 pb-3.5 pt-2 scroll-px-4 scrollbar-none sm:-mx-3 sm:px-3 sm:scroll-px-3",
+        // First-paint centring (the effect above does the same where unsupported).
+        "*:aria-[aria-current=page]:snap-center *:aria-[aria-current=page]:[scroll-initial-target:nearest]",
         className,
       )}
     >

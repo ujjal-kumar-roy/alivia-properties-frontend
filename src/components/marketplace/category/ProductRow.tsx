@@ -11,6 +11,7 @@ import { ROUTES } from "@/config/routes.config"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
 import { cn } from "@/lib/utils"
 import type { ProductWithSupplier } from "@/services/marketplace.service"
+import { formatTaka } from "@/utils/format-price"
 import { isServiceKind } from "@/utils/marketplace-kind"
 
 type ProductRowProps = {
@@ -20,19 +21,15 @@ type ProductRowProps = {
   className?: string
 }
 
-/** Exact taka amount ("৳157,300", "৳11.5"): a list row has room for the real number. */
-function taka(amount: number) {
-  return `৳${amount.toLocaleString("en-BD", { maximumFractionDigits: 2 })}`
-}
-
 function days(count: number) {
   return `${count} ${count === 1 ? "day" : "days"}`
 }
 
 /**
  * Dense list row for category results (the "list" layout): 88px photo, name
- * on up to two lines, price per unit (or "Ask for price"), then one quiet line
- * of facts: "MOQ 500 bag · Ships in 1 day · Seller". The row is one link; the
+ * on up to two lines, the exact price per unit ("৳1,57,300", formatTaka) or
+ * "Ask for price", then one quiet line of facts: "MOQ 500 bag · Ships in
+ * 1 day · Seller". The row is one link; the
  * add-to-quote button sits beside it, never inside the <a>. On phones the
  * button rides the bottom-right corner so the name keeps the full width; from
  * md the price moves to its own right-aligned column.
@@ -96,7 +93,7 @@ export function ProductRow({ product, morph = true, className }: ProductRowProps
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-x-6">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink-900 md:col-start-1 md:row-start-1 md:text-[0.9375rem]">
+          <h3 className="line-clamp-2 font-sans text-sm font-semibold leading-snug text-ink-900 md:col-start-1 md:row-start-1 md:text-[0.9375rem]">
             {product.name}
           </h3>
 
@@ -105,7 +102,7 @@ export function ProductRow({ product, morph = true, className }: ProductRowProps
             {price ? (
               <>
                 <span className="text-base font-extrabold tabular-nums text-ink-900 md:text-lg">
-                  {taka(price)}
+                  {formatTaka(price)}
                 </span>
                 <span className="ml-1 text-xs font-medium text-ink-500">/ {product.unit}</span>
               </>

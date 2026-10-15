@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useEffect, useRef, useState, ViewTransition } from "react"
+import { useEffect, useRef, useState, useSyncExternalStore, ViewTransition } from "react"
 import { ChevronLeft, ChevronRight, Images } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
@@ -14,22 +14,49 @@ type PropertyGalleryProps = {
   property: Property
 }
 
+/** Where the desktop gallery takes over from the swipe strip (Tailwind `lg`). */
+const DESKTOP_QUERY = "(min-width: 1024px)"
+
+/**
+ * Which of the two galleries is on screen. Both stay in the DOM (CSS switches
+ * them), but a shared-element name may live on one only: with two mounted,
+ * React pairs the card with the last one, the display:none desktop gallery on
+ * phones, so the phone morph never ran. Client navigations (the only ones that
+ * morph) read the real breakpoint on first render; hydration starts from the
+ * phone layout and corrects itself without remounting any photo.
+ */
+function useDesktopGallery() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mql = window.matchMedia(DESKTOP_QUERY)
+      mql.addEventListener("change", onChange)
+      return () => mql.removeEventListener("change", onChange)
+    },
+    () => window.matchMedia(DESKTOP_QUERY).matches,
+    () => false,
+  )
+}
+
 export function PropertyGallery({ property }: PropertyGalleryProps) {
+  const desktop = useDesktopGallery()
   const images = property.images.filter(Boolean)
   if (images.length === 0) return null
 
   return (
     <>
-      <SwipeGallery property={property} images={images} />
-      <DesktopGallery property={property} images={images} />
+      <SwipeGallery property={property} images={images} morph={!desktop} />
+      <DesktopGallery property={property} images={images} morph={desktop} />
     </>
   )
 }
 
 /**
  * The first photo is the shared element the property card morphs into. Only the
- * first photo carries the name, and only one of the two galleries is displayed
- * at a time (the other is display:none), so the name is unique on screen.
+ * first photo of the gallery on screen carries the name (`active`), so it is
+ * unique on the page. The boundary is always rendered (only the name toggles)
+ * so switching never remounts the photo. `share="morph"` matches the loading
+ * skeleton's MorphPlaceholder; `default="none"` stops the photo crossfading on
+ * its own updates (it used to replay a fade after the page loaded).
  */
 function MorphTarget({
   slug,
@@ -40,8 +67,11 @@ function MorphTarget({
   active: boolean
   children: React.ReactNode
 }) {
-  if (!active) return <>{children}</>
-  return <ViewTransition name={`property-${slug}`}>{children}</ViewTransition>
+  return (
+    <ViewTransition name={active ? `property-${slug}` : undefined} share="morph" default="none">
+      {children}
+    </ViewTransition>
+  )
 }
 
 /**
@@ -50,7 +80,15 @@ function MorphTarget({
  * follows an IntersectionObserver, so there is no scroll listener and state
  * changes only when the visible photo changes.
  */
-function SwipeGallery({ property, images }: { property: Property; images: string[] }) {
+function SwipeGallery({
+  property,
+  images,
+  morph,
+}: {
+  property: Property
+  images: string[]
+  morph: boolean
+}) {
   const [index, setIndex] = useState(0)
   const scroller = useRef<HTMLDivElement>(null)
   const multiple = images.length > 1
@@ -91,7 +129,7 @@ function SwipeGallery({ property, images }: { property: Property; images: string
             aria-label={`${i + 1} of ${images.length}`}
             className="relative aspect-4/3 w-full shrink-0 snap-center bg-ink-100 sm:aspect-16/9"
           >
-            <MorphTarget slug={property.slug} active={i === 0}>
+            <MorphTarget slug={property.slug} active={morph && i === 0}>
               <Image
                 src={src}
                 alt={`${property.title} image ${i + 1}`}
@@ -129,7 +167,15 @@ function SwipeGallery({ property, images }: { property: Property; images: string
 }
 
 /** Desktop: the large photo with arrows and a thumbnail strip, as it always was. */
-function DesktopGallery({ property, images }: { property: Property; images: string[] }) {
+function DesktopGallery({
+  property,
+  images,
+  morph,
+}: {
+  property: Property
+  images: string[]
+  morph: boolean
+}) {
   const [activeIndex, setActiveIndex] = useState(0)
   const activeImage = images[activeIndex]
   const hasMultipleImages = images.length > 1
@@ -143,7 +189,7 @@ function DesktopGallery({ property, images }: { property: Property; images: stri
   return (
     <div className="hidden flex-col gap-3 lg:flex">
       <div className="group relative h-100 overflow-hidden rounded-[1.5rem] bg-ink-100 shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
-        <MorphTarget slug={property.slug} active={activeIndex === 0}>
+        <MorphTarget slug={property.slug} active={morph && activeIndex === 0}>
           <Image
             key={activeImage}
             src={activeImage}
