@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2, MailWarning, RotateCw } from "lucide-react"
+import { AnimatePresence } from "motion/react"
 
 import { FormSuccess } from "@/components/booking/form-success"
 import { Input } from "@/components/ui/input"
 import { ROUTES } from "@/config/routes.config"
 import { authService } from "@/services/auth.service"
 import { ApiError } from "@/services/http-client"
+import { ENTER_RISE, Reveal, SubmitLabel } from "../_components/auth-motion"
 
 type Status = "verifying" | "success" | "error" | "missing"
 
@@ -77,7 +79,7 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
 
   if (status === "success") {
     return (
-      <div className="space-y-3">
+      <div className={`space-y-3 ${ENTER_RISE}`}>
         <h1 className="sr-only">Email verified</h1>
         <FormSuccess title="Email verified!" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
           Your Alivia Properties account is now active. You can sign in and start exploring.
@@ -91,7 +93,7 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
 
   // error or missing token → show explanation + resend form
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${token ? ENTER_RISE : ""}`}>
       <div className="flex flex-col items-center gap-1.5 text-center">
         <MailWarning aria-hidden="true" className="size-9 text-amber-500" />
         <h1 className="font-heading text-xl font-bold text-ink-900">
@@ -105,7 +107,7 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
       </div>
 
       {resent ? (
-        <div role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-center text-sm text-emerald-800">
+        <div role="status" className={`${ENTER_RISE} rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-center text-sm text-emerald-800`}>
           If an account exists for that email, a new verification link is on its way. Check
           your inbox.
         </div>
@@ -126,22 +128,26 @@ export function VerifyEmailClient({ token }: { token: string | null }) {
               aria-invalid={resendError ? true : undefined}
               aria-describedby={resendError ? "resend-email-error" : undefined}
             />
-            {resendError && (
-              <p id="resend-email-error" role="alert" className="text-[0.8125rem] font-medium text-destructive">
-                {resendError}
-              </p>
-            )}
+            <AnimatePresence initial={false}>
+              {resendError && (
+                <Reveal key="resend-error">
+                  <p id="resend-email-error" role="alert" className="text-[0.8125rem] font-medium text-destructive">
+                    {resendError}
+                  </p>
+                </Reveal>
+              )}
+            </AnimatePresence>
           </div>
           <button type="submit" disabled={resending} className="btn-tactile btn-tactile--block">
-            {resending ? (
-              <>
-                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Sending…
-              </>
-            ) : (
-              <>
-                <RotateCw aria-hidden="true" className="h-4 w-4" /> Resend verification email
-              </>
-            )}
+            <SubmitLabel
+              busy={resending}
+              idle={
+                <>
+                  <RotateCw aria-hidden="true" className="h-4 w-4" /> Resend verification email
+                </>
+              }
+              busyLabel="Sending…"
+            />
           </button>
         </form>
       )}

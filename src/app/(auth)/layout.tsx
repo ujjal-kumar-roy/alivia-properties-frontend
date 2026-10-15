@@ -18,7 +18,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </Link>
 
       {/* Card */}
-      <div className="liquid-glass w-full max-w-md rounded-2xl border p-4 sm:p-8">
+      <div className="liquid-glass enter-cascade w-full max-w-md rounded-2xl border p-4 sm:p-8">
         {children}
       </div>
 

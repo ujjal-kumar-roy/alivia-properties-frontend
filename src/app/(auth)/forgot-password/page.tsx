@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { AnimatePresence } from "motion/react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -12,6 +13,7 @@ import { FormSuccess } from "@/components/booking/form-success"
 import { ROUTES } from "@/config/routes.config"
 import { authService } from "@/services/auth.service"
 import { ApiError } from "@/services/http-client"
+import { ENTER_RISE, FIELD_MESSAGE, Reveal, SubmitLabel } from "../_components/auth-motion"
 
 const schema = z.object({ email: z.string().email("Invalid email address") })
 type Input = z.infer<typeof schema>
@@ -52,7 +54,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       {sent ? (
-        <div className="space-y-3">
+        <div className={`space-y-3 ${ENTER_RISE}`}>
           <FormSuccess title="Check your inbox" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
             If an account exists for that email, a reset link has been sent.
           </FormSuccess>
@@ -63,11 +65,15 @@ export default function ForgotPasswordPage() {
       ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5 md:[&_input:not([type=checkbox])]:h-10">
-            {submitError && (
-              <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {submitError}
-              </div>
-            )}
+            <AnimatePresence initial={false}>
+              {submitError && (
+                <Reveal key="submit-error" className="pb-3.5">
+                  <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    {submitError}
+                  </div>
+                </Reveal>
+              )}
+            </AnimatePresence>
             <FormField
               control={form.control}
               name="email"
@@ -77,7 +83,7 @@ export default function ForgotPasswordPage() {
                   <FormControl>
                     <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} value={field.value ?? ""} />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className={FIELD_MESSAGE} />
                 </FormItem>
               )}
             />
@@ -86,7 +92,7 @@ export default function ForgotPasswordPage() {
               className="btn-tactile btn-tactile--block"
               disabled={form.formState.isSubmitting}
             >
-              {form.formState.isSubmitting ? "Sending…" : "Send Reset Link"}
+              <SubmitLabel busy={form.formState.isSubmitting} idle="Send Reset Link" busyLabel="Sending…" />
             </button>
           </form>
         </Form>

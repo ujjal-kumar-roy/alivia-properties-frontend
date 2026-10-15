@@ -16,12 +16,14 @@ import { getDashboardRoute } from "@/utils/auth-helpers";
 import { authService } from "@/services/auth.service";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, LogIn, MailCheck, RotateCw } from "lucide-react";
+import { AnimatePresence } from "motion/react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { FIELD_MESSAGE, Reveal, SubmitLabel } from "../_components/auth-motion";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -86,8 +88,10 @@ export function LoginForm() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div>
+      <AnimatePresence initial={false}>
       {error && (
+        <Reveal key="login-error" className="pb-4 sm:pb-5">
         <div role="alert" className="space-y-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
           <p>{error}</p>
           {needsVerification &&
@@ -112,7 +116,9 @@ export function LoginForm() {
               </button>
             ))}
         </div>
+        </Reveal>
       )}
+      </AnimatePresence>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5 sm:space-y-4 md:[&_input:not([type=checkbox])]:h-10">
@@ -131,7 +137,7 @@ export function LoginForm() {
                     value={field.value ?? ""}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className={FIELD_MESSAGE} />
               </FormItem>
             )}
           />
@@ -161,7 +167,7 @@ export function LoginForm() {
                   <button
                     type="button"
                     onClick={() => setShowPass(!showPass)}
-                    className="absolute right-1 top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-ink-600 hover:text-foreground"
+                    className="absolute right-1 top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-ink-600 transition-[color,scale] hover:text-foreground active:scale-90 motion-reduce:active:scale-100"
                     aria-label={showPass ? "Hide password" : "Show password"}
                   >
                     {showPass ? (
@@ -171,7 +177,7 @@ export function LoginForm() {
                     )}
                   </button>
                 </div>
-                <FormMessage />
+                <FormMessage className={FIELD_MESSAGE} />
               </FormItem>
             )}
           />
@@ -198,13 +204,15 @@ export function LoginForm() {
             className="btn-tactile btn-tactile--block"
             disabled={form.formState.isSubmitting}
           >
-            {form.formState.isSubmitting ? (
-              "Signing in…"
-            ) : (
-              <>
-                <LogIn className="h-4 w-4" /> Sign In
-              </>
-            )}
+            <SubmitLabel
+              busy={form.formState.isSubmitting}
+              idle={
+                <>
+                  <LogIn className="h-4 w-4" /> Sign In
+                </>
+              }
+              busyLabel="Signing in…"
+            />
           </button>
         </form>
       </Form>

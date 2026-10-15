@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { AnimatePresence } from "motion/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -13,6 +14,7 @@ import { ROUTES } from "@/config/routes.config"
 import { haptic } from "@/lib/celebrate"
 import { authService } from "@/services/auth.service"
 import { ApiError } from "@/services/http-client"
+import { ENTER_RISE, FIELD_MESSAGE, Reveal, SubmitLabel } from "../_components/auth-motion"
 
 const ROLES = ["seller", "buyer"] as const
 
@@ -82,20 +84,26 @@ export function RegisterForm() {
 
   if (success) {
     return (
-      <FormSuccess title="Account created" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
-        Check your email to verify the account, then sign in.
-      </FormSuccess>
+      <div className={ENTER_RISE}>
+        <FormSuccess title="Account created" confetti={false} className="border-0 bg-transparent p-0 sm:p-0">
+          Check your email to verify the account, then sign in.
+        </FormSuccess>
+      </div>
     )
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3.5 md:[&_input:not([type=checkbox])]:h-10">
-        {submitError && (
-          <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {submitError}
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {submitError && (
+            <Reveal key="submit-error" className="pb-3.5">
+              <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {submitError}
+              </div>
+            </Reveal>
+          )}
+        </AnimatePresence>
 
         <FormField
           control={form.control}
@@ -106,7 +114,7 @@ export function RegisterForm() {
               <FormControl>
                 <Input autoComplete="name" placeholder="Md. Rafiqul Islam" {...field} value={field.value ?? ""} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className={FIELD_MESSAGE} />
             </FormItem>
           )}
         />
@@ -120,7 +128,7 @@ export function RegisterForm() {
               <FormControl>
                 <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} value={field.value ?? ""} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className={FIELD_MESSAGE} />
             </FormItem>
           )}
         />
@@ -134,7 +142,7 @@ export function RegisterForm() {
               <FormControl>
                 <Input type="tel" autoComplete="tel" placeholder="01700-000000" {...field} value={field.value ?? ""} />
               </FormControl>
-              <FormMessage />
+              <FormMessage className={FIELD_MESSAGE} />
             </FormItem>
           )}
         />
@@ -169,7 +177,7 @@ export function RegisterForm() {
                   ))}
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage className={FIELD_MESSAGE} />
             </FormItem>
           )}
         />
@@ -184,7 +192,7 @@ export function RegisterForm() {
                 <FormControl>
                   <Input type="password" autoComplete="new-password" placeholder="Min 8 chars" {...field} value={field.value ?? ""} />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className={FIELD_MESSAGE} />
               </FormItem>
             )}
           />
@@ -197,7 +205,7 @@ export function RegisterForm() {
                 <FormControl>
                   <Input type="password" autoComplete="new-password" placeholder="Repeat password" {...field} value={field.value ?? ""} />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className={FIELD_MESSAGE} />
               </FormItem>
             )}
           />
@@ -230,7 +238,7 @@ export function RegisterForm() {
                     Privacy Policy
                   </Link>
                 </FormLabel>
-                <FormMessage />
+                <FormMessage className={FIELD_MESSAGE} />
               </div>
             </FormItem>
           )}
@@ -241,7 +249,7 @@ export function RegisterForm() {
           className="btn-tactile btn-tactile--block"
           disabled={form.formState.isSubmitting}
         >
-          {form.formState.isSubmitting ? "Creating account…" : "Create Account"}
+          <SubmitLabel busy={form.formState.isSubmitting} idle="Create Account" busyLabel="Creating account…" />
         </button>
       </form>
     </Form>
