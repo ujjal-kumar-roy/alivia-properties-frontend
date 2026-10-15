@@ -2,6 +2,7 @@
 
 import { TrendingUp } from "lucide-react"
 import { useState } from "react"
+import { AnimatedNumber } from "@/components/properties/animated-number"
 
 function formatBdt(amount: number): string {
   if (amount >= 10_000_000) return `৳${(amount / 10_000_000).toFixed(2)} Cr`
@@ -87,12 +88,13 @@ export function RoiCalculator({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:grid-cols-4 sm:gap-3">
-        <Stat label="Gross yield" value={`${grossYield.toFixed(2)}%`} />
-        <Stat label="Net yield" value={`${netYield.toFixed(2)}%`} />
-        <Stat label="Total return" value={formatBdt(totalReturn)} />
+        <Stat label="Gross yield" value={grossYield} format={(n) => `${n.toFixed(2)}%`} />
+        <Stat label="Net yield" value={netYield} format={(n) => `${n.toFixed(2)}%`} />
+        <Stat label="Total return" value={totalReturn} format={formatBdt} />
         <Stat
           label="Break-even"
-          value={breakEvenYears === Infinity ? "-" : `${breakEvenYears.toFixed(1)} yrs`}
+          value={breakEvenYears}
+          format={(n) => (n === Infinity ? "-" : `${n.toFixed(1)} yrs`)}
         />
       </div>
     </div>
@@ -135,11 +137,21 @@ function SliderInput({
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  format,
+}: {
+  label: string
+  value: number
+  format: (n: number) => string
+}) {
   return (
     <div className="rounded-[1rem] bg-ink-50 p-3 text-center">
       <p className="text-[0.65rem] uppercase tracking-[0.18em] text-ink-500">{label}</p>
-      <p className="mt-1.5 text-sm font-bold text-brand-700">{value}</p>
+      <p className="mt-1.5 text-sm font-bold tabular-nums text-brand-700">
+        <AnimatedNumber value={value} format={format} />
+      </p>
     </div>
   )
 }

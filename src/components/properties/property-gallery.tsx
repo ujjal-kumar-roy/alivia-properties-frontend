@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, ViewTransition } from "react"
 import { ChevronLeft, ChevronRight, Images } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
@@ -24,6 +24,24 @@ export function PropertyGallery({ property }: PropertyGalleryProps) {
       <DesktopGallery property={property} images={images} />
     </>
   )
+}
+
+/**
+ * The first photo is the shared element the property card morphs into. Only the
+ * first photo carries the name, and only one of the two galleries is displayed
+ * at a time (the other is display:none), so the name is unique on screen.
+ */
+function MorphTarget({
+  slug,
+  active,
+  children,
+}: {
+  slug: string
+  active: boolean
+  children: React.ReactNode
+}) {
+  if (!active) return <>{children}</>
+  return <ViewTransition name={`property-${slug}`}>{children}</ViewTransition>
 }
 
 /**
@@ -73,17 +91,19 @@ function SwipeGallery({ property, images }: { property: Property; images: string
             aria-label={`${i + 1} of ${images.length}`}
             className="relative aspect-4/3 w-full shrink-0 snap-center bg-ink-100 sm:aspect-16/9"
           >
-            <Image
-              src={src}
-              alt={`${property.title} image ${i + 1}`}
-              fill
-              sizes="(max-width: 1023px) 100vw, 45vw"
-              loading={i === 0 ? "eager" : "lazy"}
-              fetchPriority={i === 0 ? "high" : "auto"}
-              placeholder="blur"
-              blurDataURL={CARD_BLUR_DATA_URL}
-              className="object-cover"
-            />
+            <MorphTarget slug={property.slug} active={i === 0}>
+              <Image
+                src={src}
+                alt={`${property.title} image ${i + 1}`}
+                fill
+                sizes="(max-width: 1023px) 100vw, 45vw"
+                loading={i === 0 ? "eager" : "lazy"}
+                fetchPriority={i === 0 ? "high" : "auto"}
+                placeholder="blur"
+                blurDataURL={CARD_BLUR_DATA_URL}
+                className="object-cover"
+              />
+            </MorphTarget>
           </div>
         ))}
       </div>
@@ -123,16 +143,18 @@ function DesktopGallery({ property, images }: { property: Property; images: stri
   return (
     <div className="hidden flex-col gap-3 lg:flex">
       <div className="group relative h-100 overflow-hidden rounded-[1.5rem] bg-ink-100 shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
-        <Image
-          key={activeImage}
-          src={activeImage}
-          alt={`${property.title} image ${activeIndex + 1}`}
-          fill
-          loading={activeIndex === 0 ? "eager" : undefined}
-          fetchPriority={activeIndex === 0 ? "high" : "auto"}
-          sizes="(max-width: 1023px) 100vw, 45vw"
-          className="object-cover motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
-        />
+        <MorphTarget slug={property.slug} active={activeIndex === 0}>
+          <Image
+            key={activeImage}
+            src={activeImage}
+            alt={`${property.title} image ${activeIndex + 1}`}
+            fill
+            loading={activeIndex === 0 ? "eager" : undefined}
+            fetchPriority={activeIndex === 0 ? "high" : "auto"}
+            sizes="(max-width: 1023px) 100vw, 45vw"
+            className="object-cover motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
+          />
+        </MorphTarget>
         <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-ink-950/80 via-ink-950/10 to-transparent" />
 
         {hasMultipleImages ? (

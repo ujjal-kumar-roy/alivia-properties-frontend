@@ -33,7 +33,10 @@ export function PropertyActionBar({
 
   return (
     <>
-      <MobileActionBar label="Contact the seller">
+      <MobileActionBar
+        label="Contact the seller"
+        className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-8 motion-safe:duration-500 motion-safe:ease-out"
+      >
         <a
           href={`tel:${phone}`}
           aria-label={`Call ${sellerName}`}

@@ -207,7 +207,7 @@ export default async function PropertyDetailPage({
       <div className="container-page section-y pt-2 sm:pt-10">
         <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-8">
           <div className="order-2 min-w-0 space-y-3 lg:order-none lg:space-y-6">
-            <div className="space-y-2 lg:space-y-4">
+            <div className="enter-cascade space-y-2 lg:space-y-4">
               <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
                 {p.isFeatured && <VerifiedBadge type="featured" />}
                 {p.isVerified && <VerifiedBadge type="verified" />}
@@ -551,7 +551,7 @@ export default async function PropertyDetailPage({
               </div>
             </div>
 
-            <div className="surface-card order-12 min-w-0 p-4 lg:p-5">
+            <div className="reveal surface-card order-12 min-w-0 p-4 lg:p-5">
               <h3 className="hidden font-sans text-lg font-semibold text-ink-900 lg:block">
                 Contact Seller
               </h3>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { formatPrice } from "@/utils/format-price"
+import { AnimatedNumber } from "@/components/properties/animated-number"
 
 interface MortgageCalculatorProps {
   propertyPrice: number
@@ -83,15 +84,16 @@ export function MortgageCalculator({ propertyPrice, embedded = false }: Mortgage
       <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:grid-cols-3 sm:gap-3">
         <div className="rounded-[1rem] bg-ink-50 p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-ink-500">Down Payment</p>
-          <p className="mt-2 text-sm font-semibold text-ink-900">{formatPrice(loanDetails.downPayment, true)}</p>
+          <p className="mt-2 text-sm font-semibold text-ink-900"><AnimatedNumber value={loanDetails.downPayment} format={(n) => formatPrice(n, true)} /></p>
         </div>
         <div className="rounded-[1rem] bg-ink-50 p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-ink-500">Loan Amount</p>
-          <p className="mt-2 text-sm font-semibold text-ink-900">{formatPrice(loanDetails.principal, true)}</p>
+          <p className="mt-2 text-sm font-semibold text-ink-900"><AnimatedNumber value={loanDetails.principal} format={(n) => formatPrice(n, true)} /></p>
         </div>
         <div className="col-span-2 rounded-[1rem] bg-brand-50 p-3 sm:col-span-1 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brand-700">Monthly Estimate</p>
-          <p className="mt-2 text-sm font-semibold text-brand-800">{formatPrice(Math.round(loanDetails.monthlyPayment))}/mo</p>
+          <p className="mt-2 text-sm font-semibold text-brand-800"><AnimatedNumber value={loanDetails.monthlyPayment} format={(n) => formatPrice(Math.round(n))} />
+            /mo</p>
         </div>
       </div>
     </div>
