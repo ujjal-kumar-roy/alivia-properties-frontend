@@ -1776,14 +1776,17 @@ html[data-action-bar="true"] body {
 
 /* Hero slide copy: eyebrow, headline, subtitle and CTAs rise in one after another
    each time a slide changes (the group is re-keyed per slide). Content is visible
-   by default; only motion-tolerant visitors get the cascade. */
+   by default; only motion-tolerant visitors get the cascade.
+   .enter-cascade is the same entrance for any page header (eyebrow, title, lead,
+   actions): put it on the wrapper, children cascade on first paint. Don't put it
+   on an element that also has .reveal or its own transform. */
 @media (prefers-reduced-motion: no-preference) {
-  .hero-copy > * {
+  :is(.hero-copy, .enter-cascade) > * {
     animation: hero-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
-  .hero-copy > :nth-child(2) { animation-delay: 0.08s; }
-  .hero-copy > :nth-child(3) { animation-delay: 0.16s; }
-  .hero-copy > :nth-child(4) { animation-delay: 0.24s; }
+  :is(.hero-copy, .enter-cascade) > :nth-child(2) { animation-delay: 0.08s; }
+  :is(.hero-copy, .enter-cascade) > :nth-child(3) { animation-delay: 0.16s; }
+  :is(.hero-copy, .enter-cascade) > :nth-child(n + 4) { animation-delay: 0.24s; }
 }
 @keyframes hero-rise {
   from { opacity: 0; transform: translateY(0.9rem); filter: blur(6px); }
