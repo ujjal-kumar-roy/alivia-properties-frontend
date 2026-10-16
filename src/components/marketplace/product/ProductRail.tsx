@@ -1,5 +1,5 @@
+import type { CardProduct } from "@/components/marketplace/card-product"
 import { MarketplaceProductCard } from "@/components/marketplace/MarketplaceProductCard"
-import type { ProductWithSupplier } from "@/services/marketplace.service"
 
 import { RailScroller } from "./RailScroller"
 
@@ -7,7 +7,8 @@ type ProductRailProps = {
   title: string
   /** "See all" destination (the category or seller page). */
   href?: string
-  products: ProductWithSupplier[]
+  /** Trimmed with toCardProduct() by the caller: the cards are client components. */
+  products: CardProduct[]
   /**
    * Name each card photo for the card-to-page morph. A name may appear once per
    * page, so turn it off for a rail whose products also appear in an earlier one.

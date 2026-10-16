@@ -4,18 +4,17 @@ import { useRef, ViewTransition } from "react"
 import { Package, Wrench } from "lucide-react"
 
 import { MorphLink } from "@/components/common/morph-placeholder"
+import type { CardProduct } from "@/components/marketplace/card-product"
 import { MediaImage } from "@/components/marketplace/MediaImage"
-import { productStartingPrice } from "@/components/marketplace/product-meta"
 import { AddToQuoteButton } from "@/components/marketplace/quote-list/AddToQuoteButton"
 import { ROUTES } from "@/config/routes.config"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
 import { cn } from "@/lib/utils"
-import type { ProductWithSupplier } from "@/services/marketplace.service"
 import { formatTaka } from "@/utils/format-price"
 import { isServiceKind } from "@/utils/marketplace-kind"
 
 type ProductRowProps = {
-  product: ProductWithSupplier
+  product: CardProduct
   /** Name the photo for the row-to-page morph. Turn off when the product can appear twice on a page. */
   morph?: boolean
   className?: string
@@ -39,7 +38,7 @@ function days(count: number) {
 export function ProductRow({ product, morph = true, className }: ProductRowProps) {
   const thumbRef = useRef<HTMLDivElement>(null)
   const service = isServiceKind(product.supplier?.kind)
-  const price = productStartingPrice(product)
+  const price = product.startingPrice
   const seller = product.supplier?.name?.trim()
   const morphName = `product-${product.slug}`
 

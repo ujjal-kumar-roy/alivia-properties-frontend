@@ -4,20 +4,17 @@ import { useRef, ViewTransition } from "react"
 import { Package, Wrench } from "lucide-react"
 
 import { MorphLink } from "@/components/common/morph-placeholder"
+import type { CardProduct } from "@/components/marketplace/card-product"
 import { MediaImage } from "@/components/marketplace/MediaImage"
-import { productStartingPrice } from "@/components/marketplace/product-meta"
 import { AddToQuoteButton } from "@/components/marketplace/quote-list/AddToQuoteButton"
 import { ROUTES } from "@/config/routes.config"
 import { CARD_BLUR_DATA_URL } from "@/lib/image-placeholder"
 import { cn } from "@/lib/utils"
-import type { MarketplaceProduct, SupplierKind } from "@/types/marketplace.types"
 import { formatTaka } from "@/utils/format-price"
 import { isServiceKind } from "@/utils/marketplace-kind"
 
 type ProductCardProps = {
-  product: MarketplaceProduct & {
-    supplier?: { id?: string; slug?: string; name: string; kind?: SupplierKind }
-  }
+  product: CardProduct
   /** Name the photo for the card-to-page morph. Turn off when the same product can appear twice on a page. */
   morph?: boolean
   className?: string
@@ -63,7 +60,7 @@ export function MarketplaceProductCard({
   const seller = (supplierName ?? product.supplier?.name)?.trim()
   const brand = product.brand?.trim()
   const unit = product.unit?.trim()
-  const price = productStartingPrice(product)
+  const price = product.startingPrice
   const morphName = `product-${product.slug}`
 
   // "brand · seller": skip a seller that only repeats the brand.

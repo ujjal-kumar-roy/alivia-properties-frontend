@@ -1,15 +1,16 @@
 "use server";
 
 import {
+  toCardProduct,
+  type CardProduct,
+} from "@/components/marketplace/card-product";
+import {
   SEARCH_MAX_LENGTH,
   sortOptionsFor,
   type ListingView,
 } from "@/components/marketplace/category-filters";
 import type { Paginated } from "@/services/http-client";
-import {
-  marketplaceService,
-  type ProductWithSupplier,
-} from "@/services/marketplace.service";
+import { marketplaceService } from "@/services/marketplace.service";
 import type { Supplier } from "@/types/marketplace.types";
 
 /**
@@ -86,8 +87,13 @@ function listParams(input: LoadInput, view: ListingView) {
 
 export async function loadCategoryProducts(
   input: LoadInput,
-): Promise<Paginated<ProductWithSupplier>> {
-  return marketplaceService.listProducts(listParams(input, "products"));
+): Promise<Paginated<CardProduct>> {
+  const page = await marketplaceService.listProducts(
+    listParams(input, "products"),
+  );
+  // The browser only gets what a card reads, not descriptions, galleries or
+  // seller contact details.
+  return { ...page, data: page.data.map(toCardProduct) };
 }
 
 export async function loadCategorySuppliers(

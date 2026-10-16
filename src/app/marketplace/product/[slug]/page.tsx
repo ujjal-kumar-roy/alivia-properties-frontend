@@ -5,6 +5,7 @@ import { ChevronRight, MapPin, ShieldCheck } from "lucide-react"
 
 import { CardFact } from "@/components/common/card-fact"
 import { GoldStar } from "@/components/marketplace/card-icons"
+import { toCardProduct } from "@/components/marketplace/card-product"
 import { MarketplaceBreadcrumb, type Crumb } from "@/components/marketplace/MarketplaceBreadcrumb"
 import { MediaImage } from "@/components/marketplace/MediaImage"
 import { BuyBox } from "@/components/marketplace/product/BuyBox"
@@ -109,8 +110,9 @@ export default async function MarketplaceProductPage({ params }: PageProps) {
   // One "seen" set across the current product and both rails: no card repeats (by
   // name, which also covers the id) and each card's morph name stays unique.
   const seen = new Set([nameKey(product.name)])
-  const similar = takeUnique(similarPage.data, seen, RAIL_SIZE)
-  const fromSeller = takeUnique(sellerPage.data, seen, RAIL_SIZE)
+  // The rail cards are client components: send each only the fields it reads.
+  const similar = takeUnique(similarPage.data, seen, RAIL_SIZE).map(toCardProduct)
+  const fromSeller = takeUnique(sellerPage.data, seen, RAIL_SIZE).map(toCardProduct)
 
   const supplier = product.supplier as DetailSupplier | undefined
   const serviceMode = isServiceKind(supplier?.kind)

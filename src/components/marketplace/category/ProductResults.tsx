@@ -15,6 +15,7 @@ import {
 } from "react"
 
 import { loadCategoryProducts } from "@/app/marketplace/category/[slug]/actions"
+import type { CardProduct } from "@/components/marketplace/card-product"
 import { ProductRow } from "@/components/marketplace/category/ProductRow"
 import {
   PRODUCT_GRID_CLASS,
@@ -25,7 +26,6 @@ import {
 import { MarketplaceProductCard } from "@/components/marketplace/MarketplaceProductCard"
 import { useListingLayout, type ListingLayout } from "@/hooks/use-listing-layout"
 import type { Paginated } from "@/services/http-client"
-import type { ProductWithSupplier } from "@/services/marketplace.service"
 
 export type ResultsQuery = {
   category: string
@@ -35,7 +35,7 @@ export type ResultsQuery = {
 }
 
 type ProductResultsProps = {
-  initial: Paginated<ProductWithSupplier>
+  initial: Paginated<CardProduct>
   query: ResultsQuery
   nextHref: string | null
 }
@@ -143,7 +143,7 @@ const ProductItem = memo(function ProductItem({
   product,
   layout,
 }: {
-  product: ProductWithSupplier
+  product: CardProduct
   layout: ListingLayout
 }) {
   return (

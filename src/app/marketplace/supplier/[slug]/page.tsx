@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 
 import { CountUp } from "@/components/common/count-up";
 import { MobileActionBar } from "@/components/common/mobile-action-bar";
+import { toCardProduct } from "@/components/marketplace/card-product";
 import { Disclosure } from "@/components/marketplace/Disclosure";
 import { MarketplaceProductCard } from "@/components/marketplace/MarketplaceProductCard";
 import { MediaImage } from "@/components/marketplace/MediaImage";
@@ -289,7 +290,7 @@ export default async function SupplierProfilePage({ params }: PageProps) {
                 {products.map((product) => (
                   <li key={product.id} className="reveal min-w-0">
                     <MarketplaceProductCard
-                      product={product}
+                      product={toCardProduct(product)}
                       supplierName={supplier.name}
                       serviceMode={serviceMode}
                       hideSupplier

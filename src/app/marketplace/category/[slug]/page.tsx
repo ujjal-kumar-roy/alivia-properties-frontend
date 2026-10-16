@@ -10,6 +10,7 @@ import {
 import type { ReactNode } from "react";
 
 import { MobileActionBar } from "@/components/common/mobile-action-bar";
+import { toCardProduct } from "@/components/marketplace/card-product";
 import {
   listingHref,
   parseKind,
@@ -645,7 +646,11 @@ export default async function MarketplaceCategoryPage({
               {view === "products" ? (
                 <ProductResults
                   key={resultsKey}
-                  initial={productList.page}
+                  initial={{
+                    ...productList.page,
+                    // Client cards: send only the fields a card reads.
+                    data: productList.page.data.map(toCardProduct),
+                  }}
                   query={resultQuery}
                   nextHref={nextHref}
                 />
