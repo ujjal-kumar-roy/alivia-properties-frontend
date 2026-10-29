@@ -163,8 +163,11 @@ function toOptionalNumber(value: string) {
   return trimmed ? Number(trimmed) : undefined
 }
 
-/** Maps validated form output onto the API's CreateProductInput/UpdateProductInput shape. */
-export function productFormToPayload(values: ProductFormValues) {
+/**
+ * Maps validated form output onto the API's CreateProductInput/UpdateProductInput shape.
+ * `saved` is the product being edited, when there is one.
+ */
+export function productFormToPayload(values: ProductFormValues, saved?: Pick<MarketplaceProduct, "externalVideoUrl">) {
   return {
     supplierId: values.supplierId,
     categorySlug: values.categorySlug,
@@ -172,8 +175,9 @@ export function productFormToPayload(values: ProductFormValues) {
     image: values.image,
     gallery: values.gallery.length > 0 ? values.gallery : undefined,
     videoUrl: values.videoUrl || undefined,
-    // "" (not undefined) so clearing the link on an edit actually removes it.
-    externalVideoUrl: values.externalVideoUrl,
+    // Optional: sent only when it differs from the saved link, so a save that leaves it alone adds nothing to
+    // the request. "" (not undefined) so clearing a saved link actually removes it.
+    externalVideoUrl: values.externalVideoUrl !== (saved?.externalVideoUrl ?? "") ? values.externalVideoUrl : undefined,
     documents: values.documents.filter((doc) => doc.label.trim() && doc.url.trim()),
     price: toOptionalNumber(values.price),
     unit: values.unit,

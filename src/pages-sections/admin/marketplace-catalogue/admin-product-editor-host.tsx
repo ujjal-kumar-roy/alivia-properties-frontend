@@ -83,7 +83,7 @@ export function AdminProductEditorHost({
     setSubmitting(true)
     setSubmitError(null)
     try {
-      const payload = productFormToPayload(values)
+      const payload = productFormToPayload(values, mode === "edit" ? product : undefined)
       if (mode === "edit" && product) {
         await marketplaceService.adminUpdateProduct(product.id, payload, token)
         router.push("/admin/marketplace/suppliers")

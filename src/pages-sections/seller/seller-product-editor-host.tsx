@@ -43,7 +43,7 @@ export function SellerProductEditorHost({
     setSubmitting(true)
     setSubmitError(null)
     try {
-      const payload = productFormToPayload(values)
+      const payload = productFormToPayload(values, mode === "edit" ? product : undefined)
       if (mode === "edit" && product) {
         await marketplaceService.sellerUpdateProduct(product.id, payload, token)
       } else {
