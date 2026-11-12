@@ -164,30 +164,52 @@ function toOptionalNumber(value: string) {
 }
 
 /**
+ * A clearable optional text field: sent only when it differs from the saved
+ * value, so a save that leaves it alone adds nothing to the request. When it
+ * does change, the value itself goes on the wire — `""` (not `undefined`) — so
+ * clearing a saved value actually clears it on the API.
+ */
+function clearableText(value: string, saved?: string | null) {
+  return value !== (saved ?? "") ? value : undefined
+}
+
+/**
  * Maps validated form output onto the API's CreateProductInput/UpdateProductInput shape.
  * `saved` is the product being edited, when there is one.
  */
-export function productFormToPayload(values: ProductFormValues, saved?: Pick<MarketplaceProduct, "externalVideoUrl">) {
+export function productFormToPayload(
+  values: ProductFormValues,
+  saved?: Pick<
+    MarketplaceProduct,
+    | "externalVideoUrl"
+    | "shortDescription"
+    | "videoUrl"
+    | "brand"
+    | "badge"
+    | "sku"
+    | "warranty"
+    | "origin"
+    | "packaging"
+  >,
+) {
   return {
     supplierId: values.supplierId,
     categorySlug: values.categorySlug,
     name: values.name,
     image: values.image,
     gallery: values.gallery.length > 0 ? values.gallery : undefined,
-    videoUrl: values.videoUrl || undefined,
-    // Optional: sent only when it differs from the saved link, so a save that leaves it alone adds nothing to
-    // the request. "" (not undefined) so clearing a saved link actually removes it.
-    externalVideoUrl: values.externalVideoUrl !== (saved?.externalVideoUrl ?? "") ? values.externalVideoUrl : undefined,
+    videoUrl: clearableText(values.videoUrl, saved?.videoUrl),
+    externalVideoUrl: clearableText(values.externalVideoUrl, saved?.externalVideoUrl),
     documents: values.documents.filter((doc) => doc.label.trim() && doc.url.trim()),
     price: toOptionalNumber(values.price),
     unit: values.unit,
     inStock: values.inStock === "in",
     moq: toOptionalNumber(values.moq),
     leadTimeDays: toOptionalNumber(values.leadTimeDays),
-    brand: values.brand || undefined,
-    badge: values.badge || undefined,
+    brand: clearableText(values.brand, saved?.brand),
+    badge: clearableText(values.badge, saved?.badge),
     description: values.description || `${values.name} quote-ready product.`,
-    shortDescription: values.shortDescription || undefined,
+    shortDescription: clearableText(values.shortDescription, saved?.shortDescription),
     highlights: values.highlights.filter((h) => h.trim()),
     specs: values.specs
       .filter((spec) => spec.label.trim() && spec.value.trim())
@@ -215,10 +237,10 @@ export function productFormToPayload(values: ProductFormValues, saved?: Pick<Mar
         price: Number(tier.price),
         note: tier.note.trim() || undefined,
       })),
-    sku: values.sku || undefined,
-    warranty: values.warranty || undefined,
-    origin: values.origin || undefined,
-    packaging: values.packaging || undefined,
+    sku: clearableText(values.sku, saved?.sku),
+    warranty: clearableText(values.warranty, saved?.warranty),
+    origin: clearableText(values.origin, saved?.origin),
+    packaging: clearableText(values.packaging, saved?.packaging),
     certifications: values.certifications.filter((c) => c.trim()),
     isActive: values.isActive,
     isFeatured: values.isFeatured,

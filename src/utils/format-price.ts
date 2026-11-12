@@ -15,10 +15,12 @@ export function formatPrice(amount: number, short = false): string {
   }
 
   if (amount >= CRORE) {
-    const crore = amount / CRORE
+    // Floor the crore part: `toFixed(0)` would round 1.5 → "2" and print
+    // "2 Crore 50 Lakh" for 1.5 crore.
+    const crore = Math.floor(amount / CRORE)
     const rem = (amount % CRORE) / LAKH
     if (rem === 0) return `৳${crore} Crore`
-    return `৳${crore.toFixed(0)} Crore ${rem.toFixed(0)} Lakh`
+    return `৳${crore} Crore ${rem.toFixed(0)} Lakh`
   }
 
   if (amount >= LAKH) {

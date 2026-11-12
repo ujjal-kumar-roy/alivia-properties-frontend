@@ -8,6 +8,7 @@ import { ProjectFilterSidebar } from "@/components/projects/project-filter-sideb
 import { SectionHeader } from "@/components/common/section-header"
 import { EmptyState } from "@/components/common/empty-state"
 import { Building2 } from "lucide-react"
+import { formatPrice } from "@/utils/format-price"
 import type { ProjectStatus } from "@/types/project.types"
 
 const STATUS_TABS: { label: string; value: string }[] = [
@@ -49,8 +50,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const activeTags = [
     search && `Search: ${search}`,
     view && `View: ${view}`,
-    minPrice && `Min: ৳${(Number(minPrice) / 100000).toFixed(0)}L`,
-    maxPrice && `Max: ৳${(Number(maxPrice) / 100000).toFixed(0)}L`,
+    minPrice && `Min: ${formatPrice(Number(minPrice), true)}`,
+    maxPrice && `Max: ${formatPrice(Number(maxPrice), true)}`,
     featured === "true" && "Flagship only",
   ].filter(Boolean) as string[]
 
