@@ -1,5 +1,5 @@
 import fs from "node:fs"
-import { test as base, expect, type Request } from "@playwright/test"
+import { test as base, expect } from "@playwright/test"
 import { API_URL, BASE_URL } from "../playwright.config"
 import { authFile, type Role } from "./accounts"
 
@@ -75,11 +75,8 @@ const isViewPing = (url: URL) =>
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"])
 
 /** Writes that change no data: the NextAuth session, the notification socket, Next's dev tooling. */
-function isHarmlessWrite(url: URL, request: Request) {
-  if (/^\/(api\/auth\/|socket\.io\/|__nextjs|_next\/)/.test(url.pathname)) return true
-  // The marketplace category page loads its next pages through read-only server functions
-  // (src/app/marketplace/category/[slug]/actions.ts), which Next sends as POSTs.
-  return url.pathname.startsWith("/marketplace/category/") && request.headers()["next-action"] !== undefined
+function isHarmlessWrite(url: URL) {
+  return /^\/(api\/auth\/|socket\.io\/|__nextjs|_next\/)/.test(url.pathname)
 }
 
 const extended = base.extend<Options & Fixtures>({
@@ -137,7 +134,7 @@ const extended = base.extend<Options & Fixtures>({
         const line = `${request.method()} ${request.url()}`
         if (
           WRITE_METHODS.has(request.method()) &&
-          !isHarmlessWrite(url, request) &&
+          !isHarmlessWrite(url) &&
           !allowedWrites.some((pattern) => pattern.test(line))
         ) {
           browserWrites.push(`${line} (blocked)`)
@@ -166,7 +163,7 @@ const extended = base.extend<Options & Fixtures>({
     context.on("request", (request) => {
       if (!WRITE_METHODS.has(request.method()) || !isAppUrl(request.url())) return
       const url = new URL(request.url())
-      if (isApiUrl(url) || isHarmlessWrite(url, request)) return
+      if (isApiUrl(url) || isHarmlessWrite(url)) return
       browserWrites.push(`${request.method()} ${request.url()}`)
     })
     await use(context)

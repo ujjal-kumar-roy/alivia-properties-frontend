@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test"
+import { BASE_URL } from "../playwright.config"
 import { expect, test, type ApiClient } from "./fixtures"
-import { KNOWN_BUG, escapeRegExp, getJson, hydrated, open } from "./helpers"
+import { KNOWN_BUG, escapeRegExp, getJson, hydrated, linkOrButton, open } from "./helpers"
 
 /*
  * The public marketplace, signed out: home, category listing (products and sellers), supplier page,
@@ -21,6 +22,9 @@ const CATEGORY_SLUG = "cement"
 const CATEGORY_PATH = `/marketplace/category/${CATEGORY_SLUG}`
 const SUPPLIER_SLUG = "berger-paints-bd"
 const PRODUCT_SLUG = "plumbing-services"
+
+/** The listing shows this many products at a time (PAGE_SIZE in the category page) and appends the next page as the visitor nears the end. */
+const PAGE_SIZE = 24
 
 const SELLER_TYPES = [
   { label: "Material sellers", kind: "SUPPLIER" },
@@ -82,7 +86,52 @@ async function categoryUnderTest(request: ApiClient) {
   return { department, category }
 }
 
+/**
+ * The first category whose products fill more than one page, so the listing has a next page to load. One read at a
+ * time, stopping at the first hit: a burst of one read per category would trip the API's default throttle.
+ */
+async function categoryWithMoreThanOnePage(request: ApiClient) {
+  for (const { categories } of await departmentsWithCategories(request)) {
+    for (const { slug } of categories) {
+      const total = await totalOf(request, `marketplace/products?category=${slug}&limit=1`)
+      if (total > PAGE_SIZE) return { slug, total }
+    }
+  }
+  throw new Error(`No category lists more than ${PAGE_SIZE} products, so there is no next page to load: add products to one.`)
+}
+
 // ─── Page helpers ─────────────────────────────────────────────────────────────
+
+/**
+ * Answers in the browser what production's nginx answers on the wire: 403 to a POST whose Content-Type is not
+ * JSON, a form or multipart, and to every method but GET, HEAD, POST and OPTIONS (measured with curl against
+ * www.aliviaproperties.com on 2026-11-12; the config itself is not in this repo). `next dev` has no such proxy,
+ * so a Server Function, which React POSTs as text/plain, worked here and failed on the live site. Returns the
+ * requests it turned away, so a test can assert that the page sent none.
+ */
+async function behindProductionProxy(page: Page) {
+  const turnedAway: string[] = []
+  const passes = /^(application\/json|application\/x-www-form-urlencoded|multipart\/form-data)\s*(;|$)/i
+  await page.route(
+    // Next's dev tooling talks to the dev server only; production has none of it.
+    (url) => url.origin === new URL(BASE_URL).origin && !/^\/(__nextjs|_next\/)/.test(url.pathname),
+    async (route, request) => {
+      const method = request.method()
+      const type = request.headers()["content-type"] ?? ""
+      if (["GET", "HEAD", "OPTIONS"].includes(method) || (method === "POST" && passes.test(type))) {
+        await route.fallback()
+        return
+      }
+      turnedAway.push(`${method} ${new URL(request.url()).pathname} (${type || "no content-type"})`)
+      await route.fulfill({
+        status: 403,
+        contentType: "text/html",
+        body: "<html><head><title>403 Forbidden</title></head><body><center><h1>403 Forbidden</h1></center><hr><center>nginx</center></body></html>",
+      })
+    },
+  )
+  return turnedAway
+}
 
 /** The server HTML is interactive only after React hydrates the page's main landmark. */
 const pageHydrated = (page: Page) => hydrated(page.getByRole("main"))
@@ -381,6 +430,30 @@ test.describe("category page: products", () => {
     await expect(first.getByRole("heading", { level: 3 }).getByRole("link")).toHaveAttribute("href", /^\/marketplace\/product\/./)
     await expect(first).toContainText(/৳|Ask for price/)
     await expect(first.getByRole("button", { name: /^Add .+ to quote list$/ })).toBeVisible()
+  })
+
+  test("loads the next page of products when the proxy in front rejects non-JSON POSTs, as production's does", async ({
+    page,
+    request,
+  }) => {
+    const { slug } = await categoryWithMoreThanOnePage(request)
+    const turnedAway = await behindProductionProxy(page)
+
+    await open(page, `/marketplace/category/${slug}`)
+    await toolbarReady(page)
+    const products = page.locator("#category-results").getByRole("article")
+
+    // The list preloads the next page as its end comes near; "Show more products" asks for it by hand.
+    // Either way the request has to be one production lets through.
+    await expect(async () => {
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+      const showMore = linkOrButton(page, "Show more products")
+      if ((await products.count()) <= PAGE_SIZE && (await showMore.isVisible())) await showMore.click({ timeout: 2_000 })
+      expect(await products.count(), "products listed once the next page has loaded").toBeGreaterThan(PAGE_SIZE)
+    }).toPass({ timeout: 30_000 })
+
+    await expect(page.getByText(/^Could not load more/)).toHaveCount(0)
+    expect(turnedAway, "requests the production proxy would have answered 403").toEqual([])
   })
 
   const PRODUCT_SORTS = [

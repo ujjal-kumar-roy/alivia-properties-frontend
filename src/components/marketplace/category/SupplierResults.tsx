@@ -2,7 +2,6 @@
 
 import { memo, useCallback, useRef } from "react"
 
-import { loadCategorySuppliers } from "@/app/marketplace/category/[slug]/actions"
 import {
   feedKey,
   RESULTS_ID,
@@ -17,6 +16,7 @@ import {
   SupplierCardSkeleton,
 } from "@/components/marketplace/category/ResultSkeletons"
 import { MarketplaceSupplierSummaryCard } from "@/components/marketplace/MarketplaceSupplierSummaryCard"
+import { categoryResultsService } from "@/services/category-results.service"
 import type { Paginated } from "@/services/http-client"
 import type { Supplier } from "@/types/marketplace.types"
 
@@ -51,7 +51,7 @@ function SupplierFeed({
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const limit = initial.meta.limit || undefined
   const load = useCallback(
-    (page: number) => loadCategorySuppliers({ ...query, page, limit }),
+    (page: number) => categoryResultsService.listSuppliers({ ...query, page, limit }),
     [query, limit],
   )
   const feed = useResultsFeed({

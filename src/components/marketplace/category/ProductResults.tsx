@@ -14,7 +14,6 @@ import {
   type RefObject,
 } from "react"
 
-import { loadCategoryProducts } from "@/app/marketplace/category/[slug]/actions"
 import type { CardProduct } from "@/components/marketplace/card-product"
 import { ProductRow } from "@/components/marketplace/category/ProductRow"
 import {
@@ -25,6 +24,7 @@ import {
 } from "@/components/marketplace/category/ResultSkeletons"
 import { MarketplaceProductCard } from "@/components/marketplace/MarketplaceProductCard"
 import { useListingLayout, type ListingLayout } from "@/hooks/use-listing-layout"
+import { categoryResultsService } from "@/services/category-results.service"
 import type { Paginated } from "@/services/http-client"
 
 export type ResultsQuery = {
@@ -44,9 +44,9 @@ type ProductResultsProps = {
  * Category product results: grid (MarketplaceProductCard, 2/3/4/6 columns) or
  * dense list (ProductRow), following the toolbar's layout toggle, with
  * infinite loading. The first page arrives from the server and renders exactly
- * as the server markup, so hydration matches; later pages come from a Server
- * Function as the visitor nears the end, or from the "Show more" link, which is
- * a real link to `?page=n` until JS takes it over.
+ * as the server markup, so hydration matches; later pages are fetched (GET, see
+ * category-results.service.ts) as the visitor nears the end, or from the "Show
+ * more" link, which is a real link to `?page=n` until JS takes it over.
  */
 export function ProductResults(props: ProductResultsProps) {
   // A new query (sort, filter, search) or start page starts a fresh list:
@@ -66,7 +66,7 @@ function ProductFeed({
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const limit = initial.meta.limit || undefined
   const load = useCallback(
-    (page: number) => loadCategoryProducts({ ...query, page, limit }),
+    (page: number) => categoryResultsService.listProducts({ ...query, page, limit }),
     [query, limit],
   )
   const feed = useResultsFeed({
@@ -525,7 +525,7 @@ export function ResultsFooter<T>({
 
   const onMore = (event: MouseEvent<HTMLAnchorElement>) => {
     // Retries that keep failing fall through to the link: a full page load
-    // of `?page=n` still works when the Server Function does not.
+    // of `?page=n` still works when the request for the next page does not.
     if (!isPlainClick(event) || (status === "error" && !feed.softRetry)) return
     event.preventDefault()
     feed.loadMore(trigger(event))
